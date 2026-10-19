@@ -24,6 +24,7 @@ window.DataTab = (() => {
     inp.addEventListener('change', () => onChange(inp.value));
     return h('td', {}, inp);
   }
+  function cellInput(value, onChange, placeholder) { const inp = h('input', { type: 'text', value: value ?? '', placeholder, style: { marginTop: '3px' } }); inp.addEventListener('change', () => onChange(inp.value)); return inp; }
   function colorCell(value, onChange) {
     const inp = h('input', { type: 'color', value: value || '#888888' });
     inp.addEventListener('change', () => onChange(inp.value));
@@ -68,13 +69,14 @@ window.DataTab = (() => {
     const conflicts = Relations.conflicts();
     const undetCount = Relations.undetermined().size;
     const table = h('table', { class: 'grid' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Relation'), h('th', {}, 'Source'), h('th', {}, 'Note'), h('th', {}, 'Status'), h('th', {}))));
+      h('thead', {}, h('tr', {}, h('th', {}, 'Time gap'), h('th', {}, 'Source'), h('th', {}, 'Confidence'), h('th', {}, 'Note'), h('th', {}, 'Status'), h('th', {}))));
     const tb = h('tbody'); table.append(tb);
     for (const r of rels) {
       const over = r.status === 'overruled';
       tb.append(h('tr', { class: over ? 'muted' : '' },
         h('td', {}, Relations.describeRelation(r)),
         h('td', {}, r.sourceId && Store.source(r.sourceId) ? `${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}` : ''),
+        h('td', { class: 'narrow' }, UI.confidenceSelect(r.confidence, v => Store.updateRelation(r.id, { confidence: v })), r.confidence ? cellInput(r.reason, v => Store.updateRelation(r.id, { reason: v }), 'why') : null),
         cell(r.note, v => Store.updateRelation(r.id, { note: v })),
         h('td', { class: 'narrow' }, over ? 'overruled' : 'active'),
         h('td', { class: 'narrow' },
@@ -82,7 +84,7 @@ window.DataTab = (() => {
           h('button', { class: 'small', onclick: () => { const ref = r.to.kind === 'marker' ? r.to : r.from; Editor.open(ref.kind === 'marker' ? ref.id : (Store.link(ref.id) || {}).fromId); } }, '✏️'), ' ',
           h('button', { class: 'small danger', onclick: () => { if (confirm('Delete this time gap?')) Store.deleteRelation(r.id); } }, '✕'))));
     }
-    if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 5, class: 'muted' }, 'No time gaps yet. Open a marker and press ⛓ beside one of its dates.')));
+    if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 6, class: 'muted' }, 'No time gaps yet. Open a marker and press ⛓ beside one of its dates.')));
     return h('div', { class: 'data-section' },
       h('h2', {}, `Time gaps (${rels.length})`, h('span', { class: 'spacer' }),
         conflicts.length ? h('button', { class: 'small conflict-btn', onclick: () => Relations.showConflicts() }, `⚠ ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`) : h('span', { class: 'muted', style: { fontSize: '12px' } }, 'no conflicts'),
@@ -93,7 +95,7 @@ window.DataTab = (() => {
 
   function sourcesSection() {
     const table = h('table', { class: 'grid' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Title'), h('th', {}, 'Author'), h('th', {}, 'Year'), h('th', {}, 'Where (URL, library, archive…)'), h('th', {}, 'Notes'), h('th', {}, 'Used'), h('th', {}))));
+      h('thead', {}, h('tr', {}, h('th', {}, 'Title'), h('th', {}, 'Author'), h('th', {}, 'Year'), h('th', {}, 'Reliability'), h('th', {}, 'Where (URL, library, archive…)'), h('th', {}, 'Notes'), h('th', {}, 'Used'), h('th', {}))));
     const tb = h('tbody'); table.append(tb);
     for (const s of Store.sources()) {
       const used = Store.sourceUseCount(s.id);
@@ -101,6 +103,7 @@ window.DataTab = (() => {
         cell(s.title, v => Store.updateSource(s.id, { title: v })),
         cell(s.author, v => Store.updateSource(s.id, { author: v })),
         cell(s.year, v => Store.updateSource(s.id, { year: v }), { style: { width: '70px' } }),
+        h('td', { class: 'narrow' }, UI.reliabilitySelect(s.reliability, v => Store.updateSource(s.id, { reliability: v }))),
         cell(s.where, v => Store.updateSource(s.id, { where: v }), { placeholder: 'https://… or shelf / archive reference' }),
         cell(s.notes, v => Store.updateSource(s.id, { notes: v }), { placeholder: 'reliability, edition, bias…' }),
         h('td', { class: 'narrow muted', title: 'Categories, markers, positions and ties that cite this source' }, used),
@@ -109,7 +112,7 @@ window.DataTab = (() => {
     if (!Store.sources().length) tb.append(h('tr', {}, h('td', { colspan: 7, class: 'muted' }, 'No sources yet. Add the texts you are working from, then attach them to categories, markers, positions and ties.')));
     return h('div', { class: 'data-section' },
       h('h2', {}, 'Sources', h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => UI.promptNewSource() }, '+ Add source')),
-      h('p', { class: 'hint' }, 'The texts, documents and people your information comes from. Each category can have a default source; every marker, position and tie can cite a source with a page or location. The map can be filtered to a single source to compare what different texts say.'),
+      h('p', { class: 'hint' }, 'The texts, documents and people your information comes from, each with a Reliability grade (how far the source can be trusted in general). Every fact, field and time gap can cite a source with a page, and carries its own Confidence grade, which is your judgement and is never taken from the source. The map can be filtered to a single source.'),
       table);
   }
 

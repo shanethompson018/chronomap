@@ -375,3 +375,20 @@ body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px soli
 .vertex-num span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #ffb84f; color: #1a1200; font-size: 11px; font-weight: 700; border: 1px solid #1a1200; }
 .modal-overlay.side { justify-content: flex-start; align-items: flex-start; background: none; pointer-events: none; }
 .modal-overlay.side .modal { pointer-events: auto; margin: 60px 0 0 300px; }
+
+/* ---------- grading: Confidence badges and Reliability tags ---------- */
+.grade-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 50%; font-size: 9px; font-weight: 700; color: #fff; border: 1.5px solid #fff; vertical-align: middle; cursor: help; line-height: 1; }
+.grade-badge.grade-high { background: #1e7e46; }
+.grade-badge.grade-reasonable { background: #3fae5e; }
+.grade-badge.grade-low { background: #e0a21b; }
+.grade-badge.grade-none { background: #d9403a; }
+.grade-reason { font-size: 11px; color: var(--muted); margin: 1px 0 2px 14px; }
+.rel-grade { display: inline-block; font-size: 10px; color: var(--muted); margin-left: 3px; vertical-align: middle; }
+.rel-grade.rel-high { color: #7ee2a8; } .rel-grade.rel-reliable { color: #a9d9b6; } .rel-grade.rel-questionable { color: #e0a21b; } .rel-grade.rel-unreliable { color: #e5484d; }
+.pin-wrap .grade-badge { position: absolute; top: -7px; right: -7px; opacity: 1 !important; }
+.pin-badge-only { background: none; border: none; }
+.tie-badge { background: none; border: none; }
+.tie-badge .grade-badge { position: relative; top: -8px; left: -8px; }
+.fact-grade { margin-top: 4px; }
+body.eink .grade-badge { background: #000; color: #fff; border-color: #fff; }
+body.eink .rel-grade { color: #000; }

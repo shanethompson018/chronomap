@@ -87,11 +87,34 @@ window.UI = (() => {
     const year = prompt('Year (optional):') || '';
     return Store.addSource({ title: title.trim(), author: author.trim(), year: year.trim() });
   }
+  // Grading: Reliability belongs to a source, Confidence is the user's own grade on a fact.
+  const RELIABILITY_LABELS = { high: 'Highly Reliable', reliable: 'Reliable', questionable: 'Questionable', unreliable: 'Unreliable' };
+  const CONFIDENCE_LABELS = { high: 'High Confidence', reasonable: 'Reasonable Confidence', low: 'Low Confidence', none: 'No Confidence' };
+  const CONFIDENCE_GLYPH = { high: '✓✓', reasonable: '✓', low: '?', none: '✗' };
+  function reliabilitySelect(value, onChange) {
+    const sel = select([['', '— ungraded —'], ...Object.entries(RELIABILITY_LABELS)], value || '', { title: 'Reliability of this source' });
+    sel.addEventListener('change', () => onChange(sel.value));
+    return sel;
+  }
+  function confidenceSelect(value, onChange, attrs = {}) {
+    const sel = select([['', '— ungraded —'], ...Object.entries(CONFIDENCE_LABELS).map(([k, v]) => [k, `${CONFIDENCE_GLYPH[k]} ${v}`])], value || '', Object.assign({ title: 'Your confidence in this fact (never derived from the source)' }, attrs));
+    sel.addEventListener('change', () => onChange(sel.value));
+    return sel;
+  }
+  // Small badge: ✓✓ / ✓ / ? / ✗ in its colour; nothing when ungraded.
+  function gradeBadgeHTML(conf, reason) {
+    if (!conf || !CONFIDENCE_GLYPH[conf]) return '';
+    return `<span class="grade-badge grade-${esc(conf)}" title="${esc(CONFIDENCE_LABELS[conf])}${reason ? ': ' + esc(reason) : ''}">${CONFIDENCE_GLYPH[conf]}</span>`;
+  }
+  function reliabilityHTML(rel) {
+    if (!rel || !RELIABILITY_LABELS[rel]) return '';
+    return `<span class="rel-grade rel-${esc(rel)}" title="Source reliability">${esc(RELIABILITY_LABELS[rel])}</span>`;
+  }
   function citeHTML(sourceId, page) {
     if (!sourceId) return '';
     const s = Store.source(sourceId);
     if (!s) return '';
-    return `<span class="cite" title="${esc([s.author, s.title, s.year, s.where].filter(Boolean).join(' · '))}">📖 ${esc(s.title)}${page ? ', ' + esc(page) : ''}</span>`;
+    return `<span class="cite" title="${esc([s.author, s.title, s.year, s.where].filter(Boolean).join(' · '))}${s.reliability ? ' · ' + esc(RELIABILITY_LABELS[s.reliability]) : ''}">📖 ${esc(s.title)}${page ? ', ' + esc(page) : ''}</span>${reliabilityHTML(s.reliability)}`;
   }
 
   // Describe a link from the point of view of marker `me`.
@@ -150,8 +173,8 @@ window.UI = (() => {
       const filled = v !== '' && v != null;
       const kidsFilled = node.children.some(function any(c) { const cv = (m.fields || {})[c.key]; return (cv !== '' && cv != null) || c.children.some(any); });
       if (!filled && !kidsFilled) return;
-      const fs = (m.fieldSources || {})[node.key];
-      rows.push([node.name, (filled ? textToHTML(v) : '') + (fs && fs.sourceId ? ' ' + citeHTML(fs.sourceId, fs.page) : ''), depth]);
+      const fs = (m.fieldSources || {})[node.key], fg = (m.fieldGrades || {})[node.key];
+      rows.push([node.name, (filled ? textToHTML(v) : '') + (fg && fg.confidence ? ' ' + gradeBadgeHTML(fg.confidence, fg.reason) : '') + (fs && fs.sourceId ? ' ' + citeHTML(fs.sourceId, fs.page) : ''), depth]);
       node.children.forEach(c => walk(c, depth + 1));
     };
     fieldTree(m.fields).forEach(n => walk(n, 0));
@@ -175,7 +198,7 @@ window.UI = (() => {
 
     const rels = window.Relations ? Store.relationsFor(m.id) : [];
     if (rels.length) out += `<h4>Time gaps (${rels.length})</h4><ul>` + rels.map(r =>
-      `<li${r.status === 'overruled' ? ' class="muted"' : ''}>⛓ ${esc(Relations.describeRelation(r))}${r.status === 'overruled' ? ' <em>(overruled)</em>' : ''}${r.sourceId ? ' ' + citeHTML(r.sourceId, r.page) : ''}${r.note ? ` <span class="muted">– ${esc(r.note)}</span>` : ''}</li>`).join('') + '</ul>';
+      `<li${r.status === 'overruled' ? ' class="muted"' : ''}>⛓ ${esc(Relations.describeRelation(r))}${r.status === 'overruled' ? ' <em>(overruled)</em>' : ''}${gradeBadgeHTML(r.confidence, r.reason)}${r.sourceId ? ' ' + citeHTML(r.sourceId, r.page) : ''}${r.note ? ` <span class="muted">– ${esc(r.note)}</span>` : ''}</li>`).join('') + '</ul>';
 
     const cites = (m.citations || []).filter(c => c.sourceId && Store.source(c.sourceId));
     const catSrc = cat && cat.sourceId && Store.source(cat.sourceId) ? cat.sourceId : null;
@@ -221,8 +244,10 @@ window.UI = (() => {
     if (who) bits.push(who);
     if (details) bits.push(`<span class="muted">${details}</span>`);
     let line = bits.join(' · ');
+    if (f.confidence) line += ' ' + gradeBadgeHTML(f.confidence, f.reason);
     if (f.note) line += ` <span class="muted">– ${esc(f.note)}</span>`;
     if (f.sourceId) line += ' ' + citeHTML(f.sourceId, f.page);
+    if (f.confidence && f.reason) line += `<div class="grade-reason">${esc(CONFIDENCE_LABELS[f.confidence])}: ${textToHTML(f.reason)}</div>`;
     return `<li>${line}</li>`;
   }
 
@@ -283,5 +308,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, tieHTML, markerSelect, modal, download };
+  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, tieHTML, markerSelect, modal, download,
+    reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

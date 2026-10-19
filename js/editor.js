@@ -30,10 +30,10 @@ window.Editor = (() => {
   }
   function blankMarker() {
     return { id: Store.uid(), name: 'New marker', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '',
-      fields: {}, fieldSources: {}, facts: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [], pinned: [], undetermined: [], derived: {} };
+      fields: {}, fieldSources: {}, fieldGrades: {}, facts: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [], pinned: [], undetermined: [], derived: {} };
   }
   function tidy(d) {
-    d.facts = d.facts || []; d.citations = d.citations || []; d.fields = d.fields || {}; d.fieldSources = d.fieldSources || {};
+    d.facts = d.facts || []; d.citations = d.citations || []; d.fields = d.fields || {}; d.fieldSources = d.fieldSources || {}; d.fieldGrades = d.fieldGrades || {};
     d.pinned = d.pinned || []; d.undetermined = d.undetermined || []; d.derived = d.derived || {}; d.photoIds = d.photoIds || [];
     d.facts.forEach(f => { f.participants = f.participants || []; f.details = f.details || {}; });
     return d;
@@ -303,6 +303,8 @@ window.Editor = (() => {
     card.append(row(h('input', { type: 'text', 'data-bind': `facts.${i}.note`, value: f.note, placeholder: 'note: the wording, what happened, why' })));
     card.append(row(UI.sourceSelect({ value: f.sourceId, onChange: v => { draft.facts[i].sourceId = v; render(); }, noneLabel: '— source —' }),
       h('input', { type: 'text', 'data-bind': `facts.${i}.page`, value: f.page, placeholder: 'page / verse', style: { flex: '0 0 40%' } })));
+    card.append(row(h('div', { class: 'narrow', style: { minWidth: '190px' } }, UI.confidenceSelect(f.confidence, v => { draft.facts[i].confidence = v; render(); })),
+      f.confidence ? h('input', { type: 'text', 'data-bind': `facts.${i}.reason`, value: f.reason, placeholder: 'why this grade: ambiguity, cross-references, circumstantial evidence…' }) : h('span', { class: 'muted', style: { fontSize: '11px', alignSelf: 'center' } }, 'confidence: your own grade, never taken from the source')));
     return card;
   }
   function renderWhere(i, t) {
@@ -430,18 +432,21 @@ window.Editor = (() => {
     const walk = (node, depth) => {
       const k = node.key;
       const fs = draft.fieldSources[k] || { sourceId: null, page: '' };
-      const srcRow = h('div', { class: 'kv-src' + (fs.sourceId ? ' on' : ''), style: { marginLeft: `calc(34% + ${depth * 14}px)` } },
+      const graded = !!(draft.fieldGrades[k] && draft.fieldGrades[k].confidence);
+      const srcRow = h('div', { class: 'kv-src' + (fs.sourceId || graded ? ' on' : ''), style: { marginLeft: `calc(34% + ${depth * 14}px)`, flexWrap: 'wrap' } },
         UI.sourceSelect({ value: fs.sourceId, noneLabel: '— source for this field —', onChange: v => {
           if (v) draft.fieldSources[k] = { sourceId: v, page: (draft.fieldSources[k] || {}).page || '' };
           else delete draft.fieldSources[k];
           render();
         } }),
-        fs.sourceId ? h('input', { type: 'text', value: fs.page, placeholder: 'page / location', style: { flex: '0 0 36%' }, oninput: e => { draft.fieldSources[k].page = e.target.value; } }) : null);
+        fs.sourceId ? h('input', { type: 'text', value: fs.page, placeholder: 'page / location', style: { flex: '0 0 30%' }, oninput: e => { draft.fieldSources[k].page = e.target.value; } }) : null,
+        h('div', { class: 'narrow' }, UI.confidenceSelect((draft.fieldGrades[k] || {}).confidence, v => { if (v) draft.fieldGrades[k] = { confidence: v, reason: (draft.fieldGrades[k] || {}).reason || '' }; else delete draft.fieldGrades[k]; render(); })),
+        (draft.fieldGrades[k] || {}).confidence ? h('input', { type: 'text', value: draft.fieldGrades[k].reason || '', placeholder: 'why this grade', style: { flex: '1 1 160px' }, oninput: e => { draft.fieldGrades[k].reason = e.target.value; } }) : null);
       out.push(h('div', { class: 'kv-block', style: { marginLeft: depth * 14 + 'px' } },
         h('div', { class: 'kv-row' },
           h('input', { type: 'text', class: 'k', value: (depth ? '↳ ' : '') + node.name, disabled: true, title: k }),
           h('input', { type: 'text', class: 'v', 'data-field': k, value: draft.fields[k] ?? '', placeholder: node.children.length ? '(optional summary)' : '' }),
-          h('button', { type: 'button', class: 'small' + (fs.sourceId ? ' src-on' : ''), title: fs.sourceId ? 'Source attached: ' + Store.sourceLabel(fs.sourceId) : 'Attach a source to this field', onclick: () => { srcRow.classList.toggle('open'); } }, '📖'),
+          h('button', { type: 'button', class: 'small' + (fs.sourceId || graded ? ' src-on' : ''), title: fs.sourceId ? 'Source attached: ' + Store.sourceLabel(fs.sourceId) : 'Attach a source or a confidence grade to this field', onclick: () => { srcRow.classList.toggle('open'); } }, '📖'),
           h('button', { type: 'button', class: 'small', title: `Add a sub-field under "${node.name}"`, onclick: () => {
             const name = prompt(`Name of the sub-field under "${node.name}":`);
             if (!name || !name.trim()) return;
@@ -451,7 +456,7 @@ window.Editor = (() => {
           } }, '＋'),
           h('button', { type: 'button', class: 'small', title: node.children.length ? 'Remove this field and its sub-fields' : 'Remove field', onclick: () => {
             if (node.children.length && !confirm(`Remove "${node.name}" and its ${node.children.length} sub-field(s)?`)) return;
-            for (const kk of Object.keys(draft.fields)) if (kk === k || kk.startsWith(k + '/')) { delete draft.fields[kk]; delete draft.fieldSources[kk]; }
+            for (const kk of Object.keys(draft.fields)) if (kk === k || kk.startsWith(k + '/')) { delete draft.fields[kk]; delete draft.fieldSources[kk]; delete draft.fieldGrades[kk]; }
             render();
           } }, '✕')),
         srcRow));

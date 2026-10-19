@@ -192,6 +192,29 @@ gap** records exactly that: *Seth · Born = Adam · Born + 130 y*, with the sour
   the slider until you decide). Two year-precision dates in the same year are not a conflict.
 * Time gaps sync between devices like everything else, and every device recomputes the same results.
 
+## Grading: Reliability and Confidence
+
+Two separate grades, judged independently, so that a weak source with one solid detail, or a strong
+source read with doubt, can both be recorded honestly. Anything ungraded is simply blank.
+
+* **Reliability** belongs to a **source** and says how far that text or person can be trusted in
+  general: *Highly Reliable*, *Reliable*, *Questionable* or *Unreliable*. Set it in the Library's
+  Sources table. It shows as a small tag beside every citation in the bubble and nowhere on the map.
+* **Confidence** is **your own grade** on a single fact, field or time gap: *High*, *Reasonable*,
+  *Low* or *No Confidence* ("recorded because a source says it, but I do not believe it"). It is never
+  taken from the source or its wording. A **reason** box sits beside every grade for the why:
+  an ambiguity, a cross-reference, circumstantial evidence. In the editor the grade sits under each
+  fact's source row and in a field's 📖 row; the time-gap dialog and the Library's Time gaps table
+  have their own.
+* **On the map and in the graphs.** A graded fact shows a small corner **badge** on its pin
+  (✓✓ dark green High, ✓ green Reasonable, ? amber Low, ✗ red No Confidence), at the centre of an area,
+  and at the midpoint of a tie line; the Ties and Network graphs put the same badge on the edge. The
+  badge is always drawn at full strength, so a faded pin with a ✓✓ badge reads as "a trusted date that
+  is only roughly known". Hover a badge for the grade and the reason. In e-ink mode the badges are
+  black and white.
+* **In the bubble.** Every fact line, field and time gap carries its badge; the reason follows on the
+  next line.
+
 ## Dates
 
 Written as `YYYY-MM-DD`, `YYYY-MM` or `YYYY`. Add ` BC` for before Christ (`44 BC`, `500 BC`).

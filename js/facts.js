@@ -181,7 +181,7 @@ window.Facts = (() => {
         if (!where) continue;
         const w = W.get(f.id);
         const mv = { id: f.id, date: w.date, dateMin: w.min, dateMax: w.max, dateEnd: t && t.hasEnd ? w.dateEnd : '', dateEndMin: t && t.hasEnd ? w.endMin : '', dateEndMax: t && t.hasEnd ? w.endMax : '',
-          lat: null, lng: null, coords: null, atMarkerId: null, label: f.placeLabel || '', note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f) };
+          lat: null, lng: null, coords: null, atMarkerId: null, label: f.placeLabel || '', note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f), confidence: f.confidence || '', reason: f.reason || '' };
         if (where.kind === 'point') { mv.lat = where.lat; mv.lng = where.lng; }
         else if (where.kind === 'area' || where.kind === 'route') { mv.coords = where.coords; mv.extent = where.extent || null; mv.rough = where.rough || []; mv.extentRough = where.extentRough || []; }
         else if (where.kind === 'marker') { mv.atMarkerId = where.markerId; if (!mv.label) { const o = d.markers.find(x => x.id === where.markerId); mv.label = o ? o.name : ''; } }
@@ -198,7 +198,7 @@ window.Facts = (() => {
           const w = W.get(f.id);
           links.push({ id: `${f.id}|${role.id}|${p.markerId}`, typeId: role.tieTypeId, fromId: toOther ? m.id : p.markerId, toId: toOther ? p.markerId : m.id,
             label: f.label || '', start: w.date || '', startMin: w.min || '', startMax: w.max || '', end: t.hasEnd ? (w.dateEnd || '') : '', endMin: t.hasEnd ? (w.endMin || '') : '', endMax: t.hasEnd ? (w.endMax || '') : '',
-            note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factId: f.id, ownerId: m.id, roleName: role.name });
+            note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factId: f.id, ownerId: m.id, roleName: role.name, confidence: f.confidence || '', reason: f.reason || '' });
         }
       }
     }

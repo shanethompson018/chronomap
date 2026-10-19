@@ -286,7 +286,8 @@ window.MapView = (() => {
       : `<div class="pin-dot${inside}" style="background:${UI.esc(color)}">${UI.esc(icon)}</div>`;
     const ring = opts.inside ? `<div class="pin-ring" style="border-color:${UI.esc(color)}"></div>` : '';
     const [dx, dy] = opts.fan || [0, 0];
-    const html = `<div class="pin-wrap" style="opacity:${opts.opacity.toFixed(2)};transform:translate(${dx}px,${dy}px)">${ring}${dot}${label}</div>`;
+    const badge = UI.gradeBadgeHTML(opts.confidence, opts.reason);
+    const html = `<div class="pin-wrap" style="opacity:${opts.opacity.toFixed(2)};transform:translate(${dx}px,${dy}px)">${ring}${dot}${badge}${label}</div>`;
     return L.divIcon({ className: 'pin-icon', html, iconSize: [28, 28], iconAnchor: [14 - dx, 14 - dy], popupAnchor: [dx, -12 + dy] });
   }
   function popupContent(id) {
@@ -317,8 +318,8 @@ window.MapView = (() => {
       let ll;
       if (geo.lat != null) ll = [+geo.lat, +geo.lng];
       else { const c = geo.coords.reduce((a, p) => [a[0] + +p[0], a[1] + +p[1]], [0, 0]); ll = [c[0] / geo.coords.length, c[1] / geo.coords.length]; }
-      const opts = { opacity, inside: geo.inside || null, fan: fanOffset(fan) };
-      const sig = `${color}|${icon}|${m.name}|${showLabels}|${Photos.thumb(m.photoId) || ''}|${opacity.toFixed(2)}|${opts.inside || ''}|${opts.fan.join(',')}`;
+      const opts = { opacity, inside: geo.inside || null, fan: fanOffset(fan), confidence: mv.confidence || '', reason: mv.reason || '' };
+      const sig = `${color}|${icon}|${m.name}|${showLabels}|${Photos.thumb(m.photoId) || ''}|${opacity.toFixed(2)}|${opts.inside || ''}|${opts.fan.join(',')}|${opts.confidence}|${opts.reason}`;
       if (!rec) {
         const layer = L.marker(ll, { icon: pinIcon(m, color, icon, opts), riseOnHover: true });
         bindPopup(layer, m.id); layer.addTo(map);
@@ -333,14 +334,14 @@ window.MapView = (() => {
     } else if (m.kind === 'area') {
       // an area is a group: the certain core (fill), its edges (solid where firm, dashed with a soft band where
       // rough), and optionally the largest possible extent as a lighter dashed outline
-      const sig = JSON.stringify([geo.coords, geo.extent, geo.rough, geo.extentRough, color, opacity.toFixed(2), m.name]);
+      const sig = JSON.stringify([geo.coords, geo.extent, geo.rough, geo.extentRough, color, opacity.toFixed(2), m.name, mv.confidence, mv.reason]);
       if (!rec) {
         const group = L.featureGroup();
         group.bindTooltip(m.name, { sticky: true });
         bindPopup(group, m.id); group.addTo(map);
         rec = { key, markerId: m.id, kind: 'area', layer: group, sig: '' }; layers.set(key, rec);
       }
-      if (rec.sig !== sig) { buildArea(rec.layer, geo, color, opacity); rec.sig = sig; }
+      if (rec.sig !== sig) { buildArea(rec.layer, geo, color, opacity, mv); rec.sig = sig; }
     } else {
       const coords = geo.coords.map(c => [+c[0], +c[1]]);
       const style = { color, weight: 4, opacity: 0.85 * opacity };
@@ -370,8 +371,12 @@ window.MapView = (() => {
       }
     }
   }
-  function buildArea(group, geo, color, opacity) {
+  function buildArea(group, geo, color, opacity, mv) {
     group.clearLayers();
+    if (mv && mv.confidence) {
+      const c = geo.coords.reduce((a, p) => [a[0] + +p[0], a[1] + +p[1]], [0, 0]);
+      group.addLayer(L.marker([c[0] / geo.coords.length, c[1] / geo.coords.length], { icon: L.divIcon({ className: 'pin-badge-only', html: UI.gradeBadgeHTML(mv.confidence, mv.reason), iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false }));
+    }
     const core = geo.coords.map(c => [+c[0], +c[1]]);
     if (geo.extent && geo.extent.length >= 3) {
       const ext = geo.extent.map(c => [+c[0], +c[1]]);
@@ -411,8 +416,9 @@ window.MapView = (() => {
       if (tt != null && l.end && l.endMin && l.endMin !== l.endMax) op *= weightOut(tt, dayRange(l.endMin, l.end, l.endMax));
       const line = L.polyline([a, b], { color: type ? type.color : '#999', weight: 2, opacity: Math.max(0.15, op), dashArray: '6 6', interactive: true });
       const fromName = Store.marker(l.fromId)?.name, toName = Store.marker(l.toId)?.name;
-      line.bindTooltip(`${UI.esc(fromName)} — ${UI.esc(type ? type.name : 'tie')} ${type && type.directed ? '→' : '—'} ${UI.esc(toName)}${l.label ? ' · ' + UI.esc(l.label) : ''}`, { sticky: true });
+      line.bindTooltip(`${UI.esc(fromName)} — ${UI.esc(type ? type.name : 'tie')} ${type && type.directed ? '→' : '—'} ${UI.esc(toName)}${l.label ? ' · ' + UI.esc(l.label) : ''}${l.confidence ? ' · ' + UI.CONFIDENCE_LABELS[l.confidence] : ''}`, { sticky: true });
       tieLayer.addLayer(line);
+      if (l.confidence) tieLayer.addLayer(L.marker([(a.lat + b.lat) / 2, (a.lng + b.lng) / 2], { icon: L.divIcon({ className: 'pin-badge-only', html: UI.gradeBadgeHTML(l.confidence, l.reason), iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false }));
     }
   }
 

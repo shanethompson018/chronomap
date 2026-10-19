@@ -163,6 +163,8 @@ window.Relations = (() => {
     let src = null;
     const page = h('input', { type: 'text', placeholder: 'page / verse' });
     const note = h('input', { type: 'text', placeholder: 'e.g. "When Adam had lived 130 years, he fathered Seth"' });
+    let conf = ''; const reason = h('input', { type: 'text', placeholder: 'why this grade' });
+    const confSel = UI.confidenceSelect('', v => { conf = v; });
     function fillSlots(mid) {
       slotSel.innerHTML = '';
       if (!mid) { slotSel.append(h('option', { value: '' }, '— pick a marker first —')); return; }
@@ -188,7 +190,7 @@ window.Relations = (() => {
         if (sign < 0) { const t = min; min = max; max = t; } // "before": the larger gap is the earlier date
       }
       // thisRef = other + offset  →  relation from=other, to=this
-      Store.addRelation({ from: other, to: thisRef, years: sign * Y, months: sign * M, days: sign * D, min, max, sourceId: src, page: page.value, note: note.value });
+      Store.addRelation({ from: other, to: thisRef, years: sign * Y, months: sign * M, days: sign * D, min, max, sourceId: src, page: page.value, note: note.value, confidence: conf, reason: reason.value });
       m.close();
       onDone && onDone();
       UI.toast('Time gap saved');
@@ -202,6 +204,7 @@ window.Relations = (() => {
       h('label', { class: 'field' }, 'which date', slotSel),
       h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Source', srcSel), h('label', { class: 'field' }, 'Page / verse', page)),
       h('label', { class: 'field' }, 'Note (the wording you are relying on)', note),
+      h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Confidence (your grade)', confSel), h('label', { class: 'field' }, 'Reason', reason)),
       h('p', { class: 'hint' }, 'The other date becomes the anchor if it is already known; this date is then reckoned from it and moves with it. Anchor a date (🔒) to make it the fixed end instead.'),
       h('div', { class: 'row' }, h('button', { class: 'primary', onclick: save }, 'Save time gap'), h('button', { onclick: () => m.close() }, 'Cancel')));
     const m = UI.modal({ title: 'Time gap', body, width: '640px' });

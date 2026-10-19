@@ -46,6 +46,12 @@ window.Graph = (() => {
       .attr('marker-end', d => d.directed ? `url(#${colorId(d.color)})` : null);
     linkSel.append('title').text(d => d.title || d.label || '');
     const linkText = showLinkLabels ? linkSel.append('text').attr('class', 'link-label').text(d => d.label || '') : null;
+    // confidence badge at the midpoint of graded edges
+    const COLORS = { high: '#1e7e46', reasonable: '#3fae5e', low: '#e0a21b', none: '#d9403a' };
+    const GLYPH = { high: '\u2713\u2713', reasonable: '\u2713', low: '?', none: '\u2717' };
+    const graded = linkSel.filter(d => !!d.confidence);
+    graded.append('circle').attr('class', 'edge-badge').attr('r', 8).attr('fill', d => COLORS[d.confidence] || '#888').attr('stroke', '#fff').attr('stroke-width', 1.5);
+    graded.append('text').attr('class', 'edge-badge-text').attr('text-anchor', 'middle').attr('dy', '0.35em').attr('font-size', d => d.confidence === 'high' ? 7 : 10).attr('font-weight', 700).attr('fill', '#fff').text(d => GLYPH[d.confidence] || '');
 
     const nodeSel = g.append('g').selectAll('g').data(N).join('g')
       .attr('class', d => 'node' + (d.center ? ' center' : '')).style('cursor', 'pointer');
@@ -71,7 +77,9 @@ window.Graph = (() => {
         const ux = dx / len, uy = dy / len;
         d3.select(this).attr('x1', s.x + ux * R).attr('y1', s.y + uy * R).attr('x2', tn.x - ux * (R + 2)).attr('y2', tn.y - uy * (R + 2));
       });
-      if (linkText) linkText.attr('x', d => (S(d).x + T(d).x) / 2).attr('y', d => (S(d).y + T(d).y) / 2 - 4);
+      if (linkText) linkText.attr('x', d => (S(d).x + T(d).x) / 2).attr('y', d => (S(d).y + T(d).y) / 2 - 12);
+      linkSel.select('circle.edge-badge').attr('cx', d => (S(d).x + T(d).x) / 2).attr('cy', d => (S(d).y + T(d).y) / 2);
+      linkSel.select('text.edge-badge-text').attr('x', d => (S(d).x + T(d).x) / 2).attr('y', d => (S(d).y + T(d).y) / 2);
       nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
       N.forEach(n => cache.set(n.id, { x: n.x, y: n.y }));
     }

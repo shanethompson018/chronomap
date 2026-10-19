@@ -38,8 +38,10 @@ window.Store = (() => {
   function normCitation(c) { return Object.assign({ sourceId: null, page: '', note: '' }, c || {}); }
   function normMarker(m) {
     const out = Object.assign({ id: uid(), name: 'Untitled', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '',
-      fields: {}, fieldSources: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [],
+      fields: {}, fieldSources: {}, fieldGrades: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [],
       pinned: [], undetermined: [], derived: {}, facts: undefined }, m || {});
+    out.fieldGrades = out.fieldGrades || {};
+    for (const k of Object.keys(out.fieldGrades)) if (!out.fieldGrades[k] || !CONFIDENCE.includes(out.fieldGrades[k].confidence)) delete out.fieldGrades[k];
     out.moves = (out.moves || []).map(normMove);
     if (Array.isArray(out.facts)) out.facts = out.facts.map(normFact); // undefined = not yet converted from version 2
     out.pinned = (out.pinned || []).filter(Boolean); out.undetermined = (out.undetermined || []).filter(Boolean); out.derived = out.derived || {};
@@ -48,6 +50,7 @@ window.Store = (() => {
     out.fields = out.fields || {};
     out.fieldSources = out.fieldSources || {};
     for (const k of Object.keys(out.fieldSources)) if (!(k in out.fields) || !out.fieldSources[k] || !out.fieldSources[k].sourceId) delete out.fieldSources[k];
+    for (const k of Object.keys(out.fieldGrades)) if (!(k in out.fields)) delete out.fieldGrades[k];
     out.tags = out.tags || [];
     return out;
   }
@@ -78,8 +81,9 @@ window.Store = (() => {
     return null;
   }
   function normFact(f) {
-    const o = Object.assign({ id: uid(), typeId: 'ft_note', label: '', date: '', dateMin: '', dateMax: '', dateEnd: '', dateEndMin: '', dateEndMax: '', where: null, placeLabel: '', participants: [], details: {}, note: '', sourceId: null, page: '' }, f || {});
+    const o = Object.assign({ id: uid(), typeId: 'ft_note', label: '', date: '', dateMin: '', dateMax: '', dateEnd: '', dateEndMin: '', dateEndMax: '', where: null, placeLabel: '', participants: [], details: {}, note: '', sourceId: null, page: '', confidence: '', reason: '' }, f || {});
     o.where = normWhere(o.where);
+    if (!CONFIDENCE.includes(o.confidence)) o.confidence = '';
     // a range needs both ends; a lone bound is kept as typed but does not count as a range
     ['date', 'dateEnd'].forEach(k => { if (o[k + 'Min'] && o[k + 'Max'] && Dates.toDays(o[k + 'Min']) != null && Dates.toDays(o[k + 'Max']) != null && Dates.toDays(o[k + 'Min']) > Dates.toDays(o[k + 'Max'])) { const t = o[k + 'Min']; o[k + 'Min'] = o[k + 'Max']; o[k + 'Max'] = t; } });
     o.participants = (o.participants || []).filter(p => p && p.roleId && p.markerId).map(p => ({ roleId: p.roleId, markerId: p.markerId }));
@@ -96,14 +100,17 @@ window.Store = (() => {
   // Relation: to = from + (years, months, days). status 'overruled' keeps the record but leaves it out of the maths.
   function normOffset(x) { return x && (x.years || x.months || x.days) ? { years: Math.trunc(+x.years || 0), months: Math.trunc(+x.months || 0), days: Math.trunc(+x.days || 0) } : null; }
   function normRelation(r) {
-    const o = Object.assign({ id: uid(), from: null, to: null, years: 0, months: 0, days: 0, min: null, max: null, note: '', sourceId: null, page: '', status: 'active' }, r || {});
+    const o = Object.assign({ id: uid(), from: null, to: null, years: 0, months: 0, days: 0, min: null, max: null, note: '', sourceId: null, page: '', status: 'active', confidence: '', reason: '' }, r || {});
+    if (!CONFIDENCE.includes(o.confidence)) o.confidence = '';
     o.from = normRef(o.from); o.to = normRef(o.to);
     o.years = Math.trunc(+o.years || 0); o.months = Math.trunc(+o.months || 0); o.days = Math.trunc(+o.days || 0);
     o.min = normOffset(o.min); o.max = normOffset(o.max); // approximate gap: smallest and largest it could be
     if (o.status !== 'overruled') o.status = 'active';
     return o;
   }
-  function normSource(s) { return Object.assign({ id: uid(), title: 'Untitled source', author: '', year: '', where: '', notes: '' }, s || {}); }
+  const RELIABILITY = ['high', 'reliable', 'questionable', 'unreliable'];
+  const CONFIDENCE = ['high', 'reasonable', 'low', 'none'];
+  function normSource(s) { const o = Object.assign({ id: uid(), title: 'Untitled source', author: '', year: '', where: '', notes: '', reliability: '' }, s || {}); if (!RELIABILITY.includes(o.reliability)) o.reliability = ''; return o; }
   function normPhoto(p) {
     const o = Object.assign({ id: uid(), title: '', caption: '', credit: '', date: '', notes: '', citations: [], w: 0, h: 0, bytes: 0, type: '' }, p || {});
     o.citations = (o.citations || []).map(normCitation);
@@ -621,6 +628,6 @@ window.Store = (() => {
     addCategory, updateCategory, deleteCategory, addLinkType, updateLinkType, deleteLinkType,
     addSource, updateSource, deleteSource, setSetting,
     exportJSON, importJSON, resetToSample, clearAll,
-    exportSyncDoc, replaceSyncDoc, isApplyingSync, syncCollections, normalizeDoc,
+    exportSyncDoc, replaceSyncDoc, isApplyingSync, syncCollections, normalizeDoc, RELIABILITY, CONFIDENCE,
   };
 })();

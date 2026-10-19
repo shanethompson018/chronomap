@@ -67,9 +67,14 @@ Going through these in order:
 
 ## 2. Grading of information: Reliability and Confidence
 
-- [ ] A grade on every piece of input (dates, positions, areas, ties, fields, sources) saying how far it
+- [x] A grade on every piece of input (dates, positions, areas, ties, fields, sources) saying how far it
       can be trusted. Two dials, judged independently (modelled on the Admiralty Code's source/information split).
-      Decisions so far (build later):
+      **Built 19 Oct 2026**: Reliability on sources (Library table, tag beside citations in the bubble);
+      Confidence + reason on facts (editor card), fields (📖 row, `fieldGrades`) and time gaps (dialog and
+      Library table); badges on pins, area centres, tie-line midpoints, graph edges and every bubble line;
+      black-and-white badges in e-ink mode. Confidence is stored on the fact and copied onto the derived
+      location and tie, never computed from the source.
+      Decisions:
       - **Reliability** is the grade of a *source* (set once on the source, inherited by everything
         that cites it). Levels: Highly Reliable, Reliable, Questionable, Unreliable.
       - **Confidence** is the user's own grade on a *fact* (a tie, date, position, area, field).
