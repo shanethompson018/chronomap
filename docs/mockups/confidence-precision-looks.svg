@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700" font-family="Segoe UI, system-ui, sans-serif">
+  <defs>
+    <g id="pin"><circle r="14" fill="#4f8cff" stroke="#fff" stroke-width="2.5"/><text text-anchor="middle" dy="5" font-size="13">👤</text></g>
+    <g id="areaRing"><circle r="21" fill="none" stroke="#4f8cff" stroke-width="2" stroke-dasharray="3.5 3.5"/></g>
+    <g id="bHigh"><circle r="8" fill="#1e7e46" stroke="#fff" stroke-width="1.5"/><text text-anchor="middle" dy="3" font-size="8" font-weight="700" fill="#fff">✓✓</text></g>
+    <g id="bReas"><circle r="8" fill="#3fae5e" stroke="#fff" stroke-width="1.5"/><text text-anchor="middle" dy="3.5" font-size="10" font-weight="700" fill="#fff">✓</text></g>
+    <g id="bLow"><circle r="8" fill="#e0a21b" stroke="#fff" stroke-width="1.5"/><text text-anchor="middle" dy="3.5" font-size="10" font-weight="700" fill="#fff">?</text></g>
+    <g id="bNo"><circle r="8" fill="#d9403a" stroke="#fff" stroke-width="1.5"/><text text-anchor="middle" dy="3.5" font-size="10" font-weight="700" fill="#fff">✗</text></g>
+  </defs>
+  <rect width="900" height="700" fill="#e8e2d0"/>
+  <text x="20" y="30" font-size="17" font-weight="700" fill="#222">Pins: Confidence (corner badge) × precision (fade for time, dashed ring for place)</text>
+
+  <!-- column headers -->
+  <g font-size="12" fill="#333" text-anchor="middle">
+    <text x="250" y="62">exact date, at a point</text>
+    <text x="410" y="62">inside a date range</text>
+    <text x="410" y="76" fill="#666">("possibly here")</text>
+    <text x="570" y="62">somewhere in an area</text>
+    <text x="730" y="62">in a range AND in an area</text>
+  </g>
+  <!-- row labels -->
+  <g font-size="13" fill="#222">
+    <text x="20" y="120">Ungraded (blank)</text>
+    <text x="20" y="190">High Confidence</text>
+    <text x="20" y="260">Reasonable Confidence</text>
+    <text x="20" y="330">Low Confidence</text>
+    <text x="20" y="400">No Confidence</text>
+  </g>
+  <line x1="200" y1="88" x2="200" y2="420" stroke="#bbb"/>
+
+  <!-- rows: y = 115, 185, 255, 325, 395 ; cols x = 250, 410, 570, 730 -->
+  <!-- Ungraded -->
+  <use href="#pin" x="250" y="115"/>
+  <g opacity="0.45"><use href="#pin" x="410" y="115"/></g>
+  <use href="#areaRing" x="570" y="115"/><use href="#pin" x="570" y="115"/>
+  <g opacity="0.45"><use href="#areaRing" x="730" y="115"/><use href="#pin" x="730" y="115"/></g>
+  <!-- High -->
+  <use href="#pin" x="250" y="185"/><use href="#bHigh" x="262" y="173"/>
+  <g opacity="0.45"><use href="#pin" x="410" y="185"/></g><use href="#bHigh" x="422" y="173"/>
+  <use href="#areaRing" x="570" y="185"/><use href="#pin" x="570" y="185"/><use href="#bHigh" x="582" y="173"/>
+  <g opacity="0.45"><use href="#areaRing" x="730" y="185"/><use href="#pin" x="730" y="185"/></g><use href="#bHigh" x="742" y="173"/>
+  <!-- Reasonable -->
+  <use href="#pin" x="250" y="255"/><use href="#bReas" x="262" y="243"/>
+  <g opacity="0.45"><use href="#pin" x="410" y="255"/></g><use href="#bReas" x="422" y="243"/>
+  <use href="#areaRing" x="570" y="255"/><use href="#pin" x="570" y="255"/><use href="#bReas" x="582" y="243"/>
+  <g opacity="0.45"><use href="#areaRing" x="730" y="255"/><use href="#pin" x="730" y="255"/></g><use href="#bReas" x="742" y="243"/>
+  <!-- Low -->
+  <use href="#pin" x="250" y="325"/><use href="#bLow" x="262" y="313"/>
+  <g opacity="0.45"><use href="#pin" x="410" y="325"/></g><use href="#bLow" x="422" y="313"/>
+  <use href="#areaRing" x="570" y="325"/><use href="#pin" x="570" y="325"/><use href="#bLow" x="582" y="313"/>
+  <g opacity="0.45"><use href="#areaRing" x="730" y="325"/><use href="#pin" x="730" y="325"/></g><use href="#bLow" x="742" y="313"/>
+  <!-- No -->
+  <use href="#pin" x="250" y="395"/><use href="#bNo" x="262" y="383"/>
+  <g opacity="0.45"><use href="#pin" x="410" y="395"/></g><use href="#bNo" x="422" y="383"/>
+  <use href="#areaRing" x="570" y="395"/><use href="#pin" x="570" y="395"/><use href="#bNo" x="582" y="383"/>
+  <g opacity="0.45"><use href="#areaRing" x="730" y="395"/><use href="#pin" x="730" y="395"/></g><use href="#bNo" x="742" y="383"/>
+
+  <text x="20" y="445" font-size="12" fill="#444">The badge stays at full strength even when the pin is faded, so a doubtful-but-possibly-here pin still reads clearly.</text>
+
+  <!-- ===== Ties ===== -->
+  <text x="20" y="490" font-size="17" font-weight="700" fill="#222">Tie lines on the map and edges in the Ties / Network graphs</text>
+  <g font-size="13" fill="#222">
+    <text x="20" y="528">Ungraded</text>
+    <text x="20" y="563">High Confidence</text>
+    <text x="20" y="598">Reasonable Confidence</text>
+    <text x="20" y="633">Low Confidence</text>
+    <text x="20" y="668">No Confidence</text>
+  </g>
+  <g stroke="#e67e22" stroke-width="2.5" stroke-dasharray="6 6">
+    <line x1="200" y1="524" x2="440" y2="524"/>
+    <line x1="200" y1="559" x2="440" y2="559"/>
+    <line x1="200" y1="594" x2="440" y2="594"/>
+    <line x1="200" y1="629" x2="440" y2="629"/>
+    <line x1="200" y1="664" x2="440" y2="664"/>
+  </g>
+  <use href="#bHigh" x="320" y="559"/>
+  <use href="#bReas" x="320" y="594"/>
+  <use href="#bLow" x="320" y="629"/>
+  <use href="#bNo" x="320" y="664"/>
+
+  <text x="480" y="528" font-size="13" fill="#222">Tie with approximate dates:</text>
+  <g opacity="0.45"><line x1="480" y1="559" x2="720" y2="559" stroke="#e67e22" stroke-width="2.5" stroke-dasharray="6 6"/></g>
+  <use href="#bReas" x="600" y="559"/>
+  <text x="480" y="590" font-size="12" fill="#444">Faded while the slider is inside the tie's</text>
+  <text x="480" y="606" font-size="12" fill="#444">date range but before its most-likely date;</text>
+  <text x="480" y="622" font-size="12" fill="#444">the badge stays solid. In the graphs (no</text>
+  <text x="480" y="638" font-size="12" fill="#444">time) only the badge is used.</text>
+  <circle cx="700" cy="664" r="14" fill="#4f8cff" stroke="#fff" stroke-width="2.5"/><circle cx="820" cy="664" r="14" fill="#27ae60" stroke="#fff" stroke-width="2.5"/>
+  <line x1="714" y1="664" x2="806" y2="664" stroke="#e67e22" stroke-width="2.5"/><use href="#bLow" x="760" y="664"/>
+  <text x="480" y="668" font-size="12" fill="#444">Graph edge, Low Confidence:</text>
+</svg>
