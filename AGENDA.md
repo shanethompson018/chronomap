@@ -16,7 +16,12 @@ Going through these in order:
         Any of them may be left empty (a one-sided limit leaves earliest or latest empty).
       - Most likely is optional; when empty the app uses the midpoint of earliest and latest. The most
         likely value places the marker on the slider; earliest and latest feed the conflict check.
-      - Open: the same tick box on a relation's gap (under discussion); slider behaviour for ranges.
+      - The same tick box on a relation's gap (earliest / most likely / latest gap). A computed date's
+        range is the anchor's range combined with the gap's range, end to end, so ranges widen along a
+        chain of rough steps and stay the same width through exact steps. "Before" relations flip which
+        ends combine. The conflict check compares ranges: a value inside the other's range agrees.
+      - Open: how a range shows on the map (under discussion: show the marker through the whole range,
+        two copies if two ranges overlap; exact-dated facts versus approximate ones at the same moment).
 - [ ] **1b. Approximate areas and locations.** Country boundaries that are only roughly known; where a
       person was at a time when the text gives a region rather than a place ("in the land of Nod").
 - [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
@@ -41,3 +46,10 @@ Going through these in order:
 - [ ] **Combining fields and ties.** A field that names another marker ("Father: Adam") could be a tie,
       and a tie could appear as a field in the info bubble. One model so the same fact is not entered
       twice; how category field lists and link types relate.
+
+## 5. Points, areas and routes attached to fields and ties
+
+- [ ] Today a position, area or route is a stand-alone thing on a marker. Idea: attach them to the field
+      or tie that states the fact ("lived at Haran" carries the point; "ruled Judah" carries the area;
+      "fled to Egypt" carries the route), so a place is not entered twice and the map shows where a fact
+      happened. To be discussed when we reach it; overlaps with 3 (Areas) and 4.
