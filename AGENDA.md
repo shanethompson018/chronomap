@@ -1,26 +1,37 @@
 # Chrono Map – Agenda
 
 Things to work on next. This is a working list, separate from the app itself; add to it freely and
-cross items off as they land.
+cross items off as they land. We go through it one item at a time.
 
-## Time
+## 1. Approximation
 
-- [ ] **Approximation.** Dates and relation offsets that are not exact: "about 40 years", "circa 1200 BC",
-      "some years later", "before X", ranges and ± uncertainty. Decide how an approximate date shows on the
-      slider and in the info bubble, and how the conflict checker treats two values that overlap within
-      their uncertainty.
-- [x] Date relations (fixed gaps between dates, pinned vs computed dates, conflicts, undeterminable) – built 19 Oct 2026.
-      Keep notes here on what still feels awkward in use.
+Going through these in order:
 
-## Markers
+- [ ] **1a. Approximate times.** Dates and relation gaps that are not exact: "about 40 years",
+      "between 30 and 50 years", "at least 40 years", "before Noah died". How to write them, how they
+      carry through date relations, how the conflict check treats overlapping ranges, how they show on
+      the slider and in the bubble.
+- [ ] **1b. Approximate areas and locations.** Country boundaries that are only roughly known; where a
+      person was at a time when the text gives a region rather than a place ("in the land of Nod").
+- [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
+- [x] Date relations (fixed gaps, pinned vs computed, conflicts, undeterminable) – built 19 Oct 2026.
 
-- [ ] **Areas.** (to discuss) What areas and borders should be able to do beyond the current draw-a-shape:
-      changing shape over time more easily, labels inside the area, relations between an area and the
-      people/events inside it, areas following a person (a kingdom's extent at a ruler's death), importing
-      real border data.
+## 2. Grading of information (name to be decided)
 
-## Fields and ties
+- [ ] A grade on every piece of input (dates, positions, areas, ties, fields, sources) saying how far it
+      can be trusted. Name still open: credibility, reliability, certainty, veracity, probability,
+      validity. Levels to be decided. To be discussed alongside the approximation items, since
+      "approximate" and "uncertain" overlap.
 
-- [ ] **Combining fields and ties.** (to discuss) A field that names another marker ("Father: Adam") could be
-      a tie, and a tie could appear as a field in the info bubble. Work out one model so the same fact is
-      not entered twice, and how category field lists and link types relate.
+## 3. Markers
+
+- [ ] **Areas.** What areas and borders should be able to do beyond the current draw-a-shape: changing
+      shape over time more easily, labels inside the area, relations between an area and the people and
+      events inside it, areas following a person (a kingdom's extent at a ruler's death), importing real
+      border data. Overlaps with 1b.
+
+## 4. Fields and ties
+
+- [ ] **Combining fields and ties.** A field that names another marker ("Father: Adam") could be a tie,
+      and a tie could appear as a field in the info bubble. One model so the same fact is not entered
+      twice; how category field lists and link types relate.
