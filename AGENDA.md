@@ -155,6 +155,10 @@ Going through these in order:
       category, link type, pin/area/path, Appears/Disappears, and the labels on buttons and tabs) and
       decide whether each is the clearest word for a reader coming from historical texts. One pass,
       after the grading names are settled, so all the terms fit together.
+      Decided so far:
+      - Date relation → **Time gap** (plain; may revisit after feedback from others).
+      - Pinned date → **Anchor** (🔒).
+      - Computed date → under discussion.
 
 ## 5. Points, areas and routes attached to fields and ties
 
