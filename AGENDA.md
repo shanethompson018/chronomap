@@ -29,6 +29,18 @@ Going through these in order:
         here: tabled to item 2, Grading of information, because the look must also carry the grade.
 - [ ] **1b. Approximate areas and locations.** Country boundaries that are only roughly known; where a
       person was at a time when the text gives a region rather than a place ("in the land of Nod").
+      Decisions so far (build later):
+      - A position can be "inside an area" (pointing at an existing area marker) instead of a point.
+      - The person stays a pin, placed at the area's representative point (its centre, or a label spot
+        the area can define). Several people in one area fan out in a small ring rather than stacking.
+      - Hovering or clicking the pin highlights the area in the person's colour with a translucent
+        hatched fill. The area marker itself keeps its solid outline and faint flat fill, so a border
+        never looks like someone's whereabouts. No permanent overlay.
+      - The pin follows the area's shape as it changes over time; the bubble says "Somewhere in X".
+      - Pin styling for "somewhere in" (e.g. a dashed ring) is a precision signal: candidate noted,
+        final look decided in item 2 together with the grade and time-precision looks.
+      - Still open in 1b: boundaries that are themselves only roughly known.
+      - If this does not work well in practice, adjust later.
 - [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
 - [x] Date relations (fixed gaps, pinned vs computed, conflicts, undeterminable) – built 19 Oct 2026.
 
