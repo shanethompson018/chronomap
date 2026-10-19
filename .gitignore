@@ -4,3 +4,5 @@
 Thumbs.db
 desktop.ini
 .DS_Store
+# Session transcripts (personal, kept out of the public repository)
+transcripts/
