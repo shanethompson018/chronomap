@@ -91,6 +91,13 @@ Going through these in order:
       and a tie could appear as a field in the info bubble. One model so the same fact is not entered
       twice; how category field lists and link types relate.
 
+## 6. Review the wording of everything
+
+- [ ] Go over every name the app uses (marker, tie, field, position, source, citation, relation,
+      category, link type, pin/area/path, Appears/Disappears, and the labels on buttons and tabs) and
+      decide whether each is the clearest word for a reader coming from historical texts. One pass,
+      after the grading names are settled, so all the terms fit together.
+
 ## 5. Points, areas and routes attached to fields and ties
 
 - [ ] Today a position, area or route is a stand-alone thing on a marker. Idea: attach them to the field
