@@ -11,6 +11,12 @@ Going through these in order:
       "between 30 and 50 years", "at least 40 years", "before Noah died". How to write them, how they
       carry through date relations, how the conflict check treats overlapping ranges, how they show on
       the slider and in the bubble.
+      Decisions so far (build later):
+      - An "approximation" tick box beside a date opens three boxes: earliest, most likely, latest.
+        Any of them may be left empty (a one-sided limit leaves earliest or latest empty).
+      - Most likely is optional; when empty the app uses the midpoint of earliest and latest. The most
+        likely value places the marker on the slider; earliest and latest feed the conflict check.
+      - Open: the same tick box on a relation's gap (under discussion); slider behaviour for ranges.
 - [ ] **1b. Approximate areas and locations.** Country boundaries that are only roughly known; where a
       person was at a time when the text gives a region rather than a place ("in the land of Nod").
 - [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
