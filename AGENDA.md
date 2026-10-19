@@ -56,6 +56,13 @@ Going through these in order:
         (edges) and in the bubble. Candidate: line style for confidence (solid / dashed / dotted),
         line weight or colour depth for source grade. Final looks decided in item 2.
       - The same two dials apply to dates, positions and fields, not only ties.
+      - A tie's confidence is the user's own judgement and is NEVER derived from the source's grade
+        or from how flatly the source states it. A weak source can carry a confident tie when outside
+        circumstantial evidence supports it; a strong source can carry a doubtful one. The app never
+        sets or changes a confidence grade by itself.
+      - A free-text "reason" box sits beside the confidence grade to record why it was graded that way
+        (ambiguity in the wording, cross-references, circumstantial evidence). Shown in the bubble.
+      - The source's reliability stays separate and informational; it never overrides the fact grade.
 - [x] Date relations (fixed gaps, pinned vs computed, conflicts, undeterminable) – built 19 Oct 2026.
 
 ## 2. Grading of information (name to be decided)
