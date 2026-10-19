@@ -47,6 +47,15 @@ Going through these in order:
         later if it does.
       - If any of this does not work well in practice, adjust later.
 - [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
+      Decisions so far (build later):
+      - Tie dates get the 1a tick box (earliest / most likely / latest), nothing new needed.
+      - The tie itself carries its own confidence ("probably her brother"), separate from the grade
+        of the source that reports it: a strong source can report a doubtful fact and a weak source a
+        confident one. Two dials, both recorded, both shown.
+      - The two must be told apart visually on the map (tie lines), in the Ties and Network graphs
+        (edges) and in the bubble. Candidate: line style for confidence (solid / dashed / dotted),
+        line weight or colour depth for source grade. Final looks decided in item 2.
+      - The same two dials apply to dates, positions and fields, not only ties.
 - [x] Date relations (fixed gaps, pinned vs computed, conflicts, undeterminable) – built 19 Oct 2026.
 
 ## 2. Grading of information (name to be decided)
