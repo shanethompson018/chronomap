@@ -78,7 +78,24 @@ Going through these in order:
       - Ungraded is simply blank: no grade entered, no special level for "cannot be judged".
       - Confidence is never derived from reliability or from the source's wording (see 1c); a reason
         box sits beside every confidence grade.
-      - Still open: how each level looks (map, Ties, Network, bubble), and the items carried in below.
+      Looks (decided; mockups in docs/mockups/confidence-precision-looks.svg and time-fade-levels-75-50.svg):
+      - On the map at a glance: Confidence and precision. Reliability only in the bubble, beside the citation.
+      - Confidence = a small corner badge on the pin: none when ungraded, ✓✓ dark green High,
+        ✓ green Reasonable, ? amber Low, ✗ red No Confidence. Always drawn at full strength.
+        The same badge sits at the midpoint of tie lines on the map and of edges in the Ties and
+        Network graphs.
+      - Time precision = fading of the pin (and of a tie line) while the slider is inside a date range:
+        50% at the earliest and latest dates, 75% at the most-likely date, blended in between.
+        When no most-likely date was entered, a flat 60% across the whole range.
+        A position range peaks in the middle (50 → 75 → 50, then gone). An Appears range climbs
+        (50 → 75 → 100 and stays solid); a Disappears range runs the reverse. Exact dates are 100%.
+        Graph edges have no time axis, so only the badge applies there.
+      - Place precision = a dashed ring in the pin's colour around the white rim when the position is
+        "somewhere in" an area; hover/click still highlights the area (1b).
+      - Each signal uses a different part of the pin, so every combination stays readable, and colour
+        and icon remain free for the category and the profile picture.
+      - The "credible source but only an approximation" conundrum resolves itself: a full-strength
+        badge on a faded pin, with the source's Reliability in the bubble.
       Carried in from 1a:
       - Each grade should look different on the map and in the bubble (transparency, symbol, outline…).
       - The same look must also show "possibly here" (inside a range) versus "known here" (exact date).
