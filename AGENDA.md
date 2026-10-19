@@ -39,8 +39,13 @@ Going through these in order:
       - The pin follows the area's shape as it changes over time; the bubble says "Somewhere in X".
       - Pin styling for "somewhere in" (e.g. a dashed ring) is a precision signal: candidate noted,
         final look decided in item 2 together with the grade and time-precision looks.
-      - Still open in 1b: boundaries that are themselves only roughly known.
-      - If this does not work well in practice, adjust later.
+      - Rough boundaries: a combination of "certain core + largest possible extent" (two outlines,
+        like earliest and latest for a date) and "edge by edge" (each side of an outline marked firm
+        or rough: solid where a coast, river or treaty line fixes it, dashed with a soft band where it
+        is a guess). Mockup: docs/mockups/border-approximation-options.svg. Both are optional per
+        area; a plain single outline stays the default. Watch that it does not muddy the map; adjust
+        later if it does.
+      - If any of this does not work well in practice, adjust later.
 - [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
 - [x] Date relations (fixed gaps, pinned vs computed, conflicts, undeterminable) – built 19 Oct 2026.
 
