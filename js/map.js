@@ -192,9 +192,11 @@ window.MapView = (() => {
       if (!passesFilter(m) || !Store.visibleAt(m, tt)) continue;
       const mv = Store.positionAt(m, tt);
       if (!Store.hasLocation(mv)) continue;
-      if (m.kind !== 'pin' && !(mv.coords && mv.coords.length)) continue;
-      if (m.kind === 'pin' && (mv.lat == null || mv.lng == null)) continue;
-      upsert(m, mv); keep.add(m.id);
+      const geo = Store.resolveMove(mv, tt);
+      if (!geo) continue;
+      if (m.kind !== 'pin' && !(geo.coords && geo.coords.length)) continue;
+      if (m.kind === 'pin' && geo.lat == null && !(geo.coords && geo.coords.length)) continue;
+      upsert(m, geo); keep.add(m.id);
     }
     for (const [id, rec] of layers) if (!keep.has(id)) { map.removeLayer(rec.layer); layers.delete(id); }
     drawTies(keep, tt);
@@ -217,12 +219,14 @@ window.MapView = (() => {
     layer.bindPopup(() => popupContent(id), { maxWidth: 360, minWidth: 260, maxHeight: 340, className: 'cm-popup' });
   }
 
-  function upsert(m, mv) {
+  function upsert(m, geo) {
     const color = Store.displayColor(m), icon = Store.displayIcon(m);
     let rec = layers.get(m.id);
     if (rec && rec.kind !== m.kind) { map.removeLayer(rec.layer); layers.delete(m.id); rec = null; }
     if (m.kind === 'pin') {
-      const ll = [+mv.lat, +mv.lng];
+      let ll;
+      if (geo.lat != null) ll = [+geo.lat, +geo.lng];
+      else { const c = geo.coords.reduce((a, p) => [a[0] + +p[0], a[1] + +p[1]], [0, 0]); ll = [c[0] / geo.coords.length, c[1] / geo.coords.length]; }
       const sig = `${color}|${icon}|${m.name}|${showLabels}|${Photos.thumb(m.photoId) || ''}`;
       if (!rec) {
         const layer = L.marker(ll, { icon: pinIcon(m, color, icon), riseOnHover: true });
@@ -233,7 +237,7 @@ window.MapView = (() => {
         if (rec.sig !== sig) { rec.layer.setIcon(pinIcon(m, color, icon)); rec.sig = sig; }
       }
     } else {
-      const coords = mv.coords.map(c => [+c[0], +c[1]]);
+      const coords = geo.coords.map(c => [+c[0], +c[1]]);
       if (!rec) {
         const layer = m.kind === 'area'
           ? L.polygon(coords, { color, weight: 2, fillOpacity: 0.18 })
@@ -314,14 +318,14 @@ window.MapView = (() => {
   // Pan to one position (a move) and flash a highlight there, whatever the slider says.
   let highlight = null;
   function showPosition(mv, kind) {
-    if (!Store.hasLocation(mv)) { UI.toast('This position has no location yet'); return; }
+    if (!Store.hasLocation(mv)) { UI.toast('This location has no place set yet'); return; }
     if (highlight) { map.removeLayer(highlight); highlight = null; }
     if (kind === 'pin' || !(mv.coords && mv.coords.length)) {
       const ll = L.latLng(+mv.lat, +mv.lng);
       goTo(ll, Math.max(map.getZoom(), 7));
       highlight = L.circleMarker(ll, { radius: 22, color: App.isEink() ? '#000' : '#ffb84f', weight: 3, fillOpacity: 0.15, className: 'pulse' }).addTo(map);
     } else {
-      const coords = mv.coords.map(c => [+c[0], +c[1]]);
+      const coords = geo.coords.map(c => [+c[0], +c[1]]);
       const hc = App.isEink() ? '#000' : '#ffb84f';
       const shape = kind === 'area' ? L.polygon(coords, { color: hc, weight: 3, dashArray: '6 4', fillOpacity: 0.1 }) : L.polyline(coords, { color: hc, weight: 6, opacity: 0.6 });
       goToBounds(shape.getBounds());
@@ -392,13 +396,15 @@ window.MapView = (() => {
   function addPin() {
     App.showTab('map');
     pickPoint(ll => {
-      Editor.openNew({ name: 'New marker', kind: 'pin', categoryId: defaultCategory('pin'), moves: [{ date: defaultMoveDate(), lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) }] });
-    }, 'Click on the map where the new pin should be');
+      Editor.openNew({ name: 'New marker', kind: 'pin', categoryId: defaultCategory('pin'),
+        facts: [{ typeId: 'ft_located', date: defaultMoveDate(), where: { kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) } }] });
+    }, 'Click on the map where the new point should be');
   }
   function addShape(kind) {
     App.showTab('map');
     drawShape(kind, [], coords => {
-      Editor.openNew({ name: kind === 'area' ? 'New area' : 'New path', kind, categoryId: defaultCategory(kind), moves: [{ date: defaultMoveDate(), coords: coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]) }] });
+      Editor.openNew({ name: kind === 'area' ? 'New area' : 'New route', kind, categoryId: defaultCategory(kind),
+        facts: [{ typeId: kind === 'area' ? 'ft_border' : 'ft_located', date: defaultMoveDate(), where: { kind: kind === 'area' ? 'area' : 'route', coords: coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]) } }] });
     });
   }
 

@@ -1,4 +1,4 @@
-/* Data tab: categories, link types, the full marker table, and backup / restore. */
+/* Library tab: sync, time gaps, sources, images, categories, fact types, tie types, the marker table, and backup / restore. */
 window.DataTab = (() => {
   const { h } = UI;
   let host, search = '';
@@ -15,7 +15,7 @@ window.DataTab = (() => {
   function render() {
     const scroll = host.scrollTop;
     host.innerHTML = '';
-    host.append(syncSection(), relationsSection(), sourcesSection(), photosSection(), categoriesSection(), linkTypesSection(), markersSection(), backupSection());
+    host.append(syncSection(), relationsSection(), sourcesSection(), photosSection(), categoriesSection(), factTypesSection(), linkTypesSection(), markersSection(), backupSection());
     host.scrollTop = scroll;
   }
 
@@ -80,13 +80,13 @@ window.DataTab = (() => {
         h('td', { class: 'narrow' },
           h('button', { class: 'small', onclick: () => Store.updateRelation(r.id, { status: over ? 'active' : 'overruled' }) }, over ? 'Restore' : 'Overrule'), ' ',
           h('button', { class: 'small', onclick: () => { const ref = r.to.kind === 'marker' ? r.to : r.from; Editor.open(ref.kind === 'marker' ? ref.id : (Store.link(ref.id) || {}).fromId); } }, '✏️'), ' ',
-          h('button', { class: 'small danger', onclick: () => { if (confirm('Delete this relation?')) Store.deleteRelation(r.id); } }, '✕'))));
+          h('button', { class: 'small danger', onclick: () => { if (confirm('Delete this time gap?')) Store.deleteRelation(r.id); } }, '✕'))));
     }
-    if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 5, class: 'muted' }, 'No date relations yet. Open a marker and press ⛓ beside one of its dates.')));
+    if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 5, class: 'muted' }, 'No time gaps yet. Open a marker and press ⛓ beside one of its dates.')));
     return h('div', { class: 'data-section' },
-      h('h2', {}, `Date relations (${rels.length})`, h('span', { class: 'spacer' }),
+      h('h2', {}, `Time gaps (${rels.length})`, h('span', { class: 'spacer' }),
         conflicts.length ? h('button', { class: 'small conflict-btn', onclick: () => Relations.showConflicts() }, `⚠ ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`) : h('span', { class: 'muted', style: { fontSize: '12px' } }, 'no conflicts'),
-        undetCount ? h('span', { class: 'muted', style: { fontSize: '12px', marginLeft: '10px' } }, `${undetCount} date${undetCount > 1 ? 's' : ''} undetermined (no anchor)`) : null),
+        undetCount ? h('span', { class: 'muted', style: { fontSize: '12px', marginLeft: '10px' } }, `${undetCount} date${undetCount > 1 ? 's' : ''} not yet anchored`) : null),
       h('p', { class: 'hint' }, 'Fixed gaps between dates ("Seth\'s birth = Adam\'s birth + 130 y"). Pinned dates are the anchors; everything else is computed and moves with them. A relation that is overruled stays on record but is left out of the maths.'),
       table);
   }
@@ -124,7 +124,7 @@ window.DataTab = (() => {
     });
     const grid = h('div', { class: 'photo-grid' });
     const list = Store.photos();
-    if (!list.length) grid.append(h('div', { class: 'muted', style: { gridColumn: '1 / -1' } }, 'No photos yet. Add portraits, maps, documents, scene photographs… then pick them as a marker\'s profile picture or gallery.'));
+    if (!list.length) grid.append(h('div', { class: 'muted', style: { gridColumn: '1 / -1' } }, 'No images yet. Add portraits, maps, documents, scene photographs, then pick one as a portrait or add it to a marker.'));
     for (const p of list) {
       const users = Store.photoUsers(p.id).length;
       grid.append(h('div', { class: 'photo-tile', title: `${p.title}${users ? ` · used by ${users} marker(s)` : ''}`, onclick: () => Photos.edit(p.id) },
@@ -132,8 +132,8 @@ window.DataTab = (() => {
         h('div', { class: 'muted', style: { fontSize: '10px' } }, `${(p.citations || []).filter(c => c.sourceId).length} source(s)${users ? ` · ${users} marker(s)` : ''}`)));
     }
     return h('div', { class: 'data-section' },
-      h('h2', {}, `Photos (${list.length})`, h('span', { class: 'muted', style: { fontWeight: 400, fontSize: '12px' } }, `${(Photos.totalBytes() / (1024 * 1024)).toFixed(1)} MB`), status, h('span', { class: 'spacer' }),
-        h('button', { class: 'small', onclick: () => fileInput.click() }, '⬆ Add photos'), fileInput),
+      h('h2', {}, `Images (${list.length})`, h('span', { class: 'muted', style: { fontWeight: 400, fontSize: '12px' } }, `${(Photos.totalBytes() / (1024 * 1024)).toFixed(1)} MB`), status, h('span', { class: 'spacer' }),
+        h('button', { class: 'small', onclick: () => fileInput.click() }, '⬆ Add images'), fileInput),
       h('p', { class: 'hint' }, Photos.isReady()
         ? 'Click a photo to edit its title, caption, credit and sources, or to delete it. Large images are shrunk to 1600 px on the long side. Photos are stored in this browser; use "Export JSON" with photos included to back them up.'
         : 'Photo storage is still loading, or is not available in this browser.'),
@@ -142,7 +142,7 @@ window.DataTab = (() => {
 
   function categoriesSection() {
     const table = h('table', { class: 'grid' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Icon'), h('th', {}, 'Name'), h('th', {}, 'Colour'), h('th', {}, 'Default kind'), h('th', {}, 'Fields (comma separated)'), h('th', {}, 'Default source'), h('th', {}, 'Markers'), h('th', {}))));
+      h('thead', {}, h('tr', {}, h('th', {}, 'Icon'), h('th', {}, 'Name'), h('th', {}, 'Colour'), h('th', {}, 'Default kind'), h('th', {}, 'Fields (comma separated)'), h('th', {}, 'Default source'), h('th', {}, 'Usual facts'), h('th', {}, 'Markers'), h('th', {}))));
     const tb = h('tbody'); table.append(tb);
     for (const c of Store.categories()) {
       const count = Store.markers().filter(m => m.categoryId === c.id).length;
@@ -156,6 +156,7 @@ window.DataTab = (() => {
         h('td', { class: 'narrow' }, kindSel),
         cell(c.fields.join(', '), v => Store.updateCategory(c.id, { fields: v.split(',').map(s => s.trim()).filter(Boolean) })),
         h('td', { class: 'narrow' }, srcSel),
+        h('td', { class: 'narrow' }, h('button', { class: 'small', title: 'Which fact types this category offers first', onclick: () => pickFactTypes(c) }, `${Facts.defaultTypeIdsFor(c).length} facts…`)),
         h('td', { class: 'narrow muted' }, count),
         h('td', { class: 'narrow' }, h('button', { class: 'small danger', onclick: () => { if (confirm(`Delete category "${c.name}"? Its ${count} marker(s) become uncategorised.`)) Store.deleteCategory(c.id); } }, '✕'))));
     }
@@ -183,12 +184,107 @@ window.DataTab = (() => {
         cell(t.toLabel, v => Store.updateLinkType(t.id, { toLabel: v }), { placeholder: 'e.g. child' }),
         h('td', { class: 'narrow' }, top),
         h('td', { class: 'narrow muted' }, count),
-        h('td', { class: 'narrow' }, h('button', { class: 'small danger', onclick: () => { if (confirm(`Delete link type "${t.name}" and its ${count} tie(s)?`)) Store.deleteLinkType(t.id); } }, '✕'))));
+        h('td', { class: 'narrow' }, h('button', { class: 'small danger', onclick: () => { if (confirm(`Delete tie type "${t.name}"? Roles that use it stop making ties (${count} tie(s) now).`)) Store.deleteLinkType(t.id); } }, '✕'))));
     }
     return h('div', { class: 'data-section' },
-      h('h2', {}, 'Link types', h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => { const name = prompt('Link type name (e.g. "Parent of", "Works for", "Phoned"):'); if (name && name.trim()) Store.addLinkType({ name: name.trim(), color: randomColor(), directed: confirm('Is this link directed (one-way, like "Parent of")?\nOK = directed, Cancel = mutual (like "Spouse of").') }); } }, '+ Add link type')),
+      h('h2', {}, 'Tie types', h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => { const name = prompt('Tie type name (e.g. "Parent of", "Works for", "Phoned"):'); if (name && name.trim()) Store.addLinkType({ name: name.trim(), color: randomColor(), directed: confirm('Is this link directed (one-way, like "Parent of")?\nOK = directed, Cancel = mutual (like "Spouse of").') }); } }, '+ Add tie type')),
       h('p', { class: 'hint' }, 'Directed ties draw as arrows and can be laid out as a hierarchy. "Top of hierarchy" says which end sits above the other: for "Parent of" the From side (parent) is on top; for "Member of" the To side (the organisation) is on top.'),
       table);
+  }
+
+  // ---------- fact types ----------
+  function factTypesSection() {
+    const table = h('table', { class: 'grid' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Name'), h('th', {}, 'Date'), h('th', {}, 'Place'), h('th', {}, 'Roles → ties'), h('th', {}, 'Implies'), h('th', {}, 'Details'), h('th', {}, 'Used'), h('th', {}))));
+    const tb = h('tbody'); table.append(tb);
+    const used = new Map();
+    Store.markers().forEach(m => m.facts.forEach(f => used.set(f.typeId, (used.get(f.typeId) || 0) + 1)));
+    for (const t of Store.factTypes().slice().sort((a, b) => a.name.localeCompare(b.name))) {
+      const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}`; }).join(', ');
+      const implies = [t.begins ? 'begins' : null, t.ends ? 'ends' : null, t.placeFrom ? 'place from ' + ((t.roles.find(r => r.id === t.placeFrom) || {}).name || '?') : null].filter(Boolean).join(', ');
+      tb.append(h('tr', {},
+        h('td', {}, t.name),
+        h('td', { class: 'narrow' }, t.hasDate === false ? 'none' : (t.hasEnd ? 'from / until' : 'single')),
+        h('td', { class: 'narrow' }, t.place),
+        h('td', {}, roles || h('span', { class: 'muted' }, '—')),
+        h('td', {}, implies || h('span', { class: 'muted' }, '—')),
+        h('td', {}, (t.details || []).join(', ')),
+        h('td', { class: 'narrow muted' }, used.get(t.id) || 0),
+        h('td', { class: 'narrow' },
+          h('button', { class: 'small', onclick: () => editFactType(t.id) }, '✏️'), ' ',
+          h('button', { class: 'small danger', title: 'Delete (facts of this type become plain Notes)', onclick: () => { if (confirm(`Delete fact type "${t.name}"? ${used.get(t.id) || 0} fact(s) of this type become plain Notes.`)) Store.deleteFactType(t.id); } }, '✕'))));
+    }
+    return h('div', { class: 'data-section' },
+      h('h2', {}, 'Fact types', h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => editFactType(null) }, '+ Add fact type')),
+      h('p', { class: 'hint' }, 'What kinds of facts a marker can have, and what each kind means: whether it has a date (or a from/until span), what sort of place it can carry, which roles it names (each role makes a tie of the chosen type), and whether it begins or ends the marker.'),
+      table);
+  }
+
+  // Modal editor for one fact type. cb(type|null) runs when it closes.
+  function editFactType(id, cb) {
+    const existing = id ? Store.factType(id) : null;
+    const t = existing ? JSON.parse(JSON.stringify(existing)) : { name: '', hasDate: true, hasEnd: false, place: 'any', roles: [], begins: false, ends: false, details: [], placeFrom: null };
+    const name = h('input', { type: 'text', value: t.name, placeholder: 'e.g. Reigned, Baptised, Exiled' });
+    const hasDate = h('input', { type: 'checkbox', checked: t.hasDate !== false });
+    const hasEnd = h('input', { type: 'checkbox', checked: !!t.hasEnd });
+    const place = UI.select([['any', 'any (point, outline, or another marker)'], ['point', 'a point or another marker'], ['area', 'an area outline or another marker'], ['route', 'a route or another marker'], ['none', 'no place']], t.place);
+    const begins = h('input', { type: 'checkbox', checked: !!t.begins });
+    const ends = h('input', { type: 'checkbox', checked: !!t.ends });
+    const details = h('input', { type: 'text', value: (t.details || []).join(', '), placeholder: 'e.g. Cause, Outcome, Age' });
+    const rolesHost = h('div');
+    const placeFrom = h('select');
+    function renderRoles() {
+      rolesHost.innerHTML = '';
+      t.roles.forEach((r, i) => {
+        const nm = h('input', { type: 'text', value: r.name, placeholder: 'role, e.g. Father' }); nm.addEventListener('input', () => { r.name = nm.value; renderPlaceFrom(); });
+        const tie = UI.select([['', '— no tie —'], ...Store.linkTypes().map(x => [x.id, x.name]), ['__new', '+ New tie type…']], r.tieTypeId || '');
+        tie.addEventListener('change', () => {
+          if (tie.value === '__new') { const n = prompt('Tie type name (e.g. "Parent of"):'); if (n && n.trim()) { const lt = Store.addLinkType({ name: n.trim(), color: randomColor(), directed: confirm('Is this tie directed (one-way, like "Parent of")?\nOK = directed, Cancel = mutual (like "Spouse of").') }); r.tieTypeId = lt.id; } renderRoles(); return; }
+          r.tieTypeId = tie.value || null;
+        });
+        const dir = UI.select([['other-to-this', 'the other marker → this marker (Father: Adam → Seth)'], ['this-to-other', 'this marker → the other marker (Child: Adam → Seth)']], r.direction || 'this-to-other');
+        dir.addEventListener('change', () => { r.direction = dir.value; });
+        rolesHost.append(h('div', { class: 'card' },
+          h('div', { class: 'ed-row' }, nm, tie, h('button', { class: 'small narrow', title: 'Remove role', onclick: () => { t.roles.splice(i, 1); renderRoles(); renderPlaceFrom(); } }, '✕')),
+          h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Tie direction', dir))));
+      });
+      rolesHost.append(h('button', { class: 'small', onclick: () => { t.roles.push({ id: Store.uid(), name: '', tieTypeId: null, direction: 'this-to-other' }); renderRoles(); renderPlaceFrom(); } }, '+ Add role'));
+    }
+    function renderPlaceFrom() {
+      placeFrom.innerHTML = '';
+      placeFrom.append(h('option', { value: '' }, '— the fact has its own place —'));
+      t.roles.forEach(r => placeFrom.append(h('option', { value: r.id, selected: r.id === t.placeFrom }, `the ${r.name || 'role'}'s location`)));
+    }
+    renderRoles(); renderPlaceFrom();
+    const save = () => {
+      if (!name.value.trim()) { UI.toast('Give the fact type a name', 'error'); return; }
+      const data = { name: name.value.trim(), hasDate: hasDate.checked, hasEnd: hasEnd.checked, place: place.value, begins: begins.checked, ends: ends.checked,
+        details: details.value.split(',').map(s => s.trim()).filter(Boolean), roles: t.roles.filter(r => r.name.trim()), placeFrom: placeFrom.value || null };
+      const saved = existing ? Store.updateFactType(existing.id, data) : Store.addFactType(data);
+      m.close(); cb && cb(saved);
+    };
+    const body = h('div', {},
+      h('label', { class: 'field' }, 'Name', name),
+      h('div', { class: 'ed-row' },
+        h('label', {}, hasDate, ' has a date'), h('label', {}, hasEnd, ' has an end date (from / until)'),
+        h('label', {}, begins, ' begins the marker'), h('label', {}, ends, ' ends the marker')),
+      h('label', { class: 'field' }, 'Place', place),
+      h('label', { class: 'field' }, 'Or take the place from a role', placeFrom),
+      h('div', { class: 'field' }, 'Roles (who else is involved; each makes a tie)', rolesHost),
+      h('label', { class: 'field' }, 'Detail fields (comma separated)', details),
+      h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'primary', onclick: save }, existing ? 'Save' : 'Create'), h('button', { onclick: () => { m.close(); cb && cb(null); } }, 'Cancel')));
+    const m = UI.modal({ title: existing ? 'Fact type: ' + existing.name : 'New fact type', body, width: '720px' });
+    setTimeout(() => name.focus(), 50);
+  }
+
+  // Choose which fact types a category offers first.
+  function pickFactTypes(c) {
+    const current = new Set(Facts.defaultTypeIdsFor(c));
+    const boxes = Store.factTypes().slice().sort((a, b) => a.name.localeCompare(b.name)).map(t => { const cb = h('input', { type: 'checkbox', checked: current.has(t.id) }); return { t, cb, el: h('label', { style: { display: 'block', padding: '3px 0' } }, cb, ' ', t.name) }; });
+    const body = h('div', {}, h('p', { class: 'hint' }, `Facts offered first when editing a ${c.name}. All other fact types stay available under "All fact types".`),
+      ...boxes.map(b => b.el),
+      h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'primary', onclick: () => { Store.updateCategory(c.id, { factTypeIds: boxes.filter(b => b.cb.checked).map(b => b.t.id) }); m.close(); } }, 'Save'), h('button', { onclick: () => m.close() }, 'Cancel')));
+    const m = UI.modal({ title: `Usual facts for ${c.name}`, body, width: '480px' });
   }
 
   function markersSection() {
@@ -199,17 +295,17 @@ window.DataTab = (() => {
     const searchBox = h('input', { type: 'search', placeholder: 'Filter…', value: search, style: { width: '220px' } });
     searchBox.addEventListener('input', () => { search = searchBox.value; const pos = searchBox.selectionStart; render(); const nb = host.querySelector('input[type=search]'); nb.focus(); nb.setSelectionRange(pos, pos); });
     const table = h('table', { class: 'grid' },
-      h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Name'), h('th', {}, 'Category'), h('th', {}, 'Kind'), h('th', {}, 'Appears'), h('th', {}, 'Disappears'), h('th', {}, 'Positions'), h('th', {}, 'Ties'), h('th', {}))));
+      h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Name'), h('th', {}, 'Category'), h('th', {}, 'Shape'), h('th', {}, 'Begins'), h('th', {}, 'Ends'), h('th', {}, 'Facts'), h('th', {}, 'Ties'), h('th', {}))));
     const tb = h('tbody'); table.append(tb);
     for (const m of shown) {
       tb.append(h('tr', {},
         h('td', { class: 'narrow' }, h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m))),
         h('td', {}, h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => Editor.open(m.id) }, m.name)),
         h('td', {}, Store.category(m.categoryId)?.name || h('span', { class: 'muted' }, '—')),
-        h('td', {}, m.kind),
+        h('td', {}, { pin: 'Point', area: 'Area', path: 'Route' }[m.kind] || m.kind),
         h('td', {}, m.start ? `${Dates.formatInput(m.start)}${m.startLabel ? ' (' + m.startLabel + ')' : ''}` : ''),
         h('td', {}, m.end ? `${Dates.formatInput(m.end)}${m.endLabel ? ' (' + m.endLabel + ')' : ''}` : ''),
-        h('td', { class: 'narrow muted' }, m.moves.length),
+        h('td', { class: 'narrow muted' }, m.facts.length),
         h('td', { class: 'narrow muted' }, Store.linksOf(m.id).length),
         h('td', { class: 'narrow' },
           h('button', { class: 'small', onclick: () => Editor.open(m.id), title: 'Edit' }, '✏️'), ' ',
@@ -270,5 +366,5 @@ window.DataTab = (() => {
     return '#' + [f(0), f(8), f(4)].map(x => Math.round(255 * x).toString(16).padStart(2, '0')).join('');
   }
 
-  return { init, show };
+  return { init, show, editFactType, pickFactTypes };
 })();

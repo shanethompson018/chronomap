@@ -1,6 +1,6 @@
 /* Date relations: "Seth's birth = Adam's birth + 130 years".
  *
- * Every dated thing is a slot (a marker's Appears/Disappears, a position's date, a tie's from/until). A relation
+ * Every dated thing is a slot (a fact's date, or its end date). A time gap (relation)
  * says slot B = slot A + offset. The solver walks each connected group of slots from its pinned dates and fills
  * in the rest; a group with no pinned date is "undetermined". When two routes give different dates for one slot,
  * that is a conflict, listed in the conflicts panel where the user picks a value or marks the slot undeterminable.
@@ -116,7 +116,7 @@ window.Relations = (() => {
     const mos = h('input', { type: 'number', value: 0, style: { width: '70px' } });
     const dys = h('input', { type: 'number', value: 0, style: { width: '70px' } });
     const dir = UI.select([['after', 'after'], ['before', 'before']], 'after');
-    const ownerId = thisRef.kind === 'marker' ? thisRef.id : (Store.link(thisRef.id) || {}).fromId;
+    const ownerId = thisRef.id;
     const markerSel = UI.markerSelect({ placeholder: 'Other marker…', onChange: fillSlots });
     const slotSel = h('select');
     const srcSel = UI.sourceSelect({ onChange: v => { src = v; } });
@@ -177,7 +177,7 @@ window.Relations = (() => {
             h('button', { class: 'small', onclick: () => { useValue(c, cand); render(); } }, 'Use this')));
         }
         card.append(h('div', { style: { marginTop: '6px' } }, h('button', { class: 'small', onclick: () => { Store.setUndetermined(c.ref, true); render(); } }, 'Mark undeterminable'),
-          ' ', h('button', { class: 'small', onclick: () => { Editor.open(c.ref.kind === 'marker' ? c.ref.id : (Store.link(c.ref.id) || {}).fromId); } }, 'Open marker')));
+          ' ', h('button', { class: 'small', onclick: () => { Editor.open(c.ref.id); } }, 'Open marker')));
         body.append(card);
       }
     };

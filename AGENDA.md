@@ -127,7 +127,8 @@ Going through these in order:
 
 ## 4. Fields and ties
 
-- [ ] **Combining fields and ties → "a marker is a list of facts".** Decided (build later):
+- [x] **Combining fields and ties → "a marker is a list of facts".** Built 19 Oct 2026 (js/facts.js, editor
+      rewritten, Library tab with fact types, existing data converted automatically). Decided:
       - Every statement about a marker is one *fact* with up to five parts: what happened (its
         type), when (exact date or 1a range), where (a point, an area, a place marker, a shape, or
         unknown), who else was involved (other markers, each with a role), and the evidence (source,
@@ -151,11 +152,8 @@ Going through these in order:
 
 ## 6. Review the wording of everything
 
-- [ ] Go over every name the app uses (marker, tie, field, position, source, citation, relation,
-      category, link type, pin/area/path, Appears/Disappears, and the labels on buttons and tabs) and
-      decide whether each is the clearest word for a reader coming from historical texts. One pass,
-      after the grading names are settled, so all the terms fit together.
-      Decided (apply when building):
+- [x] Go over every name the app uses and decide whether each is the clearest word for a reader coming
+      from historical texts. Decided and applied 19 Oct 2026 with the facts build:
       - Date relation → **Time gap** (plain; may revisit after feedback from others).
       - Pinned date → **Anchor** (🔒). Computed date → **Reckoned** (⛓), e.g. "reckoned from Adam's birth, time gap 130 y".
       - Chain without an anchor → **Not yet anchored**; the user's own decision → **Undeterminable**.

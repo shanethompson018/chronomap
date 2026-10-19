@@ -112,7 +112,7 @@ window.SampleData = (() => {
       { id: 'm_declaration', name: 'Declaration of Independence', categoryId: cat.document, start: '1776-07-04', startLabel: 'Adopted',
         summary: 'Adopted by the Second Continental Congress on 4 July 1776.',
         fields: { Author: 'Thomas Jefferson (drafter); Committee of Five', Adopted: '4 July 1776' },
-        description: 'Most delegates signed the engrossed copy on 2 August 1776, not 4 July.\nUse the Ties tab with link type "Signed by" and this marker as hub to see the signers.',
+        description: 'Most delegates signed the engrossed copy on 2 August 1776, not 4 July.\nUse the Ties tab with tie type "Signed by" and this marker as hub to see the signers.',
         moves: [pin('1776-07-04', 'philadelphia', 'Philadelphia, Independence Hall')] },
       { id: 'm_congress', name: 'Second Continental Congress', categoryId: cat.org, start: '1775-05-10', startLabel: 'Convened', end: '1781-03-01', endLabel: 'Replaced by Congress of the Confederation',
         summary: 'Governing body of the colonies during the Revolution.',

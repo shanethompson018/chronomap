@@ -196,7 +196,7 @@ window.Sync = (() => {
       let remote = null, remoteText = null;
       if (dataId) {
         remoteText = await (await download(dataId)).text();
-        try { remote = JSON.parse(remoteText); } catch (e) { remote = null; }
+        try { remote = Store.normalizeDoc(JSON.parse(remoteText)); } catch (e) { remote = null; } // brings an older layout up to date before merging
       }
       const local = Store.exportSyncDoc();
       let merged;

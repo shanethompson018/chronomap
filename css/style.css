@@ -348,3 +348,13 @@ body.eink .graph-empty { color: #000; }
 .toast { background: #2c3240; border: 1px solid var(--border); padding: 8px 14px; border-radius: var(--radius); box-shadow: 0 6px 20px rgba(0,0,0,.5); animation: fadein .2s; }
 .toast.error { border-color: var(--danger); }
 @keyframes fadein { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none; } }
+
+/* ---------- facts in the editor and bubble ---------- */
+.fact-card { border-left: 3px solid var(--accent); }
+.fact-card .ed-row { margin-bottom: 6px; }
+.fact-card select { min-width: 0; }
+.fact-where, .fact-role { margin: 4px 0 6px; padding: 6px 8px; background: rgba(255,255,255,.03); border-radius: 6px; }
+.fact-role .ed-row { margin-bottom: 4px; }
+.fact-details { margin: 4px 0 6px; }
+.fact-list li { margin: 3px 0; }
+body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px solid #ccc; }

@@ -1,4 +1,4 @@
-/* Ties tab: every marker joined by one kind of tie (or all), optionally narrowed to a hub marker's group. */
+/* Ties tab: every marker joined by one kind of tie (or all), optionally narrowed to a centre marker's group. */
 window.Ties = (() => {
   const $ = id => document.getElementById(id);
   let typeId = '', hubId = null, layout = 'auto', selectedId = null, hubSel, fresh = false;
@@ -18,7 +18,7 @@ window.Ties = (() => {
     const sel = $('ties-type');
     const cur = typeId;
     sel.innerHTML = '';
-    sel.append(UI.h('option', { value: '' }, 'All link types'));
+    sel.append(UI.h('option', { value: '' }, 'All tie types'));
     Store.linkTypes().forEach(t => sel.append(UI.h('option', { value: t.id, selected: t.id === cur }, t.name + (t.directed ? ' (hierarchy)' : ''))));
     if (cur && !Store.linkType(cur)) typeId = '';
     sel.value = typeId;
@@ -54,7 +54,7 @@ window.Ties = (() => {
     Graph.render($('ties-graph'), {
       nodes, links, layout: lay, selectedId, fresh, cacheKey: 'ties:' + typeId + ':' + (hubId || ''),
       showLinkLabels: $('ties-labels').checked,
-      emptyText: hubId ? 'That marker has no ties of this type.' : (Store.links().length ? 'Pick a link type or a hub marker.' : 'No ties yet. Open a marker and add some.'),
+      emptyText: hubId ? 'That marker has no ties of this type.' : (Store.links().length ? 'Pick a tie type or a centre marker.' : 'No ties yet. Ties come from facts that name other markers (Father, Spouse, Member of…).'),
       onNodeClick: id => { selectedId = id; draw(); },
     });
     fresh = false;

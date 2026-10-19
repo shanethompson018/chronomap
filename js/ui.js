@@ -119,10 +119,12 @@ window.UI = (() => {
   }
 
   // Full information block for a marker (used in map popups and the info panels).
+  // Full information block for a marker (used in map bubbles and the info panels).
   function markerInfoHTML(m, t, opts = {}) {
     const cat = Store.category(m.categoryId);
     const color = Store.displayColor(m), icon = Store.displayIcon(m);
-    const kindName = { pin: 'Pin', area: 'Area', path: 'Path' }[m.kind] || m.kind;
+    const kindName = { pin: 'Point', area: 'Area', path: 'Route' }[m.kind] || m.kind;
+    const badge = slot => (window.Relations ? Relations.badgesHTML({ kind: 'marker', id: m.id, slot }) : '');
     const profile = m.photoId && Store.photo(m.photoId) && Photos.url(m.photoId)
       ? `<img class="info-photo" src="${esc(Photos.thumb(m.photoId))}" alt="${esc(Store.photo(m.photoId).title)}" title="${esc(Store.photo(m.photoId).title)}" data-action="view-photo" data-photo="${esc(m.photoId)}">` : '';
     let out = `<div class="info">${profile}<div class="info-head"><span class="swatch" style="background:${esc(color)}">${esc(icon)}</span>`
@@ -130,21 +132,18 @@ window.UI = (() => {
     if (m.summary) out += `<div class="info-summary">${esc(m.summary)}</div>`;
 
     const rows = []; // [label, html, depth]
-    // if a field (or field group) carries the same label as the time span (e.g. "Born"), it usually holds more detail: show it once
-    const hasField = label => label && Object.entries(m.fields || {}).some(([k, v]) => v && (k.toLowerCase() === label.toLowerCase() || k.toLowerCase().startsWith(label.toLowerCase() + '/')));
-    const badge = slot => (window.Relations ? Relations.badgesHTML({ kind: 'marker', id: m.id, slot }) : '');
-    const undet = slot => (m.undetermined || []).includes(slot);
-    if (undet('start')) rows.push([m.startLabel || 'Appears', '<span class="muted">undeterminable</span>' + badge('start')]);
-    else if (m.start && !hasField(m.startLabel)) rows.push([m.startLabel || 'Appears', Dates.formatInput(m.start) + badge('start')]);
-    if (undet('end')) rows.push([m.endLabel || 'Disappears', '<span class="muted">undeterminable</span>' + badge('end')]);
-    else if (m.end && !hasField(m.endLabel)) rows.push([m.endLabel || 'Disappears', Dates.formatInput(m.end) + badge('end')]);
+    const span = [];
+    if (m.start) span.push(`${esc(m.startLabel || 'Begins')} ${esc(Dates.formatInput(m.start))}`);
+    if (m.end) span.push(`${esc(m.endLabel || 'Ends')} ${esc(Dates.formatInput(m.end))}`);
+    if (span.length) rows.push(['Span', span.join(' · '), 0]);
     const pos = Store.positionAt(m, t);
     if (pos && Store.hasLocation(pos)) {
-      let where = pos.label || (pos.coords ? `${pos.coords.length} points` : `${(+pos.lat).toFixed(3)}, ${(+pos.lng).toFixed(3)}`);
+      let where = pos.label || (pos.atMarkerId ? (Store.marker(pos.atMarkerId) || {}).name : '') || (pos.coords ? `${pos.coords.length} points` : `${(+pos.lat).toFixed(3)}, ${(+pos.lng).toFixed(3)}`);
+      if (pos.atMarkerId) where = 'at / in ' + where;
       if (pos.date) where += ` <span class="muted">(since ${esc(Dates.formatInput(pos.date))})</span>`;
-      rows.push([t == null ? 'Latest location' : 'Location', where]);
+      rows.push([t == null ? 'Latest location' : 'Location', where, 0]);
     } else if (m.moves.length && t != null) {
-      rows.push(['Location', '<span class="muted">not on the map at this time</span>']);
+      rows.push(['Location', '<span class="muted">not on the map at this time</span>', 0]);
     }
     const walk = (node, depth) => {
       const v = (m.fields || {})[node.key];
@@ -158,24 +157,25 @@ window.UI = (() => {
     fieldTree(m.fields).forEach(n => walk(n, 0));
     if (rows.length) out += '<dl>' + rows.map(([k, v, depth]) => `<dt${depth ? ` style="padding-left:${depth * 12}px"` : ''}>${depth ? '↳ ' : ''}${esc(k)}</dt><dd>${v}</dd>`).join('') + '</dl>';
     if (m.tags && m.tags.length) out += '<div>' + m.tags.map(tg => `<span class="tag">${esc(tg)}</span>`).join('') + '</div>';
-    if (m.description) out += `<h4>Notes</h4><div class="desc">${textToHTML(m.description)}</div>`;
-    const gallery = (m.photoIds || []).map(pid => Store.photo(pid)).filter(p => p && Photos.thumb(p.id));
-    if (gallery.length) out += `<h4>Photos (${gallery.length})</h4><div class="info-gallery">` + gallery.map(p => `<img src="${esc(Photos.thumb(p.id))}" alt="${esc(p.title)}" title="${esc(p.title)}" data-action="view-photo" data-photo="${esc(p.id)}">`).join('') + '</div>';
 
-    if (m.moves.length > 1 || (m.moves.length === 1 && m.moves[0].date)) {
-      out += `<h4>Movements (${m.moves.length})</h4><ul>` + Store.sortedMoves(m).map(mv => {
-        const when = mv.date ? Dates.formatInput(mv.date) : 'start';
-        const where = mv.label || (mv.coords ? `${mv.coords.length} points` : (mv.lat != null ? `${(+mv.lat).toFixed(2)}, ${(+mv.lng).toFixed(2)}` : 'no location'));
-        return `<li><span class="muted">${esc(when)}:</span>${badge('move:' + mv.id)} ${esc(where)}${mv.note ? ` <span class="muted">– ${esc(mv.note)}</span>` : ''}${mv.sourceId ? ' ' + citeHTML(mv.sourceId, mv.page) : ''}</li>`;
+    // facts, in date order (undated last)
+    const facts = (m.facts || []).map((f, i) => ({ f, i, d: f.date ? Dates.toDays(f.date) : null }))
+      .sort((a, b) => (a.d == null && b.d == null) ? a.i - b.i : a.d == null ? 1 : b.d == null ? -1 : a.d - b.d);
+    if (facts.length) out += `<h4>Facts (${facts.length})</h4><ul class="fact-list">` + facts.map(({ f }) => factLineHTML(m, f, badge)).join('') + '</ul>';
+    const mentions = Store.mentionsOf(m.id);
+    if (mentions.length) {
+      out += `<h4>Mentioned in (${mentions.length})</h4><ul class="fact-list">` + mentions.map(x => {
+        const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : 'as the place';
+        return `<li><a class="mlink" data-action="goto-marker" data-id="${esc(x.marker.id)}">${esc(x.marker.name)}</a> · ${esc(Store.factTitle(x.fact))}${x.fact.date ? ` <span class="muted">${esc(Dates.formatInput(x.fact.date))}</span>` : ''} <span class="muted">(${how})</span></li>`;
       }).join('') + '</ul>';
     }
+    if (m.description) out += `<h4>Notes</h4><div class="desc">${textToHTML(m.description)}</div>`;
+    const gallery = (m.photoIds || []).map(pid => Store.photo(pid)).filter(p => p && Photos.thumb(p.id));
+    if (gallery.length) out += `<h4>Images (${gallery.length})</h4><div class="info-gallery">` + gallery.map(p => `<img src="${esc(Photos.thumb(p.id))}" alt="${esc(p.title)}" title="${esc(p.title)}" data-action="view-photo" data-photo="${esc(p.id)}">`).join('') + '</div>';
 
     const rels = window.Relations ? Store.relationsFor(m.id) : [];
-    if (rels.length) out += `<h4>Date relations (${rels.length})</h4><ul>` + rels.map(r =>
+    if (rels.length) out += `<h4>Time gaps (${rels.length})</h4><ul>` + rels.map(r =>
       `<li${r.status === 'overruled' ? ' class="muted"' : ''}>⛓ ${esc(Relations.describeRelation(r))}${r.status === 'overruled' ? ' <em>(overruled)</em>' : ''}${r.sourceId ? ' ' + citeHTML(r.sourceId, r.page) : ''}${r.note ? ` <span class="muted">– ${esc(r.note)}</span>` : ''}</li>`).join('') + '</ul>';
-
-    const links = Store.linksOf(m.id);
-    if (links.length) out += `<h4>Ties (${links.length})</h4><ul>` + links.map(l => tieHTML(l, m.id)).join('') + '</ul>';
 
     const cites = (m.citations || []).filter(c => c.sourceId && Store.source(c.sourceId));
     const catSrc = cat && cat.sourceId && Store.source(cat.sourceId) ? cat.sourceId : null;
@@ -196,6 +196,32 @@ window.UI = (() => {
         + `<button data-action="ties" data-id="${esc(m.id)}">🔗 Ties</button></div>`;
     }
     return out + '</div>';
+  }
+  // One fact as a bubble line: "4004 BC · Born · Eden · Father: Adam, Mother: Eve – note 📖 source"
+  function factLineHTML(m, f, badge) {
+    const t = Store.factType(f.typeId);
+    const bits = [];
+    let when = '';
+    if (f.date) when = esc(Dates.formatInput(f.date)) + (t && t.hasEnd && f.dateEnd ? ' – ' + esc(Dates.formatInput(f.dateEnd)) : '');
+    else if ((m.undetermined || []).includes('fact:' + f.id)) when = '<span class="muted">undeterminable</span>';
+    const b = badge ? badge('fact:' + f.id) + (t && t.hasEnd && f.dateEnd ? badge('fact:' + f.id + ':end') : '') : '';
+    const title = `<strong>${esc(f.label || (t ? t.name : 'Fact'))}</strong>`;
+    let where = '';
+    if (f.where && f.where.kind === 'marker') { const o = Store.marker(f.where.markerId); if (o) where = `at <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(o.name)}</a>`; }
+    else if (f.placeLabel) where = esc(f.placeLabel);
+    else if (f.where && f.where.kind === 'point') where = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
+    else if (f.where && f.where.coords) where = `${f.where.coords.length}-point ${f.where.kind}`;
+    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${esc(r ? r.name : 'with')}: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(o.name)}</a>` : ''; }).filter(Boolean).join(', ');
+    const details = Object.entries(f.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
+    if (when) bits.push(when + b); else if (b) bits.push(b);
+    bits.push(title);
+    if (where) bits.push(where);
+    if (who) bits.push(who);
+    if (details) bits.push(`<span class="muted">${details}</span>`);
+    let line = bits.join(' · ');
+    if (f.note) line += ` <span class="muted">– ${esc(f.note)}</span>`;
+    if (f.sourceId) line += ' ' + citeHTML(f.sourceId, f.page);
+    return `<li>${line}</li>`;
   }
 
   // Combobox for choosing a marker. Returns an element with getValue()/setValue().
@@ -255,5 +281,5 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, tieHTML, markerSelect, modal, download };
+  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, tieHTML, markerSelect, modal, download };
 })();

@@ -75,103 +75,97 @@ The Google side lives in a Google Cloud project owned by the same account; its c
 ### Map
 * **Time slider** at the bottom. Drag it, press ▶ to play, step by day/week/month/year/decade, or type a
   date in the box (`1776-07-04`, `1776`, `44 BC`) and press Enter.
-* **Show all times** ignores the slider and shows every marker at its latest position.
+* **Show all times** ignores the slider and shows every marker at its latest location.
 * **Ties** draws dashed lines between tied markers that are both on the map right now.
-* Click a marker for its info bubble (scrolls). The **Edit** button opens the editor; the other buttons
+* Click a marker for its bubble (scrolls). The **Edit** button opens the editor; the other buttons
   jump to the Network or Ties view with that marker.
-* **+ Pin / + Area / + Path** on the left: click (or click several points) on the map to create a marker
-  at the current slider date. Areas are for borders and regions; paths for routes and journeys.
+* **+ Point / + Area / + Route** on the left: click (or click several points) on the map to create a marker
+  with a first "Located at" fact at the current slider date. Areas are for borders and regions; routes for
+  journeys.
 * The left list shows every marker; greyed ones are not on the map at this moment. Clicking one jumps
-  the slider to when it first appears.
-* Categories on the left filter what's on the map.
+  the slider to when it first appears. Categories and the source dropdown filter what's on the map.
 
 ### Ties
-"Everyone joined by one kind of tie." Pick a link type (e.g. *Signed by*) and optionally a hub marker
-(e.g. *Declaration of Independence*) to see just that group. Directed link types are drawn as a
+"Everyone joined by one kind of tie." Pick a tie type (e.g. *Signed by*) and optionally a centre marker
+(e.g. *Declaration of Independence*) to see just that group. Directed tie types are drawn as a
 hierarchy (family tree, org chart); undirected ones are scattered randomly. Drag nodes around, scroll
 to zoom, click a node to read about it.
 
 ### Network
-Pick one marker and a number of degrees of separation. 1 shows its direct ties; 2 adds the ties of those
-markers; and so on. Untick link types or categories you don't want to see. **Saved views** remember a
-whole set-up (centre, degrees, filters) under a name.
+Pick a centre marker and a number of degrees of separation. 1 shows its direct ties; 2 adds the ties of
+those markers; and so on. Untick tie types or categories you don't want to see. **Saved views** remember
+a whole set-up (centre, degrees, filters) under a name.
 
-### Data
-Edit categories and link types in place, browse the full marker table, and back up or restore.
+### Library
+Sync, time gaps, sources, images, categories, fact types, tie types, the full marker table, and backup.
 
-## The building blocks
+## The building blocks: a marker is a list of facts
 
-**Marker** – anything: a person, a battle, a treaty, a company, a suspect, a phone. Has a kind
-(pin, area or path), a category, free-form **fields**, notes, tags and sources.
+**Marker** – anything: a person, a battle, a treaty, a company, a suspect, a kingdom. It has a name, a
+**shape** (point, area or route), a category, a portrait, undated **fields**, images, citations, and a
+list of **facts**.
 
-**Time span** – *Appears* and *Disappears* dates with labels (Born / Died, Founded / Dissolved,
-First seen / Arrested…). Leave blank for "always".
+**Fact** – one statement about the marker, with up to five parts:
+* *what happened* – its **fact type** (Born, Died, Located at, Married, Took place, Signed, Founded,
+  Border changed, Ruled by, Member of, Note…);
+* *when* – a date, and for some types an end date (from / until);
+* *where* – a point, an area outline, a route, or "at / inside another marker" (a town, a region, a
+  battle), plus a place name;
+* *who else* – participants, each in a **role** the fact type defines (Father, Mother, Spouse,
+  Signatory, Ruler…);
+* *the evidence* – a note (the wording you relied on), a source and page, and detail fields.
 
-**Positions over time** – a list of "from this date, the marker is here". A pin moves when the slider
-passes each date. For areas and paths each row is a whole new shape, so a border can change and a route
-can grow. The first row can have no date (the starting position).
+Everything else is derived from the facts, so nothing is entered twice:
+* **Begins / Ends** – from facts whose type begins or ends the marker (Born / Died, Founded /
+  Destroyed, Took place). The fact's label is what the bubble shows ("Created" instead of "Born" for
+  Adam: just type it in the label box).
+* **Locations over time** – from every fact with a "where". A fact placed "at another marker" follows
+  that marker (a person "in Egypt" sits inside Egypt's border as it was at that date).
+* **Ties** – from participants. A Born fact with Father: Adam makes the tie Adam —Parent of→ Seth,
+  which the map, the Ties view and the Network view draw.
 
-**Category** – open-ended. Each has a colour, an emoji icon, a default kind, and a list of field names
-that get added automatically to new markers (Person: Born, Died, Occupation…). Add as many as you like
-in the Data tab or straight from the editor.
+**Fact type** – editable on the Library tab: whether the fact has a date and an end date, what kind of
+place it can carry, its roles (each role names a tie type and a direction), whether it begins or ends the
+marker, and its detail fields. Add your own ("Reigned", "Baptised", "Exiled"). Each category lists the
+fact types it offers first.
 
-**Fields and sub-fields** – a field can hold sub-fields to any depth: *Born* can have *Date* and *Place*,
-each with its own value and its own source. In the editor press the ＋ beside a field to add a sub-field
-under it. In a category's field list, write the path with a slash: `Born/Date, Born/Place`. The info
-bubble shows sub-fields indented under their parent.
+**Category** – open-ended. Each has a colour, an emoji icon, a default shape, a default source, a list
+of undated field names, and its usual fact types.
 
-**Link type** – also open-ended: *Parent of*, *Spouse of*, *Member of*, *Signed by*, *Phoned*,
-*Seen with*, *Owes money to*… A type is **directed** (one-way, drawn as an arrow) or mutual.
-For directed types, "Top of hierarchy" says which end is drawn above the other in the Ties view:
-for *Parent of* the From side (the parent) is on top; for *Member of* the To side (the organization) is on top.
+**Fields and sub-fields** – undated details (occupation, tribe, nationality). A field can hold sub-fields
+to any depth (*Born/Place*), each with its own value and source; in a category's field list write the
+path with a slash: `Born/Date, Born/Place`.
 
-**Tie (link)** – joins two markers with a type, optional dates (ties only draw on the map while active),
-a label, a note (the evidence) and a source with page.
+**Tie type** – open-ended: *Parent of*, *Spouse of*, *Member of*, *Signed by*… A type is **directed**
+(one-way, drawn as an arrow) or mutual. For directed types, "Top of hierarchy" says which end is drawn
+above the other in the Ties view.
 
-**Source** – a book, document, website or witness, kept in a list on the Data tab (title, author, year,
-where to find it, notes on reliability). Sources attach in four places:
+**Source** – a book, document, website or witness, kept in a list on the Library tab. Sources attach to
+categories (default source), to markers (citations), to each fact, each field and each time gap.
 
-* a **category** has a *default source* that covers every marker in it (e.g. everything in the
-  "Herodotus people" category comes from Herodotus);
-* a **marker** can carry any number of *citations*, each with a page or location and a note;
-* each **field or sub-field** on a marker (Born/Date, Born/Place, Occupation, your own fields…) can cite
-  its own source and page: press the 📖 button beside it in the editor;
-* each **position over time** can cite a source and page, so two texts that put someone in different
-  places on the same date can both be recorded;
-* each **tie** can cite a source and page.
+**Images** – a library of pictures on the Library tab, each with its own sources. A marker can have one
+**portrait** (also used on its map pin and graph node) and a gallery of further images.
 
-The info bubble lists all of them. The **source dropdown** at the top of the map's left panel shows only
-the markers that draw on one source, which is the quickest way to compare what different texts claim.
+## Time gaps (dates that depend on other dates)
 
-**Photos** – a library of pictures (portraits, maps, documents, scene photographs) on the Data tab. Each
-photo has a title, caption, credit, date, notes and its own list of sources. A marker can have one
-*profile picture*, which also replaces its dot on the map and in the graphs, plus a gallery of further
-photos shown in the info bubble; click any picture for a large view with its caption and sources.
-Images are shrunk to 1600 px on the long side and stored in the browser's own database, so they do not
-count against the small limit of the main data store. Tick "include photos" when exporting to carry
-them in the backup file.
+Many texts give gaps instead of dates: "When Adam had lived 130 years, he fathered Seth." A **time
+gap** records exactly that: *Seth · Born = Adam · Born + 130 y*, with the source and the wording.
 
-## Date relations (dates that depend on other dates)
-
-Many texts give gaps instead of dates: "When Adam had lived 130 years, he fathered Seth." A **date
-relation** records exactly that: *Seth · Born = Adam · Born + 130 y*, with the source and the wording.
-
-* In the editor, press **⛓** beside any date (Appears, Disappears, a position's date) or use the
-  *Date relations* section, which also offers the dates of the marker's ties.
-* A date is either **pinned** (🔒, you typed it and it is an anchor) or **computed** (⛓, worked out
-  from a pinned date through the relations; shown in italics with "from Adam · Born + 130 y"). Change a
-  pinned date and every computed date in the chain moves with it. Relations work in both directions, so
-  pinning the other end instead makes the maths run the other way.
-* When you create a relation, whichever end already has a date is pinned automatically. To type a date
-  into a computed slot, pin it first.
-* A chain with no pinned date is **undetermined**: its markers exist and show in the Ties and Network
+* In the editor, press **⛓** beside any fact's date, or use the *Time gaps* section.
+* A date is either an **anchor** (🔒, you typed it and it is fixed) or **reckoned** (⛓, worked out
+  from an anchor through the time gaps; shown in italics with "reckoned from Adam · Born + 130 y").
+  Change an anchor and every reckoned date in the chain moves with it. Time gaps work in both
+  directions, so anchoring the other end instead makes the maths run the other way.
+* When you create a time gap, whichever end already has a typed date becomes the anchor. To type a
+  date into a reckoned slot, anchor it first.
+* A chain with no anchor is **not yet anchored**: its markers exist and show in the Ties and Network
   views but not on the time slider.
-* **Conflicts.** If two chains place one date differently, or a pinned date disagrees with a relation,
+* **Conflicts.** If two chains place one date differently, or an anchor disagrees with a time gap,
   a ⚠ badge appears in the top bar. The conflicts panel shows each disagreement with both values and the
-  route that produced each. Choose *Use this* (the losing relation is kept but marked *overruled*, so the
+  route that produced each. Choose *Use this* (the losing time gap is kept but marked *overruled*, so the
   disagreement stays on record) or *Mark undeterminable* (the date shows as "?" and the marker leaves
   the slider until you decide). Two year-precision dates in the same year are not a conflict.
-* Relations sync between devices like everything else, and every device recomputes the same results.
+* Time gaps sync between devices like everything else, and every device recomputes the same results.
 
 ## Dates
 
@@ -180,15 +174,15 @@ Precision is kept: a marker that "disappears" in `1776` stays until 31 December 
 
 ## Tips
 
-* To make a hierarchy for an event (the Declaration and its signers), create the event as a marker and
-  give it a directed link type pointing from the event to each person. Open the Ties tab with that type
-  and the event as hub.
-* Conflicting sources? Record each claim as its own position or citation with its source and page. The
-  Movements list in the info bubble shows the whole itinerary with the source beside each step, and the
-  source filter on the map shows one text's version at a time.
-* Detective use: suspects and witnesses are pins with "First seen" / "Last seen"; sightings are
-  positions over time; calls, meetings and transactions are dated ties; the crime scene is an event;
-  the Network tab with 2–3 degrees shows who connects to whom.
+* To make a hierarchy for an event (the Declaration and its signers), give each signer a "Signed" fact
+  naming the document, or give the document "Signed by" facts naming the signers. Open the Ties tab with
+  the *Signed by* tie type and the document as centre.
+* Conflicting sources? Record each claim as its own fact with its source and page. The Facts list in
+  the bubble shows the whole itinerary with the source beside each step, and the source filter on the map
+  shows one text's version at a time.
+* Detective use: suspects and witnesses are point markers with "First seen" / "Last seen" fact types;
+  sightings are "Located at" facts; calls, meetings and transactions are facts with roles; the crime scene
+  is an event; the Network tab with 2–3 degrees shows who connects to whom.
 * Export before big changes. There is no undo.
 
 ## Files
@@ -197,6 +191,7 @@ Precision is kept: a marker that "disappears" in `1776` stays until 31 December 
 index.html        page layout
 css/style.css     styling
 js/dates.js       flexible date parsing (BC dates, year/month precision)
+js/facts.js       fact types, derivation of spans/locations/ties, conversion of old data
 js/store.js       data model, saving, import/export
 js/sample.js      the sample dataset
 js/map.js         Map tab
@@ -204,7 +199,7 @@ js/editor.js      marker editor drawer
 js/graph.js       graph drawing (used by Ties and Network)
 js/ties.js        Ties tab
 js/network.js     Network tab
-js/data.js        Data tab
+js/data.js        Library tab
 js/photos.js      photo library (images in IndexedDB), picker, lightbox
 js/sync.js        Google Drive sync (sign-in, Drive folder, per-record merge, photos)
 js/config.js      deployment settings (Google client ID)

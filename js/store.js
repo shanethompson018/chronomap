@@ -22,11 +22,13 @@ window.Store = (() => {
 
   // Collections that sync between devices. Every record in them carries updatedAt; deletions leave a
   // tombstone in `deleted` so a removal on one device is not undone by a merge from another.
-  const SYNC_COLLS = ['categories', 'linkTypes', 'markers', 'links', 'sources', 'photos', 'relations'];
+  // Ties (links) are no longer stored: they are derived from facts on every change (see facts.js).
+  const SYNC_COLLS = ['categories', 'linkTypes', 'factTypes', 'markers', 'sources', 'photos', 'relations'];
   const TOMBSTONE_DAYS = 180;
+  const VERSION = 3;
 
   function blank() {
-    return { version: 2, categories: [], linkTypes: [], markers: [], links: [], sources: [], photos: [], relations: [], deleted: [],
+    return { version: VERSION, categories: [], linkTypes: [], factTypes: [], markers: [], links: [], sources: [], photos: [], relations: [], deleted: [],
       settings: { basemap: 'streets', showTies: true, showLabels: true, networkViews: [], sampleUntouched: false, driveSync: false } };
   }
   // Mark a record as changed now; any data change also means the sample data is no longer pristine.
@@ -37,8 +39,9 @@ window.Store = (() => {
   function normMarker(m) {
     const out = Object.assign({ id: uid(), name: 'Untitled', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '',
       fields: {}, fieldSources: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [],
-      pinned: [], undetermined: [], derived: {} }, m || {});
+      pinned: [], undetermined: [], derived: {}, facts: undefined }, m || {});
     out.moves = (out.moves || []).map(normMove);
+    if (Array.isArray(out.facts)) out.facts = out.facts.map(normFact); // undefined = not yet converted from version 2
     out.pinned = (out.pinned || []).filter(Boolean); out.undetermined = (out.undetermined || []).filter(Boolean); out.derived = out.derived || {};
     out.citations = (out.citations || []).map(normCitation);
     out.photoIds = (out.photoIds || []).filter(Boolean);
@@ -48,8 +51,29 @@ window.Store = (() => {
     out.tags = out.tags || [];
     return out;
   }
-  function normCategory(c) { const o = Object.assign({ id: uid(), name: 'Category', color: '#4f8cff', icon: '📍', fields: [], defaultKind: 'pin', sourceId: null }, c || {}); o.fields = o.fields || []; return o; }
+  function normCategory(c) { const o = Object.assign({ id: uid(), name: 'Category', color: '#4f8cff', icon: '📍', fields: [], defaultKind: 'pin', sourceId: null, factTypeIds: [] }, c || {}); o.fields = o.fields || []; o.factTypeIds = o.factTypeIds || []; return o; }
   function normLinkType(t) { return Object.assign({ id: uid(), name: 'Link', color: '#999999', directed: false, fromLabel: '', toLabel: '', topSide: 'from' }, t || {}); }
+  function normRole(r) { return Object.assign({ id: uid(), name: 'Other', tieTypeId: null, direction: 'this-to-other' }, r || {}); }
+  function normFactType(t) {
+    const o = Object.assign({ id: uid(), name: 'Fact', hasDate: true, hasEnd: false, place: 'any', roles: [], begins: false, ends: false, details: [], placeFrom: null }, t || {});
+    o.roles = (o.roles || []).map(normRole); o.details = o.details || [];
+    if (!['any', 'point', 'area', 'route', 'none'].includes(o.place)) o.place = 'any';
+    return o;
+  }
+  function normWhere(w) {
+    if (!w || !w.kind) return null;
+    if (w.kind === 'point') return (w.lat == null || w.lng == null || w.lat === '' || w.lng === '') ? null : { kind: 'point', lat: +w.lat, lng: +w.lng };
+    if (w.kind === 'area' || w.kind === 'route') return (w.coords && w.coords.length) ? { kind: w.kind, coords: w.coords } : null;
+    if (w.kind === 'marker') return w.markerId ? { kind: 'marker', markerId: w.markerId } : null;
+    return null;
+  }
+  function normFact(f) {
+    const o = Object.assign({ id: uid(), typeId: 'ft_note', label: '', date: '', dateEnd: '', where: null, placeLabel: '', participants: [], details: {}, note: '', sourceId: null, page: '' }, f || {});
+    o.where = normWhere(o.where);
+    o.participants = (o.participants || []).filter(p => p && p.roleId && p.markerId).map(p => ({ roleId: p.roleId, markerId: p.markerId }));
+    o.details = o.details || {};
+    return o;
+  }
   function normLink(l) {
     const o = Object.assign({ id: uid(), typeId: null, fromId: null, toId: null, label: '', start: '', end: '', note: '', sourceId: null, page: '', pinned: [], undetermined: [], derived: {} }, l || {});
     o.pinned = (o.pinned || []).filter(Boolean); o.undetermined = (o.undetermined || []).filter(Boolean); o.derived = o.derived || {};
@@ -78,6 +102,7 @@ window.Store = (() => {
     d.linkTypes = (d.linkTypes || []).map(normLinkType);
     d.markers = (d.markers || []).map(normMarker);
     d.links = (d.links || []).map(normLink);
+    d.factTypes = (d.factTypes || []).map(normFactType);
     d.sources = (d.sources || []).map(normSource);
     d.photos = (d.photos || []).map(normPhoto);
     d.relations = (d.relations || []).map(normRelation);
@@ -86,32 +111,44 @@ window.Store = (() => {
     d.deleted = (d.deleted || []).filter(t => t && t.coll && t.id && t.at > cutoff);
     d.settings = Object.assign(blank().settings, d.settings || {});
     d.markers.forEach(sortMovesInPlace);
+    Facts.ensureSeeds(d, uid);
+    if (d.markers.some(m => !Array.isArray(m.facts))) Facts.migrateV2(d);
+    d.markers.forEach(m => { m.facts = (m.facts || []).map(normFact); });
+    d.version = VERSION;
     cleanReferences(d);
+    Facts.derive(d);
     return d;
   }
-  // Drop links to missing markers and references to missing categories, sources, link types and photos.
+  // Drop references to missing markers, categories, sources, tie types, fact types and photos.
   function cleanReferences(d) {
     const has = (coll, id) => !id || d[coll].some(r => r.id === id);
-    d.links = d.links.filter(l => has('markers', l.fromId) && has('markers', l.toId) && l.fromId && l.toId && has('linkTypes', l.typeId));
-    d.categories.forEach(c => { if (!has('sources', c.sourceId)) c.sourceId = null; });
+    d.categories.forEach(c => { if (!has('sources', c.sourceId)) c.sourceId = null; c.factTypeIds = (c.factTypeIds || []).filter(id => has('factTypes', id)); });
+    d.factTypes.forEach(t => t.roles.forEach(r => { if (!has('linkTypes', r.tieTypeId)) r.tieTypeId = null; }));
     d.markers.forEach(m => {
       if (!has('categories', m.categoryId)) m.categoryId = null;
       if (!has('photos', m.photoId)) m.photoId = null;
       m.photoIds = (m.photoIds || []).filter(pid => has('photos', pid));
       m.citations = (m.citations || []).filter(c => !c.sourceId || has('sources', c.sourceId));
-      (m.moves || []).forEach(mv => { if (!has('sources', mv.sourceId)) mv.sourceId = null; });
       for (const k of Object.keys(m.fieldSources || {})) if (!has('sources', m.fieldSources[k].sourceId)) delete m.fieldSources[k];
+      (m.facts || []).forEach(f => {
+        if (!has('factTypes', f.typeId)) f.typeId = 'ft_note';
+        if (!has('sources', f.sourceId)) f.sourceId = null;
+        f.participants = f.participants.filter(p => has('markers', p.markerId) && p.markerId !== m.id);
+        if (f.where && f.where.kind === 'marker' && (!has('markers', f.where.markerId) || f.where.markerId === m.id)) f.where = null;
+      });
+      const factIds = new Set((m.facts || []).map(f => f.id));
+      const slotOk = s => { if (!s.startsWith('fact:')) return false; const id = s.slice(5).replace(/:end$/, ''); return factIds.has(id); };
+      m.pinned = (m.pinned || []).filter(slotOk); m.undetermined = (m.undetermined || []).filter(slotOk);
+      for (const k of Object.keys(m.derived || {})) if (!slotOk(k)) delete m.derived[k];
     });
-    d.links.forEach(l => { if (!has('sources', l.sourceId)) l.sourceId = null; });
     d.photos.forEach(p => { p.citations = (p.citations || []).filter(c => !c.sourceId || has('sources', c.sourceId)); });
     const refOk = ref => {
-      if (!ref) return false;
-      const o = ref.kind === 'link' ? d.links.find(l => l.id === ref.id) : d.markers.find(m => m.id === ref.id);
-      if (!o) return false;
-      if (ref.slot === 'start' || ref.slot === 'end') return true;
-      return ref.kind === 'marker' && ref.slot.startsWith('move:') && o.moves.some(mv => mv.id === ref.slot.slice(5));
+      if (!ref || ref.kind !== 'marker' || !ref.slot.startsWith('fact:')) return false;
+      const m = d.markers.find(x => x.id === ref.id); if (!m) return false;
+      const id = ref.slot.slice(5).replace(/:end$/, '');
+      return m.facts.some(f => f.id === id);
     };
-    d.relations = d.relations.filter(r => refOk(r.from) && refOk(r.to) && !(r.from.kind === r.to.kind && r.from.id === r.to.id && r.from.slot === r.to.slot));
+    d.relations = d.relations.filter(r => refOk(r.from) && refOk(r.to) && !(r.from.id === r.to.id && r.from.slot === r.to.slot));
     d.relations.forEach(r => { if (!has('sources', r.sourceId)) r.sourceId = null; });
   }
 
@@ -129,6 +166,7 @@ window.Store = (() => {
     catch (e) { UI.toast('Could not save: ' + e.message, 'error'); }
   }
   function commit(evt) {
+    Facts.derive(S); // Begins/Ends, locations and ties follow from facts
     save();
     subs.forEach(fn => { try { fn(evt || { type: 'all' }); } catch (e) { console.error(e); } });
   }
@@ -145,7 +183,35 @@ window.Store = (() => {
     });
   }
   function sortedMoves(m) { return m.moves.slice().sort((a, b) => (moveDays(a) ?? Infinity) - (moveDays(b) ?? Infinity)); }
-  function hasLocation(mv) { return !!mv && ((mv.coords && mv.coords.length > 0) || (mv.lat != null && mv.lng != null && mv.lat !== '' && mv.lng !== '')); }
+  function hasLocation(mv) { return !!mv && (!!mv.atMarkerId || (mv.coords && mv.coords.length > 0) || (mv.lat != null && mv.lng != null && mv.lat !== '' && mv.lng !== '')); }
+  // Geometry of a location at day t: { lat, lng } or { coords }. A location "at/inside another marker"
+  // follows that marker's own location at the time (an area's centre, a pin's point).
+  function resolveMove(mv, t, depth = 0) {
+    if (!mv) return null;
+    if (mv.atMarkerId) {
+      if (depth > 4) return null;
+      const o = marker(mv.atMarkerId); if (!o || !visibleAt(o, t)) return null;
+      const omv = positionAt(o, t); if (!omv) return null;
+      const g = resolveMove(omv, t, depth + 1); if (!g) return null;
+      if (g.coords) { const c = centroid(g.coords); return c ? { lat: c[0], lng: c[1], inside: o.kind === 'area' ? o.id : null, coords: null } : null; }
+      return { lat: g.lat, lng: g.lng, inside: null };
+    }
+    if (mv.coords && mv.coords.length) return { coords: mv.coords };
+    if (mv.lat != null && mv.lng != null && mv.lat !== '' && mv.lng !== '') return { lat: +mv.lat, lng: +mv.lng };
+    return null;
+  }
+  function centroid(coords) {
+    if (!coords || !coords.length) return null;
+    let a = 0, cx = 0, cy = 0;
+    const n = coords.length;
+    if (n < 3) { const s = coords.reduce((acc, c) => [acc[0] + +c[0], acc[1] + +c[1]], [0, 0]); return [s[0] / n, s[1] / n]; }
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = [+coords[i][1], +coords[i][0]], [x2, y2] = [+coords[(i + 1) % n][1], +coords[(i + 1) % n][0]];
+      const cross = x1 * y2 - x2 * y1; a += cross; cx += (x1 + x2) * cross; cy += (y1 + y2) * cross;
+    }
+    if (Math.abs(a) < 1e-9) { const s = coords.reduce((acc, c) => [acc[0] + +c[0], acc[1] + +c[1]], [0, 0]); return [s[0] / n, s[1] / n]; }
+    a *= 0.5; return [cy / (6 * a), cx / (6 * a)];
+  }
 
   // The move that applies at day t (null t = "ignore time": latest move).
   function positionAt(m, t) {
@@ -214,7 +280,7 @@ window.Store = (() => {
     const ids = new Set();
     (m.citations || []).forEach(c => { if (c.sourceId) ids.add(c.sourceId); });
     Object.values(m.fieldSources || {}).forEach(fs => { if (fs && fs.sourceId) ids.add(fs.sourceId); });
-    (m.moves || []).forEach(mv => { if (mv.sourceId) ids.add(mv.sourceId); });
+    (m.facts || []).forEach(f => { if (f.sourceId) ids.add(f.sourceId); });
     [m.photoId, ...(m.photoIds || [])].forEach(pid => { const p = pid && photo(pid); if (p) p.citations.forEach(c => { if (c.sourceId) ids.add(c.sourceId); }); });
     linksOf(m.id).forEach(l => { if (l.sourceId) ids.add(l.sourceId); });
     const cat = category(m.categoryId);
@@ -226,10 +292,10 @@ window.Store = (() => {
     S.categories.forEach(c => { if (c.sourceId === id) n++; });
     S.markers.forEach(m => {
       if (m.citations.some(c => c.sourceId === id)) n++;
-      m.moves.forEach(mv => { if (mv.sourceId === id) n++; });
+      m.facts.forEach(f => { if (f.sourceId === id) n++; });
       Object.values(m.fieldSources || {}).forEach(fs => { if (fs && fs.sourceId === id) n++; });
     });
-    S.links.forEach(l => { if (l.sourceId === id) n++; });
+    S.relations.forEach(r => { if (r.sourceId === id) n++; });
     S.photos.forEach(p => { if (p.citations.some(c => c.sourceId === id)) n++; });
     return n;
   }
@@ -240,21 +306,20 @@ window.Store = (() => {
   const refKey = ref => `${ref.kind}:${ref.id}:${ref.slot}`;
   function parseRefKey(k) { const i = k.indexOf(':'), j = k.indexOf(':', i + 1); return { kind: k.slice(0, i), id: k.slice(i + 1, j), slot: k.slice(j + 1) }; }
   const sameRef = (a, b) => !!a && !!b && a.kind === b.kind && a.id === b.id && a.slot === b.slot;
-  function slotOwner(ref) { return !ref ? null : ref.kind === 'link' ? link(ref.id) : marker(ref.id); }
-  function refExists(ref) {
-    const o = slotOwner(ref); if (!o) return false;
-    if (ref.slot === 'start' || ref.slot === 'end') return true;
-    return ref.kind === 'marker' && ref.slot.startsWith('move:') && o.moves.some(mv => mv.id === ref.slot.slice(5));
-  }
+  // Slots are a marker's fact dates: 'fact:<factId>' (the date) and 'fact:<factId>:end' (the end date).
+  function slotOwner(ref) { return !ref || ref.kind !== 'marker' ? null : marker(ref.id); }
+  function slotParts(slot) { const isEnd = slot.endsWith(':end'); return { factId: slot.slice(5).replace(/:end$/, ''), isEnd }; }
+  function slotFact(o, slot) { if (!o || !slot.startsWith('fact:')) return null; const { factId } = slotParts(slot); return (o.facts || []).find(f => f.id === factId) || null; }
+  function refExists(ref) { const o = slotOwner(ref); return !!(o && slotFact(o, ref.slot)); }
   function slotValue(ref) {
-    const o = slotOwner(ref); if (!o) return '';
-    if (ref.slot.startsWith('move:')) { const mv = o.moves.find(m => m.id === ref.slot.slice(5)); return mv ? (mv.date || '') : ''; }
-    return o[ref.slot] || '';
+    const o = slotOwner(ref); const f = slotFact(o, ref.slot); if (!f) return '';
+    return (slotParts(ref.slot).isEnd ? f.dateEnd : f.date) || '';
   }
   function setSlotRaw(o, slot, v) {
-    if (slot.startsWith('move:')) { const mv = o.moves.find(m => m.id === slot.slice(5)); if (mv) mv.date = v; }
-    else o[slot] = v;
+    const f = slotFact(o, slot); if (!f) return;
+    if (slotParts(slot).isEnd) f.dateEnd = v; else f.date = v;
   }
+  const factRef = (markerId, factId, isEnd) => ({ kind: 'marker', id: markerId, slot: 'fact:' + factId + (isEnd ? ':end' : '') });
   const isPinned = ref => { const o = slotOwner(ref); return !!o && (o.pinned || []).includes(ref.slot); };
   const isUndetermined = ref => { const o = slotOwner(ref); return !!o && (o.undetermined || []).includes(ref.slot); };
   const derivedInfo = ref => { const o = slotOwner(ref); return (o && o.derived && o.derived[ref.slot]) || null; };
@@ -277,33 +342,57 @@ window.Store = (() => {
     if (o.moves) sortMovesInPlace(o);
     touch(o); commit({ type: ref.kind, id: o.id });
   }
-  // Human label for a slot: "Adam · Born", "Washington · position Cambridge", "Adams Member of Congress · from".
+  // Short description of a fact: "Born", "Located at Paris", "Member of Congress".
+  function factTitle(f) {
+    const t = factType(f.typeId);
+    let s = f.label || (t ? t.name : 'Fact');
+    const who = (f.participants || []).map(p => marker(p.markerId)).filter(Boolean).map(x => x.name);
+    if (f.where && f.where.kind === 'marker') { const o = marker(f.where.markerId); if (o) s += ' ' + o.name; }
+    else if (f.placeLabel) s += ' ' + f.placeLabel;
+    else if (who.length && !(t && t.roles.length > 1)) s += ' ' + who.join(', ');
+    return s;
+  }
+  // Human label for a slot: "Adam · Born", "Washington · Located at Cambridge (until)".
   function slotLabel(ref) {
     const o = slotOwner(ref); if (!o) return '(missing)';
-    if (ref.kind === 'link') {
-      const t = linkType(o.typeId), a = marker(o.fromId), b = marker(o.toId);
-      return `${a ? a.name : '?'} ${t ? t.name : 'tie'} ${b ? b.name : '?'} · ${ref.slot === 'start' ? 'from' : 'until'}`;
-    }
-    if (ref.slot === 'start') return `${o.name} · ${o.startLabel || 'Appears'}`;
-    if (ref.slot === 'end') return `${o.name} · ${o.endLabel || 'Disappears'}`;
-    const mv = o.moves.find(m => m.id === ref.slot.slice(5));
-    return `${o.name} · position${mv ? (mv.label ? ' ' + mv.label : (mv.date ? ' ' + Dates.formatInput(mv.date) : '')) : ''}`;
+    const f = slotFact(o, ref.slot); if (!f) return `${o.name} · (missing)`;
+    return `${o.name} · ${factTitle(f)}${slotParts(ref.slot).isEnd ? ' (until)' : ''}`;
   }
-  // Every date slot that belongs to a marker: its own dates, its positions, and the dates of its ties.
+  // Every date slot of a marker: each dated fact, and the end date of facts that have one.
   function slotsOfMarker(markerId) {
     const m = marker(markerId); if (!m) return [];
-    const out = [{ ref: { kind: 'marker', id: m.id, slot: 'start' }, label: m.startLabel || 'Appears' }, { ref: { kind: 'marker', id: m.id, slot: 'end' }, label: m.endLabel || 'Disappears' }];
-    sortedMoves(m).forEach(mv => out.push({ ref: { kind: 'marker', id: m.id, slot: 'move:' + mv.id }, label: `Position: ${mv.label || Dates.formatInput(mv.date) || 'unnamed'}` }));
-    linksOf(m.id).forEach(l => {
-      const t = linkType(l.typeId), other = marker(l.fromId === m.id ? l.toId : l.fromId);
-      const name = `Tie: ${t ? t.name : 'tie'} ${l.fromId === m.id ? '→' : '←'} ${other ? other.name : '?'}`;
-      out.push({ ref: { kind: 'link', id: l.id, slot: 'start' }, label: name + ' · from' }, { ref: { kind: 'link', id: l.id, slot: 'end' }, label: name + ' · until' });
-    });
+    const out = [];
+    for (const f of m.facts) {
+      const t = factType(f.typeId);
+      if (t && t.hasDate === false) continue;
+      out.push({ ref: factRef(m.id, f.id, false), label: factTitle(f) + (t && t.hasEnd ? ' (from)' : '') });
+      if (t && t.hasEnd) out.push({ ref: factRef(m.id, f.id, true), label: factTitle(f) + ' (until)' });
+    }
     return out;
   }
-  function relationsFor(markerId) {
-    const mine = ref => ref && ((ref.kind === 'marker' && ref.id === markerId) || (ref.kind === 'link' && (() => { const l = link(ref.id); return l && (l.fromId === markerId || l.toId === markerId); })()));
-    return S.relations.filter(r => mine(r.from) || mine(r.to));
+  function relationsFor(markerId) { return S.relations.filter(r => (r.from && r.from.id === markerId) || (r.to && r.to.id === markerId)); }
+  // Facts on other markers in which this marker takes part (as a participant or as the "where").
+  function mentionsOf(markerId) {
+    const out = [];
+    for (const m of S.markers) {
+      if (m.id === markerId) continue;
+      for (const f of m.facts) {
+        const roles = (f.participants || []).filter(p => p.markerId === markerId).map(p => { const t = factType(f.typeId); const r = t && t.roles.find(x => x.id === p.roleId); return r ? r.name : 'participant'; });
+        const asPlace = f.where && f.where.kind === 'marker' && f.where.markerId === markerId;
+        if (roles.length || asPlace) out.push({ marker: m, fact: f, roles, asPlace });
+      }
+    }
+    return out;
+  }
+  const factTypes = () => S.factTypes;
+  const factType = id => S.factTypes.find(t => t.id === id) || null;
+  function addFactType(data) { const t = touch(normFactType(data)); S.factTypes.push(t); commit({ type: 'factType', id: t.id }); return t; }
+  function updateFactType(id, patch) { const t = factType(id); if (!t) return null; Object.assign(t, normFactType(Object.assign({}, t, clone(patch), { id }))); touch(t); commit({ type: 'factType', id }); return t; }
+  function deleteFactType(id) {
+    if (factType(id)) tombstone('factTypes', id);
+    S.factTypes = S.factTypes.filter(t => t.id !== id);
+    S.markers.forEach(m => m.facts.forEach(f => { if (f.typeId === id) { f.label = f.label || ''; f.typeId = 'ft_note'; touch(m); } }));
+    commit({ type: 'factType', id, deleted: true });
   }
   const relationsOfRef = ref => S.relations.filter(r => sameRef(r.from, ref) || sameRef(r.to, ref));
   const displayColor = m => m.color || category(m.categoryId)?.color || '#888888';
@@ -315,9 +404,11 @@ window.Store = (() => {
     const m = marker(id); if (!m) return null;
     Object.assign(m, clone(patch), { id });
     m.moves = (m.moves || []).map(normMove); sortMovesInPlace(m);
+    m.facts = (m.facts || []).map(normFact);
     m.citations = (m.citations || []).map(normCitation);
     m.fieldSources = m.fieldSources || {};
     for (const k of Object.keys(m.fieldSources)) if (!(k in m.fields) || !m.fieldSources[k] || !m.fieldSources[k].sourceId) delete m.fieldSources[k];
+    cleanReferences(S);
     touch(m);
     commit({ type: 'marker', id }); return m;
   }
@@ -330,14 +421,16 @@ window.Store = (() => {
   function deleteMarker(id) {
     if (marker(id)) tombstone('markers', id);
     S.markers = S.markers.filter(m => m.id !== id);
-    S.links.filter(l => l.fromId === id || l.toId === id).forEach(l => { tombstone('links', l.id); dropRelationsOf('link', l.id); });
-    S.links = S.links.filter(l => l.fromId !== id && l.toId !== id);
+    // other markers' facts that mentioned it lose that participant / place
+    S.markers.forEach(m => m.facts.forEach(f => {
+      const before = f.participants.length;
+      f.participants = f.participants.filter(p => p.markerId !== id);
+      if (f.where && f.where.kind === 'marker' && f.where.markerId === id) { f.where = null; touch(m); }
+      if (f.participants.length !== before) touch(m);
+    }));
     dropRelationsOf('marker', id);
     commit({ type: 'marker', id, deleted: true });
   }
-  function addLink(data) { const l = touch(normLink(data)); S.links.push(l); commit({ type: 'link', id: l.id }); return l; }
-  function updateLink(id, patch) { const l = link(id); if (!l) return null; Object.assign(l, clone(patch), { id }); touch(l); commit({ type: 'link', id }); return l; }
-  function deleteLink(id) { if (link(id)) tombstone('links', id); S.links = S.links.filter(l => l.id !== id); dropRelationsOf('link', id); commit({ type: 'link', id, deleted: true }); }
   function addCategory(data) { const c = touch(normCategory(data)); S.categories.push(c); commit({ type: 'category', id: c.id }); return c; }
   function updateCategory(id, patch) { const c = category(id); if (!c) return null; Object.assign(c, clone(patch), { id }); touch(c); commit({ type: 'category', id }); return c; }
   function deleteCategory(id) {
@@ -351,8 +444,7 @@ window.Store = (() => {
   function deleteLinkType(id) {
     if (linkType(id)) tombstone('linkTypes', id);
     S.linkTypes = S.linkTypes.filter(t => t.id !== id);
-    S.links.filter(l => l.typeId === id).forEach(l => { tombstone('links', l.id); dropRelationsOf('link', l.id); });
-    S.links = S.links.filter(l => l.typeId !== id);
+    S.factTypes.forEach(t => t.roles.forEach(r => { if (r.tieTypeId === id) { r.tieTypeId = null; touch(t); } }));
     commit({ type: 'linkType', id, deleted: true });
   }
   function addSource(data) { const s = touch(normSource(data)); S.sources.push(s); commit({ type: 'source', id: s.id }); return s; }
@@ -364,11 +456,11 @@ window.Store = (() => {
     S.markers.forEach(m => {
       let changed = false;
       if (m.citations.some(c => c.sourceId === id)) { m.citations = m.citations.filter(c => c.sourceId !== id); changed = true; }
-      m.moves.forEach(mv => { if (mv.sourceId === id) { mv.sourceId = null; changed = true; } });
+      m.facts.forEach(f => { if (f.sourceId === id) { f.sourceId = null; changed = true; } });
       for (const k of Object.keys(m.fieldSources || {})) if (m.fieldSources[k] && m.fieldSources[k].sourceId === id) { delete m.fieldSources[k]; changed = true; }
       if (changed) touch(m);
     });
-    S.links.forEach(l => { if (l.sourceId === id) { l.sourceId = null; touch(l); } });
+    S.relations.forEach(r => { if (r.sourceId === id) { r.sourceId = null; touch(r); } });
     S.photos.forEach(p => { if (p.citations.some(c => c.sourceId === id)) { p.citations = p.citations.filter(c => c.sourceId !== id); touch(p); } });
     commit({ type: 'source', id, deleted: true });
   }
@@ -404,7 +496,7 @@ window.Store = (() => {
   // value actually changed are marked as edited, so a recomputation that changes nothing causes no sync traffic.
   function applySolved(results, undeterminedKeys) {
     let changed = false;
-    const owners = [...S.markers.map(m => ({ kind: 'marker', o: m })), ...S.links.map(l => ({ kind: 'link', o: l }))];
+    const owners = S.markers.map(m => ({ kind: 'marker', o: m }));
     for (const { kind, o } of owners) {
       const nd = {};
       for (const [k, res] of results) {
@@ -452,6 +544,9 @@ window.Store = (() => {
     SYNC_COLLS.forEach(coll => S[coll].forEach(r => S.deleted.push({ coll, id: r.id, at: Date.now() })));
     const dead = S.deleted;
     S = normalize(SampleData.create()); S.deleted = dead; S.settings = keep; S.settings.sampleUntouched = true;
+    // the fresh sample records must be newer than the tombstones just written for the old ones
+    const now = Date.now() + 1;
+    SYNC_COLLS.forEach(coll => S[coll].forEach(r => { r.updatedAt = now; }));
     commit({ type: 'all' });
   }
   function clearAll() {
@@ -480,19 +575,22 @@ window.Store = (() => {
     try { commit({ type: 'all', sync: true }); } finally { applyingSync = false; }
   }
   const isApplyingSync = () => applyingSync;
+  // Normalise a document from elsewhere (an older sync file) without touching the live state.
+  const normalizeDoc = obj => { const keep = S; const d = normalize(obj); S = keep; return d; };
   const syncCollections = () => SYNC_COLLS.slice();
 
   return {
     load, subscribe, notify, uid,
-    markers, categories, linkTypes, links, sources, photos, relations, settings, marker, category, linkType, link, source, photo, relation, linksOf, displayColor, displayIcon,
+    markers, categories, linkTypes, factTypes, links, sources, photos, relations, settings, marker, category, linkType, factType, link, source, photo, relation, linksOf, displayColor, displayIcon,
     sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
-    refKey, parseRefKey, sameRef, slotOwner, refExists, slotValue, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
-    slotLabel, slotsOfMarker, relationsFor, relationsOfRef, addRelation, updateRelation, deleteRelation, applySolved,
+    refKey, parseRefKey, sameRef, factRef, slotOwner, refExists, slotValue, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
+    slotLabel, slotsOfMarker, factTitle, mentionsOf, relationsFor, relationsOfRef, addRelation, updateRelation, deleteRelation, applySolved,
+    addFactType, updateFactType, deleteFactType,
     sortedMoves, hasLocation, positionAt, visibleAt, linkActiveAt, firstDay, timeRange,
-    addMarker, updateMarker, deleteMarker, addLink, updateLink, deleteLink,
+    addMarker, updateMarker, deleteMarker, resolveMove,
     addCategory, updateCategory, deleteCategory, addLinkType, updateLinkType, deleteLinkType,
     addSource, updateSource, deleteSource, setSetting,
     exportJSON, importJSON, resetToSample, clearAll,
-    exportSyncDoc, replaceSyncDoc, isApplyingSync, syncCollections,
+    exportSyncDoc, replaceSyncDoc, isApplyingSync, syncCollections, normalizeDoc,
   };
 })();

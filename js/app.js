@@ -42,7 +42,7 @@ window.App = (() => {
   const currentTab = () => current;
 
   function newMarker() {
-    Editor.openNew({ name: 'New marker', kind: 'pin', categoryId: Store.categories()[0]?.id || null, moves: [] });
+    Editor.openNew({ name: 'New marker', kind: 'pin', categoryId: Store.categories()[0]?.id || null, facts: [] });
   }
 
   function onGlobalClick(e) {

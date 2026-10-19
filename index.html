@@ -23,7 +23,7 @@
     <button class="tab active" data-tab="map">Map</button>
     <button class="tab" data-tab="ties">Ties</button>
     <button class="tab" data-tab="network">Network</button>
-    <button class="tab" data-tab="data">Data</button>
+    <button class="tab" data-tab="data">Library</button>
   </nav>
   <div class="topbar-right">
     <button id="btn-conflicts" class="conflict-btn hidden" title="Dates that two chains of relations place differently">⚠ 0</button>
@@ -42,9 +42,9 @@
         <input id="m-search" type="search" placeholder="Search markers…" autocomplete="off">
         <select id="m-source" title="Show only markers that draw on this source" style="margin-top:6px"></select>
         <div class="side-actions">
-          <button id="m-add-pin" title="Click on the map to place a new pin">+ Pin</button>
-          <button id="m-add-area" title="Draw a border / area on the map">+ Area</button>
-          <button id="m-add-path" title="Draw a route / path on the map">+ Path</button>
+          <button id="m-add-pin" title="Click on the map to place a new point marker">+ Point</button>
+          <button id="m-add-area" title="Draw an area (a border, a region) on the map">+ Area</button>
+          <button id="m-add-path" title="Draw a route on the map">+ Route</button>
         </div>
       </div>
       <div class="side-section">
@@ -77,7 +77,7 @@
           <input id="t-date" type="text" placeholder="YYYY-MM-DD" title="Type a date (e.g. 1776-07-04, 1776, 500 BC) and press Enter">
           <span id="t-display" class="time-display"></span>
           <span class="spacer"></span>
-          <label title="Ignore the time slider and show every marker at its latest position"><input type="checkbox" id="t-ignore"> Show all times</label>
+          <label title="Ignore the time slider and show every marker at its latest location"><input type="checkbox" id="t-ignore"> Show all times</label>
           <label title="Draw lines between tied markers that are both on the map"><input type="checkbox" id="t-ties"> Ties</label>
           <label><input type="checkbox" id="t-labels"> Labels</label>
           <select id="t-basemap" title="Base map">
@@ -105,13 +105,13 @@
     <aside class="side">
       <div class="side-section">
         <div class="side-title">Tie</div>
-        <label class="field">Link type
+        <label class="field">Tie type
           <select id="ties-type"></select>
         </label>
-        <label class="field">Hub marker (optional)
+        <label class="field">Centre marker (optional)
           <div id="ties-hub"></div>
         </label>
-        <p class="hint">Pick a link type to see every marker joined by that tie. Pick a hub marker to narrow it to the group connected to that marker (e.g. the Declaration of Independence and everyone who signed it).</p>
+        <p class="hint">Pick a tie type to see every marker joined by that tie. Pick a centre marker to narrow it to the group connected to that marker (e.g. the Declaration of Independence and everyone who signed it).</p>
       </div>
       <div class="side-section">
         <div class="side-title">Display</div>
@@ -140,7 +140,7 @@
     <aside class="side">
       <div class="side-section">
         <div class="side-title">Focus</div>
-        <label class="field">Marker
+        <label class="field">Centre marker
           <div id="net-center"></div>
         </label>
         <label class="field">Degrees of separation: <strong id="net-deg-val">1</strong>
@@ -148,7 +148,7 @@
         </label>
       </div>
       <div class="side-section">
-        <div class="side-title">Link types <button id="net-types-all" class="link-btn">all</button> <button id="net-types-none" class="link-btn">none</button></div>
+        <div class="side-title">Tie types <button id="net-types-all" class="link-btn">all</button> <button id="net-types-none" class="link-btn">none</button></div>
         <div id="net-types" class="check-list"></div>
       </div>
       <div class="side-section">
@@ -199,6 +199,7 @@
 <script src="js/dates.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/sample.js"></script>
+<script src="js/facts.js"></script>
 <script src="js/store.js"></script>
 <script src="js/photos.js"></script>
 <script src="js/relations.js"></script>
