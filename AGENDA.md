@@ -155,10 +155,20 @@ Going through these in order:
       category, link type, pin/area/path, Appears/Disappears, and the labels on buttons and tabs) and
       decide whether each is the clearest word for a reader coming from historical texts. One pass,
       after the grading names are settled, so all the terms fit together.
-      Decided so far:
+      Decided (apply when building):
       - Date relation → **Time gap** (plain; may revisit after feedback from others).
-      - Pinned date → **Anchor** (🔒).
-      - Computed date → under discussion.
+      - Pinned date → **Anchor** (🔒). Computed date → **Reckoned** (⛓), e.g. "reckoned from Adam's birth, time gap 130 y".
+      - Chain without an anchor → **Not yet anchored**; the user's own decision → **Undeterminable**.
+      - Kind: Pin / Area / Path → **Shape: Point / Area / Route**.
+      - Link / Link type → **Tie / Tie type** everywhere.
+      - Position / Positions over time → **Location / Locations over time**.
+      - Appears / Disappears → **Begins / Ends** (only shown when no fact supplies a better label).
+      - New words: **Fact**, **Fact type**, **Role**.
+      - Photos / Photo library / Profile picture → **Images / Image library / Portrait**.
+      - Data tab → **Library**. Hub marker / focus marker → **Centre** in both graph views.
+      - Pick on map → **Place on map**; Draw on map stays.
+      - Keep: Marker, Category, Field (and sub-field), Overruled, Conflict, Source, Citation,
+        Reliability, Confidence, Map / Ties / Network, Summary, Notes, Tags, Show all times, Labels.
 
 ## 5. Points, areas and routes attached to fields and ties
 
