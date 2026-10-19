@@ -321,16 +321,23 @@ window.Store = (() => {
     touch(m);
     commit({ type: 'marker', id }); return m;
   }
+  // Remove relations that touch a marker or a tie (their tombstones keep the removal in sync).
+  function dropRelationsOf(kind, id) {
+    const hits = r => (r.from && r.from.kind === kind && r.from.id === id) || (r.to && r.to.kind === kind && r.to.id === id);
+    S.relations.filter(hits).forEach(r => tombstone('relations', r.id));
+    S.relations = S.relations.filter(r => !hits(r));
+  }
   function deleteMarker(id) {
     if (marker(id)) tombstone('markers', id);
     S.markers = S.markers.filter(m => m.id !== id);
-    S.links.filter(l => l.fromId === id || l.toId === id).forEach(l => tombstone('links', l.id));
+    S.links.filter(l => l.fromId === id || l.toId === id).forEach(l => { tombstone('links', l.id); dropRelationsOf('link', l.id); });
     S.links = S.links.filter(l => l.fromId !== id && l.toId !== id);
+    dropRelationsOf('marker', id);
     commit({ type: 'marker', id, deleted: true });
   }
   function addLink(data) { const l = touch(normLink(data)); S.links.push(l); commit({ type: 'link', id: l.id }); return l; }
   function updateLink(id, patch) { const l = link(id); if (!l) return null; Object.assign(l, clone(patch), { id }); touch(l); commit({ type: 'link', id }); return l; }
-  function deleteLink(id) { if (link(id)) tombstone('links', id); S.links = S.links.filter(l => l.id !== id); commit({ type: 'link', id, deleted: true }); }
+  function deleteLink(id) { if (link(id)) tombstone('links', id); S.links = S.links.filter(l => l.id !== id); dropRelationsOf('link', id); commit({ type: 'link', id, deleted: true }); }
   function addCategory(data) { const c = touch(normCategory(data)); S.categories.push(c); commit({ type: 'category', id: c.id }); return c; }
   function updateCategory(id, patch) { const c = category(id); if (!c) return null; Object.assign(c, clone(patch), { id }); touch(c); commit({ type: 'category', id }); return c; }
   function deleteCategory(id) {
@@ -344,7 +351,7 @@ window.Store = (() => {
   function deleteLinkType(id) {
     if (linkType(id)) tombstone('linkTypes', id);
     S.linkTypes = S.linkTypes.filter(t => t.id !== id);
-    S.links.filter(l => l.typeId === id).forEach(l => tombstone('links', l.id));
+    S.links.filter(l => l.typeId === id).forEach(l => { tombstone('links', l.id); dropRelationsOf('link', l.id); });
     S.links = S.links.filter(l => l.typeId !== id);
     commit({ type: 'linkType', id, deleted: true });
   }
