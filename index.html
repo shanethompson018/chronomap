@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chrono Map</title>
+<meta name="description" content="A map that moves through time: people, places, events and the ties between them.">
+<meta name="theme-color" content="#15181e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chrono Map">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="assets/chronomap.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">🗺️ ChronoMap</div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="map">Map</button>
+    <button class="tab" data-tab="ties">Ties</button>
+    <button class="tab" data-tab="network">Network</button>
+    <button class="tab" data-tab="data">Data</button>
+  </nav>
+  <div class="topbar-right">
+    <button id="btn-eink" title="E-ink mode: light high-contrast theme, no animations, larger controls (for Boox and other e-paper screens)">◐ E-ink</button>
+    <button id="btn-new-marker" class="primary">+ New marker</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= MAP TAB ================= -->
+  <section id="tab-map" class="tab-panel active">
+    <aside class="side map-side">
+      <div class="side-section">
+        <input id="m-search" type="search" placeholder="Search markers…" autocomplete="off">
+        <select id="m-source" title="Show only markers that draw on this source" style="margin-top:6px"></select>
+        <div class="side-actions">
+          <button id="m-add-pin" title="Click on the map to place a new pin">+ Pin</button>
+          <button id="m-add-area" title="Draw a border / area on the map">+ Area</button>
+          <button id="m-add-path" title="Draw a route / path on the map">+ Path</button>
+        </div>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Categories <button id="m-cats-all" class="link-btn">all</button> <button id="m-cats-none" class="link-btn">none</button></div>
+        <div id="m-cats" class="check-list"></div>
+      </div>
+      <div class="side-section grow">
+        <div class="side-title">Markers <span id="m-count" class="muted"></span></div>
+        <div id="m-list" class="marker-list"></div>
+      </div>
+    </aside>
+
+    <div class="map-area">
+      <div id="map"></div>
+      <div id="map-banner" class="map-banner hidden"></div>
+      <div class="timebar">
+        <div class="time-controls">
+          <button id="t-start" title="Jump to start">⏮</button>
+          <button id="t-back" title="Step back">◀</button>
+          <button id="t-play" title="Play / pause" class="play">▶</button>
+          <button id="t-fwd" title="Step forward">▶</button>
+          <button id="t-end" title="Jump to end">⏭</button>
+          <select id="t-step" title="Step size">
+            <option value="1">1 day</option>
+            <option value="7">1 week</option>
+            <option value="month" selected>1 month</option>
+            <option value="year">1 year</option>
+            <option value="decade">10 years</option>
+          </select>
+          <input id="t-date" type="text" placeholder="YYYY-MM-DD" title="Type a date (e.g. 1776-07-04, 1776, 500 BC) and press Enter">
+          <span id="t-display" class="time-display"></span>
+          <span class="spacer"></span>
+          <label title="Ignore the time slider and show every marker at its latest position"><input type="checkbox" id="t-ignore"> Show all times</label>
+          <label title="Draw lines between tied markers that are both on the map"><input type="checkbox" id="t-ties"> Ties</label>
+          <label><input type="checkbox" id="t-labels"> Labels</label>
+          <select id="t-basemap" title="Base map">
+            <option value="streets">Streets</option>
+            <option value="light">Light gray</option>
+            <option value="dark">Dark gray</option>
+            <option value="natgeo">National Geographic</option>
+            <option value="terrain">Physical / terrain</option>
+            <option value="satellite">Satellite</option>
+            <option value="topo">Topographic</option>
+            <option value="none">No base map</option>
+          </select>
+        </div>
+        <div class="time-slider-row">
+          <span id="t-min" class="muted"></span>
+          <input type="range" id="t-slider" min="0" max="1" step="1" value="0">
+          <span id="t-max" class="muted"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TIES TAB ================= -->
+  <section id="tab-ties" class="tab-panel">
+    <aside class="side">
+      <div class="side-section">
+        <div class="side-title">Tie</div>
+        <label class="field">Link type
+          <select id="ties-type"></select>
+        </label>
+        <label class="field">Hub marker (optional)
+          <div id="ties-hub"></div>
+        </label>
+        <p class="hint">Pick a link type to see every marker joined by that tie. Pick a hub marker to narrow it to the group connected to that marker (e.g. the Declaration of Independence and everyone who signed it).</p>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Display</div>
+        <label class="field">Layout
+          <select id="ties-layout">
+            <option value="auto">Auto (hierarchy if directed, else random)</option>
+            <option value="tree">Hierarchy</option>
+            <option value="force">Force</option>
+            <option value="random">Random</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="ties-labels" checked> Show link labels</label>
+        <button id="ties-shuffle" class="small">Re-layout</button>
+      </div>
+      <div class="side-section">
+        <div id="ties-stats" class="muted"></div>
+      </div>
+    </aside>
+    <div class="graph-area"><div id="ties-graph" class="graph"></div></div>
+    <aside class="info-panel" id="ties-info"><div class="muted pad">Click a marker to see its details.</div></aside>
+    <button class="info-close" id="ties-info-close" title="Close details">✕</button>
+  </section>
+
+  <!-- ================= NETWORK TAB ================= -->
+  <section id="tab-network" class="tab-panel">
+    <aside class="side">
+      <div class="side-section">
+        <div class="side-title">Focus</div>
+        <label class="field">Marker
+          <div id="net-center"></div>
+        </label>
+        <label class="field">Degrees of separation: <strong id="net-deg-val">1</strong>
+          <input type="range" id="net-degrees" min="1" max="6" value="1">
+        </label>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Link types <button id="net-types-all" class="link-btn">all</button> <button id="net-types-none" class="link-btn">none</button></div>
+        <div id="net-types" class="check-list"></div>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Categories <button id="net-cats-all" class="link-btn">all</button> <button id="net-cats-none" class="link-btn">none</button></div>
+        <div id="net-cats" class="check-list"></div>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Display</div>
+        <label class="field">Layout
+          <select id="net-layout">
+            <option value="force">Force</option>
+            <option value="tree">Hierarchy</option>
+            <option value="random">Random</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="net-labels" checked> Show link labels</label>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Saved views</div>
+        <div class="row">
+          <select id="net-views"><option value="">— pick a view —</option></select>
+        </div>
+        <div class="row">
+          <button id="net-view-save" class="small">Save current</button>
+          <button id="net-view-delete" class="small">Delete</button>
+        </div>
+      </div>
+      <div class="side-section"><div id="net-stats" class="muted"></div></div>
+    </aside>
+    <div class="graph-area"><div id="net-graph" class="graph"></div></div>
+    <aside class="info-panel" id="net-info"><div class="muted pad">Pick a marker to start from.</div></aside>
+    <button class="info-close" id="net-info-close" title="Close details">✕</button>
+  </section>
+
+  <!-- ================= DATA TAB ================= -->
+  <section id="tab-data" class="tab-panel">
+    <div class="data-page" id="data-page"></div>
+  </section>
+
+</main>
+
+<aside id="drawer" class="drawer hidden"></aside>
+<div id="toast-host"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="js/dates.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/sample.js"></script>
+<script src="js/store.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/map.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/ties.js"></script>
+<script src="js/network.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Claude Code session files (local only)
+.claude/
+# OS clutter
+Thumbs.db
+desktop.ini
+.DS_Store
