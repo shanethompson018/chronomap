@@ -108,7 +108,19 @@ Going through these in order:
 - [ ] **Areas.** What areas and borders should be able to do beyond the current draw-a-shape: changing
       shape over time more easily, labels inside the area, relations between an area and the people and
       events inside it, areas following a person (a kingdom's extent at a ruler's death), importing real
-      border data. Overlaps with 1b.
+      border data. Overlaps with 1b (rough borders: core/extent outlines, firm/rough edges, decided there).
+      Decisions so far (build later):
+      - Borders over time already keep one dated shape per period and the slider shows the one in
+        force; the earlier shape stays untouched when a later one is added. Keep this.
+      - New editing flow: at the slider's date press "Change border here"; the app copies the shape in
+        force into a new dated shape and you drag only the corners that moved. Corner dragging,
+        adding and deleting corners, and a simplify button are part of this.
+      - Draft a border from a picture: (1) upload the source's map into the photo library and
+        georeference it by matching two or three known points to the real map, shown as a
+        see-through overlay; (2) a fill tool (click inside a tinted territory → outline of that
+        region) and a trace tool (click a drawn border line → follow it), both run in the browser on
+        the picture's pixels; the draft is simplified and then corrected by dragging corners. No AI
+        guessing of coordinates.
 
 ## 4. Fields and ties
 
