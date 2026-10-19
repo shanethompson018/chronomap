@@ -6,23 +6,28 @@ move and disappear. Built for learning from historical texts; works just as well
 
 ## Running it
 
-Open the Start menu and type **Chrono Map**. The shortcut opens the app in its own Chrome window.
-(You can also just double-click `index.html`; no install, no build.)
+The app is published at **https://shanethompson018.github.io/chronomap/** from the `main` branch of
+github.com/shanethompson018/chronomap (GitHub Pages). On the PC, open the Start menu and type
+**Chrono Map**: the shortcut opens that address in its own Chrome window. On a tablet or phone, open the
+address in Chrome and choose *Add to Home screen*.
 
-The shortcut lives at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Chrono Map.lnk` and points
-Chrome at `index.html` in app mode, with the icon from `assets\chronomap.ico`. If you move this folder,
-recreate it by running this in PowerShell from the new folder:
+Opening `index.html` straight from this folder still works for development, but that copy has its own
+separate data store and cannot sign in to Google (the client ID is tied to the published address and to
+`http://localhost:8765`, which `py -m http.server 8765` serves for testing).
+
+The Start Menu shortcut lives at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Chrono Map.lnk`.
+To recreate it, run this in PowerShell from this folder:
 
 ```powershell
 $p = (Get-Location).Path; $ws = New-Object -ComObject WScript.Shell
 $s = $ws.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Chrono Map.lnk")
 $s.TargetPath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-$s.Arguments = '--app="file:///' + ($p -replace '\\','/' -replace ' ','%20') + '/index.html"'
+$s.Arguments = '--app=https://shanethompson018.github.io/chronomap/'
 $s.WorkingDirectory = $p; $s.IconLocation = "$p\assets\chronomap.ico,0"; $s.Save()
 ```
 
-Your data is saved by the browser that opens the app, so always open it the same way (the shortcut, or
-the same browser) to see the same data. Export a JSON backup from the Data tab to move it elsewhere.
+Publishing a change: commit and `git push origin main`; GitHub Pages redeploys within a minute and
+open copies of the app show a "Reload" notice.
 
 * It needs an internet connection (the map tiles and the two libraries, Leaflet and D3, load from the
   web). Your data never leaves your computer. Base maps come from Esri and OpenTopoMap; OpenStreetMap's
