@@ -20,8 +20,13 @@ Going through these in order:
         range is the anchor's range combined with the gap's range, end to end, so ranges widen along a
         chain of rough steps and stay the same width through exact steps. "Before" relations flip which
         ends combine. The conflict check compares ranges: a value inside the other's range agrees.
-      - Open: how a range shows on the map (under discussion: show the marker through the whole range,
-        two copies if two ranges overlap; exact-dated facts versus approximate ones at the same moment).
+      - A marker shows on the map through its whole range (earliest to latest). When two of its
+        ranges overlap it appears in both places at once.
+      - An exact-dated location fact trims any overlapping location range on the map at that moment
+        (the range is not edited, just not drawn then); the bubble still lists both. For anything other
+        than location the app shows both facts side by side and leaves the judgement to the grade.
+      - How "possibly here" looks compared with "known here" (fade, hollow pin, symbol) is NOT decided
+        here: tabled to item 2, Grading of information, because the look must also carry the grade.
 - [ ] **1b. Approximate areas and locations.** Country boundaries that are only roughly known; where a
       person was at a time when the text gives a region rather than a place ("in the land of Nod").
 - [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
@@ -33,6 +38,12 @@ Going through these in order:
       can be trusted. Name still open: credibility, reliability, certainty, veracity, probability,
       validity. Levels to be decided. To be discussed alongside the approximation items, since
       "approximate" and "uncertain" overlap.
+      Carried in from 1a:
+      - Each grade should look different on the map and in the bubble (transparency, symbol, outline…).
+      - The same look must also show "possibly here" (inside a range) versus "known here" (exact date).
+        The two ideas overlap but may need to stay distinct; not yet worked out.
+      - The conundrum to mull over: a highly credible source that gives only an approximation. The
+        grade is high but the precision is low; how should that show?
 
 ## 3. Markers
 
