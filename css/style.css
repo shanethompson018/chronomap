@@ -256,6 +256,15 @@ table.grid tr:hover td { background: rgba(255,255,255,.02); }
 .pin-dot.pin-photo { background-size: cover; background-position: center; border-width: 3px; font-size: 0; }
 @media (max-width: 700px) { .photo-edit, .lightbox { flex-direction: column; } .lightbox img { max-width: 100%; } .photo-edit-left { flex: none; } }
 
+/* ---------- sync button ---------- */
+.sync-btn { white-space: nowrap; }
+.sync-btn.sync-ok { border-color: #2f9e62; color: #7ee2a8; }
+.sync-btn.sync-signin, .sync-btn.sync-off { border-color: var(--accent2); color: var(--accent2); }
+.sync-btn.sync-error { border-color: var(--danger); color: var(--danger); }
+.sync-btn.sync-offline { opacity: .6; }
+.sync-btn.sync-syncing { opacity: .8; }
+body.eink .sync-btn { color: #000; border-color: #000; }
+
 /* ---------- narrow screens (tablets in portrait) ---------- */
 .info-close { display: none; }
 @media (max-width: 1000px) {

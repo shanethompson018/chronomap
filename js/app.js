@@ -72,6 +72,7 @@ window.App = (() => {
       Network.init();
       DataTab.init();
       Photos.init().catch(err => console.warn('Photos failed to load', err));
+      Sync.init();
     } catch (e) {
       console.error(e);
       document.body.insertAdjacentHTML('afterbegin', `<div style="padding:20px;color:#f66">Start-up error: ${UI.esc(e.message)}. If this page was opened without an internet connection, the map and graph libraries could not load.</div>`);
@@ -80,6 +81,18 @@ window.App = (() => {
     document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
     document.getElementById('btn-new-marker').addEventListener('click', newMarker);
     document.getElementById('btn-eink').addEventListener('click', toggleEink);
+    // Sync button: shows the state, click signs in (first time) or syncs now
+    const syncBtn = document.getElementById('btn-sync');
+    const paintSync = () => {
+      const s = Sync.status();
+      syncBtn.textContent = { off: '☁ Sync', signin: '☁ Sign in', syncing: '⟳ Syncing…', ok: '☁ ' + s.text.replace('Synced ', ''), error: '⚠ Sync', offline: '☁ Offline' }[s.state] || '☁ Sync';
+      syncBtn.title = s.text + (Sync.lastError() ? '\n' + Sync.lastError().message : '') + '\nClick to sync now.';
+      syncBtn.className = 'sync-btn sync-' + s.state;
+      syncBtn.disabled = s.state === 'syncing';
+    };
+    document.addEventListener('chrono-sync', paintSync);
+    paintSync();
+    syncBtn.addEventListener('click', () => { if (!Sync.configured()) { UI.toast('Sync is not configured in js/config.js', 'error'); return; } if (Sync.enabled() && Sync.hasToken()) Sync.run({ interactive: true, reason: 'button' }); else Sync.signIn().catch(e => UI.toast('Sign-in: ' + e.message, 'error')); });
     document.addEventListener('click', onGlobalClick);
     registerServiceWorker();
     document.addEventListener('keydown', e => {

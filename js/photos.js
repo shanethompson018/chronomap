@@ -95,6 +95,19 @@ window.Photos = (() => {
     forget(id);
     if (db) await tx('readwrite', s => s.delete(id));
   }
+  // Store image bytes for a photo record that already exists (used when sync downloads a photo).
+  async function putBlob(id, blob) {
+    if (!db) throw new Error('Photo storage is not available');
+    const { blob: b, thumb } = await process(blob);
+    await tx('readwrite', s => s.put({ id, blob: b, thumb }));
+    remember(id, b, thumb);
+  }
+  async function getBlob(id) {
+    if (!db) return null;
+    const rec = await tx('readonly', s => s.get(id));
+    return rec ? rec.blob : null;
+  }
+  const hasBlob = id => cache.has(id);
   const url = id => (id && cache.get(id)) ? cache.get(id).url : null;
   const thumb = id => (id && cache.get(id)) ? cache.get(id).thumbUrl : null;
   function totalBytes() { return Store.photos().reduce((s, p) => s + (p.bytes || 0), 0); }
@@ -230,5 +243,5 @@ window.Photos = (() => {
     const m = UI.modal({ title: 'Photo', body, width: '900px' });
   }
 
-  return { init, add, remove, url, thumb, totalBytes, exportAll, importAll, pick, edit, view, thumbEl, isReady: () => ready };
+  return { init, add, remove, putBlob, getBlob, hasBlob, url, thumb, totalBytes, exportAll, importAll, pick, edit, view, thumbEl, isReady: () => ready };
 })();

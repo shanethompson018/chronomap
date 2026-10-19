@@ -10,7 +10,14 @@ window.Editor = (() => {
     drawer.addEventListener('change', onInput);
     Store.subscribe(evt => {
       if (!draft) return;
-      if (evt.type === 'all') { draft = null; id = null; isNew = false; drawer.classList.add('hidden'); return; }
+      if (evt.type === 'all') {
+        if (evt.sync) { // a background sync merged data: keep editing unless this marker vanished
+          if (!isNew && !Store.marker(id)) { UI.toast('This marker was deleted on another device', 'error'); draft = null; id = null; drawer.classList.add('hidden'); }
+          else renderLinks();
+          return;
+        }
+        draft = null; id = null; isNew = false; drawer.classList.add('hidden'); return;
+      }
       if (evt.type === 'link' || evt.type === 'linkType') renderLinks();
       if (evt.type === 'source' || evt.type === 'photo' || evt.type === 'photos') render(); // new sources/photos must show up in the pickers
       if (evt.type === 'marker' && evt.id === id && evt.deleted) { draft = null; id = null; drawer.classList.add('hidden'); }

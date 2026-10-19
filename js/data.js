@@ -6,6 +6,7 @@ window.DataTab = (() => {
   function init() {
     host = document.getElementById('data-page');
     Store.subscribe(evt => { if (App.currentTab() === 'data' && !(evt.type === 'photos' && document.activeElement && host.contains(document.activeElement))) render(); });
+    document.addEventListener('chrono-sync', e => { if (App.currentTab() === 'data' && e.detail && e.detail.state !== 'syncing' && !(document.activeElement && host.contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) render(); });
   }
   function show() { render(); }
 
@@ -14,7 +15,7 @@ window.DataTab = (() => {
   function render() {
     const scroll = host.scrollTop;
     host.innerHTML = '';
-    host.append(sourcesSection(), photosSection(), categoriesSection(), linkTypesSection(), markersSection(), backupSection());
+    host.append(syncSection(), sourcesSection(), photosSection(), categoriesSection(), linkTypesSection(), markersSection(), backupSection());
     host.scrollTop = scroll;
   }
 
@@ -27,6 +28,39 @@ window.DataTab = (() => {
     const inp = h('input', { type: 'color', value: value || '#888888' });
     inp.addEventListener('change', () => onChange(inp.value));
     return h('td', { class: 'narrow' }, inp);
+  }
+
+  function syncSection() {
+    const s = Store.settings();
+    const st = Sync.status();
+    const statusLine = h('div', { id: 'sync-status-line' });
+    const paint = () => {
+      if (!statusLine.isConnected && paint.armed) { document.removeEventListener('chrono-sync', paint); return; }
+      paint.armed = true;
+      const cur = Sync.status();
+      statusLine.innerHTML = '';
+      statusLine.append(h('strong', {}, { off: 'Not signed in', signin: 'Signed out (sign in to sync)', syncing: cur.text, ok: 'Signed in · ' + cur.text, error: 'Sync failed', offline: 'Offline' }[cur.state] || cur.text));
+      if (cur.state === 'error' && Sync.lastError()) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, Sync.lastError().message));
+      if (Store.settings().driveLastSync) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, 'Last successful sync: ' + new Date(Store.settings().driveLastSync).toLocaleString()));
+    };
+    paint();
+    document.addEventListener('chrono-sync', paint);
+    const folder = Sync.folderUrl();
+    const configured = Sync.configured();
+    return h('div', { class: 'data-section' },
+      h('h2', {}, 'Google Drive sync'),
+      h('p', { class: 'hint' }, configured
+        ? 'Keeps the same markers, ties, sources and photos on every device you sign in on. The app asks Google only for permission to manage the files it creates itself, and stores them in a "Chrono Map" folder in your Drive. Changes sync a few seconds after you make them, when the app opens, and when you press Sync.'
+        : 'Sync is not configured: js/config.js has no Google client ID.'),
+      statusLine,
+      h('div', { class: 'backup-row', style: { marginTop: '10px' } },
+        Sync.enabled() && Sync.hasToken()
+          ? h('button', { class: 'primary', onclick: () => Sync.run({ interactive: true, reason: 'button' }) }, '⟳ Sync now')
+          : h('button', { class: 'primary', disabled: !configured, onclick: () => Sync.signIn().then(() => render()).catch(e => UI.toast('Sign-in: ' + e.message, 'error')) }, Sync.enabled() ? '🔑 Sign in again' : '🔑 Sign in with Google'),
+        Sync.enabled() ? h('button', { onclick: () => { if (confirm('Stop syncing on this device? Your data stays here and in Drive; nothing is deleted.')) { Sync.signOut(); render(); } } }, 'Sign out') : null,
+        folder ? h('a', { href: folder, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)' } }, 'Open the Drive folder ↗') : null,
+        h('span', { class: 'spacer' }),
+        s.sampleUntouched ? h('span', { class: 'muted', style: { fontSize: '12px' } }, 'This device still shows the untouched sample; the first sync will replace it with what is in Drive.') : null));
   }
 
   function sourcesSection() {

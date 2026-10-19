@@ -32,6 +32,27 @@ the same browser) to see the same data. Export a JSON backup from the Data tab t
 * It opens with a sample dataset (the American founding era). Replace it any time with
   **Data → Clear everything** or **Load sample data**.
 
+## Same data on every device: Google Drive sync
+
+Press **☁ Sync** at the top right (or Data → Google Drive sync → Sign in with Google). The app asks Google
+for one narrow permission, "see and manage files this app creates", and keeps a **Chrono Map** folder
+in your Drive with `chronomap-data.json` and a `photos` folder. From then on:
+
+* changes sync a few seconds after you make them, when the app opens, when it comes back to the
+  foreground, and whenever you press the button;
+* each marker, tie, category, source and photo is merged separately: the newest version wins, so edits
+  to different things on two devices both survive, and a deletion on one device is not undone by the other;
+* a device that still shows the untouched sample data takes whatever is in Drive on its first sync;
+* Google's sign-in lasts about an hour at a time. When it lapses the button says "Sign in"; one click
+  (and sometimes a short Google popup that closes itself) renews it. Allow popups for the site if the
+  browser blocks that window.
+
+Signing out (Data tab) only stops syncing on that device; nothing is deleted. Removing the Chrono Map
+folder from Drive removes the shared copy; each device keeps its own.
+
+The Google side lives in a Google Cloud project owned by the same account; its client ID is in
+`js/config.js` and is tied to the site address, so a copy of the app elsewhere needs its own.
+
 ## On a tablet or e-reader (Boox Note Air and similar)
 
 * **E-ink mode**: the ◐ E-ink button at the top right switches to a white, high-contrast theme with no
@@ -158,6 +179,8 @@ js/ties.js        Ties tab
 js/network.js     Network tab
 js/data.js        Data tab
 js/photos.js      photo library (images in IndexedDB), picker, lightbox
+js/sync.js        Google Drive sync (sign-in, Drive folder, per-record merge, photos)
+js/config.js      deployment settings (Google client ID)
 js/app.js         tabs, e-ink mode, start-up, service worker registration
 manifest.webmanifest  installable-app description (name, icons)
 sw.js             service worker: offline cache of the app files

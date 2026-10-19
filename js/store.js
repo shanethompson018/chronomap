@@ -20,10 +20,18 @@ window.Store = (() => {
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const clone = o => JSON.parse(JSON.stringify(o));
 
+  // Collections that sync between devices. Every record in them carries updatedAt; deletions leave a
+  // tombstone in `deleted` so a removal on one device is not undone by a merge from another.
+  const SYNC_COLLS = ['categories', 'linkTypes', 'markers', 'links', 'sources', 'photos'];
+  const TOMBSTONE_DAYS = 180;
+
   function blank() {
-    return { version: 1, categories: [], linkTypes: [], markers: [], links: [], sources: [], photos: [],
-      settings: { basemap: 'streets', showTies: true, showLabels: true, networkViews: [] } };
+    return { version: 2, categories: [], linkTypes: [], markers: [], links: [], sources: [], photos: [], deleted: [],
+      settings: { basemap: 'streets', showTies: true, showLabels: true, networkViews: [], sampleUntouched: false, driveSync: false } };
   }
+  // Mark a record as changed now; any data change also means the sample data is no longer pristine.
+  function touch(rec) { if (rec) rec.updatedAt = Date.now(); if (S) S.settings.sampleUntouched = false; return rec; }
+  function tombstone(coll, id) { S.deleted.push({ coll, id, at: Date.now() }); S.settings.sampleUntouched = false; }
   function normMove(mv) { return Object.assign({ id: uid(), date: '', lat: null, lng: null, coords: null, label: '', note: '', sourceId: null, page: '' }, mv || {}); }
   function normCitation(c) { return Object.assign({ sourceId: null, page: '', note: '' }, c || {}); }
   function normMarker(m) {
@@ -57,9 +65,28 @@ window.Store = (() => {
     d.sources = (d.sources || []).map(normSource);
     d.photos = (d.photos || []).map(normPhoto);
     delete d.photoData; // image bytes from an export file are handled by Photos.importAll, never kept here
+    const cutoff = Date.now() - TOMBSTONE_DAYS * 86400000;
+    d.deleted = (d.deleted || []).filter(t => t && t.coll && t.id && t.at > cutoff);
     d.settings = Object.assign(blank().settings, d.settings || {});
     d.markers.forEach(sortMovesInPlace);
+    cleanReferences(d);
     return d;
+  }
+  // Drop links to missing markers and references to missing categories, sources, link types and photos.
+  function cleanReferences(d) {
+    const has = (coll, id) => !id || d[coll].some(r => r.id === id);
+    d.links = d.links.filter(l => has('markers', l.fromId) && has('markers', l.toId) && l.fromId && l.toId && has('linkTypes', l.typeId));
+    d.categories.forEach(c => { if (!has('sources', c.sourceId)) c.sourceId = null; });
+    d.markers.forEach(m => {
+      if (!has('categories', m.categoryId)) m.categoryId = null;
+      if (!has('photos', m.photoId)) m.photoId = null;
+      m.photoIds = (m.photoIds || []).filter(pid => has('photos', pid));
+      m.citations = (m.citations || []).filter(c => !c.sourceId || has('sources', c.sourceId));
+      (m.moves || []).forEach(mv => { if (!has('sources', mv.sourceId)) mv.sourceId = null; });
+      for (const k of Object.keys(m.fieldSources || {})) if (!has('sources', m.fieldSources[k].sourceId)) delete m.fieldSources[k];
+    });
+    d.links.forEach(l => { if (!has('sources', l.sourceId)) l.sourceId = null; });
+    d.photos.forEach(p => { p.citations = (p.citations || []).filter(c => !c.sourceId || has('sources', c.sourceId)); });
   }
 
   function load() {
@@ -68,6 +95,7 @@ window.Store = (() => {
       if (raw) { S = normalize(JSON.parse(raw)); return; }
     } catch (e) { console.warn('Could not read saved data', e); }
     S = normalize(SampleData.create());
+    S.settings.sampleUntouched = true;
     save();
   }
   function save() {
@@ -183,7 +211,7 @@ window.Store = (() => {
   const displayIcon = m => m.icon || category(m.categoryId)?.icon || '';
 
   // ---------- mutations ----------
-  function addMarker(data) { const m = normMarker(data); sortMovesInPlace(m); S.markers.push(m); commit({ type: 'marker', id: m.id }); return m; }
+  function addMarker(data) { const m = touch(normMarker(data)); sortMovesInPlace(m); S.markers.push(m); commit({ type: 'marker', id: m.id }); return m; }
   function updateMarker(id, patch) {
     const m = marker(id); if (!m) return null;
     Object.assign(m, clone(patch), { id });
@@ -191,49 +219,64 @@ window.Store = (() => {
     m.citations = (m.citations || []).map(normCitation);
     m.fieldSources = m.fieldSources || {};
     for (const k of Object.keys(m.fieldSources)) if (!(k in m.fields) || !m.fieldSources[k] || !m.fieldSources[k].sourceId) delete m.fieldSources[k];
+    touch(m);
     commit({ type: 'marker', id }); return m;
   }
   function deleteMarker(id) {
+    if (marker(id)) tombstone('markers', id);
     S.markers = S.markers.filter(m => m.id !== id);
+    S.links.filter(l => l.fromId === id || l.toId === id).forEach(l => tombstone('links', l.id));
     S.links = S.links.filter(l => l.fromId !== id && l.toId !== id);
     commit({ type: 'marker', id, deleted: true });
   }
-  function addLink(data) { const l = normLink(data); S.links.push(l); commit({ type: 'link', id: l.id }); return l; }
-  function updateLink(id, patch) { const l = link(id); if (!l) return null; Object.assign(l, clone(patch), { id }); commit({ type: 'link', id }); return l; }
-  function deleteLink(id) { S.links = S.links.filter(l => l.id !== id); commit({ type: 'link', id, deleted: true }); }
-  function addCategory(data) { const c = normCategory(data); S.categories.push(c); commit({ type: 'category', id: c.id }); return c; }
-  function updateCategory(id, patch) { const c = category(id); if (!c) return null; Object.assign(c, clone(patch), { id }); commit({ type: 'category', id }); return c; }
+  function addLink(data) { const l = touch(normLink(data)); S.links.push(l); commit({ type: 'link', id: l.id }); return l; }
+  function updateLink(id, patch) { const l = link(id); if (!l) return null; Object.assign(l, clone(patch), { id }); touch(l); commit({ type: 'link', id }); return l; }
+  function deleteLink(id) { if (link(id)) tombstone('links', id); S.links = S.links.filter(l => l.id !== id); commit({ type: 'link', id, deleted: true }); }
+  function addCategory(data) { const c = touch(normCategory(data)); S.categories.push(c); commit({ type: 'category', id: c.id }); return c; }
+  function updateCategory(id, patch) { const c = category(id); if (!c) return null; Object.assign(c, clone(patch), { id }); touch(c); commit({ type: 'category', id }); return c; }
   function deleteCategory(id) {
+    if (category(id)) tombstone('categories', id);
     S.categories = S.categories.filter(c => c.id !== id);
-    S.markers.forEach(m => { if (m.categoryId === id) m.categoryId = null; });
+    S.markers.forEach(m => { if (m.categoryId === id) { m.categoryId = null; touch(m); } });
     commit({ type: 'category', id, deleted: true });
   }
-  function addLinkType(data) { const t = normLinkType(data); S.linkTypes.push(t); commit({ type: 'linkType', id: t.id }); return t; }
-  function updateLinkType(id, patch) { const t = linkType(id); if (!t) return null; Object.assign(t, clone(patch), { id }); commit({ type: 'linkType', id }); return t; }
+  function addLinkType(data) { const t = touch(normLinkType(data)); S.linkTypes.push(t); commit({ type: 'linkType', id: t.id }); return t; }
+  function updateLinkType(id, patch) { const t = linkType(id); if (!t) return null; Object.assign(t, clone(patch), { id }); touch(t); commit({ type: 'linkType', id }); return t; }
   function deleteLinkType(id) {
+    if (linkType(id)) tombstone('linkTypes', id);
     S.linkTypes = S.linkTypes.filter(t => t.id !== id);
+    S.links.filter(l => l.typeId === id).forEach(l => tombstone('links', l.id));
     S.links = S.links.filter(l => l.typeId !== id);
     commit({ type: 'linkType', id, deleted: true });
   }
-  function addSource(data) { const s = normSource(data); S.sources.push(s); commit({ type: 'source', id: s.id }); return s; }
-  function updateSource(id, patch) { const s = source(id); if (!s) return null; Object.assign(s, clone(patch), { id }); commit({ type: 'source', id }); return s; }
+  function addSource(data) { const s = touch(normSource(data)); S.sources.push(s); commit({ type: 'source', id: s.id }); return s; }
+  function updateSource(id, patch) { const s = source(id); if (!s) return null; Object.assign(s, clone(patch), { id }); touch(s); commit({ type: 'source', id }); return s; }
   function deleteSource(id) {
+    if (source(id)) tombstone('sources', id);
     S.sources = S.sources.filter(s => s.id !== id);
-    S.categories.forEach(c => { if (c.sourceId === id) c.sourceId = null; });
+    S.categories.forEach(c => { if (c.sourceId === id) { c.sourceId = null; touch(c); } });
     S.markers.forEach(m => {
-      m.citations = m.citations.filter(c => c.sourceId !== id);
-      m.moves.forEach(mv => { if (mv.sourceId === id) mv.sourceId = null; });
-      for (const k of Object.keys(m.fieldSources || {})) if (m.fieldSources[k] && m.fieldSources[k].sourceId === id) delete m.fieldSources[k];
+      let changed = false;
+      if (m.citations.some(c => c.sourceId === id)) { m.citations = m.citations.filter(c => c.sourceId !== id); changed = true; }
+      m.moves.forEach(mv => { if (mv.sourceId === id) { mv.sourceId = null; changed = true; } });
+      for (const k of Object.keys(m.fieldSources || {})) if (m.fieldSources[k] && m.fieldSources[k].sourceId === id) { delete m.fieldSources[k]; changed = true; }
+      if (changed) touch(m);
     });
-    S.links.forEach(l => { if (l.sourceId === id) l.sourceId = null; });
-    S.photos.forEach(p => { p.citations = p.citations.filter(c => c.sourceId !== id); });
+    S.links.forEach(l => { if (l.sourceId === id) { l.sourceId = null; touch(l); } });
+    S.photos.forEach(p => { if (p.citations.some(c => c.sourceId === id)) { p.citations = p.citations.filter(c => c.sourceId !== id); touch(p); } });
     commit({ type: 'source', id, deleted: true });
   }
-  function addPhoto(data) { const p = normPhoto(data); S.photos.push(p); commit({ type: 'photo', id: p.id }); return p; }
-  function updatePhoto(id, patch) { const p = photo(id); if (!p) return null; Object.assign(p, clone(patch), { id }); p.citations = (p.citations || []).map(normCitation); commit({ type: 'photo', id }); return p; }
+  function addPhoto(data) { const p = touch(normPhoto(data)); S.photos.push(p); commit({ type: 'photo', id: p.id }); return p; }
+  function updatePhoto(id, patch) { const p = photo(id); if (!p) return null; Object.assign(p, clone(patch), { id }); p.citations = (p.citations || []).map(normCitation); touch(p); commit({ type: 'photo', id }); return p; }
   function deletePhoto(id) {
+    if (photo(id)) tombstone('photos', id);
     S.photos = S.photos.filter(p => p.id !== id);
-    S.markers.forEach(m => { if (m.photoId === id) m.photoId = null; m.photoIds = (m.photoIds || []).filter(x => x !== id); });
+    S.markers.forEach(m => {
+      const had = m.photoId === id || (m.photoIds || []).includes(id);
+      if (m.photoId === id) m.photoId = null;
+      m.photoIds = (m.photoIds || []).filter(x => x !== id);
+      if (had) touch(m);
+    });
     commit({ type: 'photo', id, deleted: true });
   }
   function setSetting(k, v) { S.settings[k] = v; save(); }
@@ -242,17 +285,61 @@ window.Store = (() => {
   function exportJSON() { return JSON.stringify(S, null, 2); }
   function importJSON(text, mode = 'merge') {
     const obj = normalize(JSON.parse(text));
-    if (mode === 'replace') { S = obj; }
+    if (mode === 'replace') {
+      const keep = S.settings;
+      SYNC_COLLS.forEach(coll => S[coll].forEach(r => { if (!obj[coll].some(x => x.id === r.id)) obj.deleted.push({ coll, id: r.id, at: Date.now() }); }));
+      obj.deleted = obj.deleted.concat(S.deleted);
+      obj.settings = keep;
+      S = obj;
+    }
     else {
       const upsert = (list, items) => items.forEach(it => { const i = list.findIndex(x => x.id === it.id); if (i >= 0) list[i] = it; else list.push(it); });
       upsert(S.categories, obj.categories); upsert(S.linkTypes, obj.linkTypes);
       upsert(S.markers, obj.markers); upsert(S.links, obj.links); upsert(S.sources, obj.sources); upsert(S.photos, obj.photos);
+      S.deleted = S.deleted.concat(obj.deleted || []);
     }
+    // imported records count as changed now, so they win over older copies on other devices
+    SYNC_COLLS.forEach(coll => S[coll].forEach(r => { if (!r.updatedAt) r.updatedAt = Date.now(); }));
+    S.settings.sampleUntouched = false;
+    S = normalize(S);
     commit({ type: 'all' });
     return { markers: obj.markers.length, links: obj.links.length };
   }
-  function resetToSample() { S = normalize(SampleData.create()); commit({ type: 'all' }); }
-  function clearAll() { const keep = S.settings; S = blank(); S.settings = keep; commit({ type: 'all' }); }
+  function resetToSample() {
+    const keep = S.settings;
+    // everything currently present is being removed: leave tombstones so a sync does not bring it back
+    SYNC_COLLS.forEach(coll => S[coll].forEach(r => S.deleted.push({ coll, id: r.id, at: Date.now() })));
+    const dead = S.deleted;
+    S = normalize(SampleData.create()); S.deleted = dead; S.settings = keep; S.settings.sampleUntouched = true;
+    commit({ type: 'all' });
+  }
+  function clearAll() {
+    const keep = S.settings;
+    SYNC_COLLS.forEach(coll => S[coll].forEach(r => S.deleted.push({ coll, id: r.id, at: Date.now() })));
+    const dead = S.deleted;
+    S = blank(); S.deleted = dead; S.settings = keep; S.settings.sampleUntouched = false;
+    commit({ type: 'all' });
+  }
+
+  // ---------- sync support ----------
+  // The part of the data that is shared between devices (settings stay on each device).
+  function exportSyncDoc() {
+    const doc = { version: S.version || 2, deleted: clone(S.deleted) };
+    SYNC_COLLS.forEach(coll => { doc[coll] = clone(S[coll]); });
+    return doc;
+  }
+  // Replace the shared collections with a merged document, keeping this device's settings.
+  let applyingSync = false;
+  function replaceSyncDoc(doc) {
+    const keep = S.settings;
+    const next = normalize(Object.assign({}, doc, { settings: keep }));
+    next.settings = keep;
+    S = next;
+    applyingSync = true;
+    try { commit({ type: 'all', sync: true }); } finally { applyingSync = false; }
+  }
+  const isApplyingSync = () => applyingSync;
+  const syncCollections = () => SYNC_COLLS.slice();
 
   return {
     load, subscribe, notify, uid,
@@ -263,5 +350,6 @@ window.Store = (() => {
     addCategory, updateCategory, deleteCategory, addLinkType, updateLinkType, deleteLinkType,
     addSource, updateSource, deleteSource, setSetting,
     exportJSON, importJSON, resetToSample, clearAll,
+    exportSyncDoc, replaceSyncDoc, isApplyingSync, syncCollections,
   };
 })();
