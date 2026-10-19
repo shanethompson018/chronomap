@@ -127,9 +127,27 @@ Going through these in order:
 
 ## 4. Fields and ties
 
-- [ ] **Combining fields and ties.** A field that names another marker ("Father: Adam") could be a tie,
-      and a tie could appear as a field in the info bubble. One model so the same fact is not entered
-      twice; how category field lists and link types relate.
+- [ ] **Combining fields and ties → "a marker is a list of facts".** Decided (build later):
+      - Every statement about a marker is one *fact* with up to five parts: what happened (its
+        type), when (exact date or 1a range), where (a point, an area, a place marker, a shape, or
+        unknown), who else was involved (other markers, each with a role), and the evidence (source,
+        page, Confidence grade, reason box).
+      - Appears/Disappears, positions, fields and ties stop being entered separately: the app derives
+        them from facts. Example: one "Born" fact (date, place, Father, Mother, source) gives the
+        Appears date and label, the first position, the bubble lines Born / Father / Mother, and the
+        two Parent-of ties. Add the birthplace later and the pin appears.
+      - Fact types are user-definable like categories and link types. Each type declares its parts
+        (date, place, roles) and what it implies: starts the marker, ends it, sets a position, makes a
+        tie of type X to the marker in role Y. Starter set: Born, Died, Lived at / Moved to, Married,
+        Fought at, Took place, Signed, Written, Adopted, Founded, Border changed (a shape as the
+        "where"), Ruled by, Destroyed, plus a free "Note" fact.
+      - Categories list their default fact types; any fact type can be added to any marker; any fact
+        can carry extra text lines; labels stay editable per marker ("Created" instead of "Born").
+      - Covers events (battle: Took place, Commanded by) and areas (kingdom: Founded, Border changed,
+        Ruled by) with the same model. Item 5 (places attached to facts) is inside this.
+      - Existing data converts automatically: Appears → Born fact, each position → Lived-at fact,
+        each tie → a fact of the matching type, fields → text lines on the relevant fact.
+      - Expect adjustments once in use; a rehaul is acceptable if needed.
 
 ## 6. Review the wording of everything
 
@@ -140,7 +158,5 @@ Going through these in order:
 
 ## 5. Points, areas and routes attached to fields and ties
 
-- [ ] Today a position, area or route is a stand-alone thing on a marker. Idea: attach them to the field
-      or tie that states the fact ("lived at Haran" carries the point; "ruled Judah" carries the area;
-      "fled to Egypt" carries the route), so a place is not entered twice and the map shows where a fact
-      happened. To be discussed when we reach it; overlaps with 3 (Areas) and 4.
+- [x] Folded into item 4: the "where" of a fact (point, area, place marker, shape or route) lives on
+      the fact itself, so a place is never entered twice and the map shows where each fact happened.
