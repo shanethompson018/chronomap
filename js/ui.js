@@ -132,8 +132,12 @@ window.UI = (() => {
     const rows = []; // [label, html, depth]
     // if a field (or field group) carries the same label as the time span (e.g. "Born"), it usually holds more detail: show it once
     const hasField = label => label && Object.entries(m.fields || {}).some(([k, v]) => v && (k.toLowerCase() === label.toLowerCase() || k.toLowerCase().startsWith(label.toLowerCase() + '/')));
-    if (m.start && !hasField(m.startLabel)) rows.push([m.startLabel || 'Appears', Dates.formatInput(m.start)]);
-    if (m.end && !hasField(m.endLabel)) rows.push([m.endLabel || 'Disappears', Dates.formatInput(m.end)]);
+    const badge = slot => (window.Relations ? Relations.badgesHTML({ kind: 'marker', id: m.id, slot }) : '');
+    const undet = slot => (m.undetermined || []).includes(slot);
+    if (undet('start')) rows.push([m.startLabel || 'Appears', '<span class="muted">undeterminable</span>' + badge('start')]);
+    else if (m.start && !hasField(m.startLabel)) rows.push([m.startLabel || 'Appears', Dates.formatInput(m.start) + badge('start')]);
+    if (undet('end')) rows.push([m.endLabel || 'Disappears', '<span class="muted">undeterminable</span>' + badge('end')]);
+    else if (m.end && !hasField(m.endLabel)) rows.push([m.endLabel || 'Disappears', Dates.formatInput(m.end) + badge('end')]);
     const pos = Store.positionAt(m, t);
     if (pos && Store.hasLocation(pos)) {
       let where = pos.label || (pos.coords ? `${pos.coords.length} points` : `${(+pos.lat).toFixed(3)}, ${(+pos.lng).toFixed(3)}`);
@@ -162,9 +166,13 @@ window.UI = (() => {
       out += `<h4>Movements (${m.moves.length})</h4><ul>` + Store.sortedMoves(m).map(mv => {
         const when = mv.date ? Dates.formatInput(mv.date) : 'start';
         const where = mv.label || (mv.coords ? `${mv.coords.length} points` : (mv.lat != null ? `${(+mv.lat).toFixed(2)}, ${(+mv.lng).toFixed(2)}` : 'no location'));
-        return `<li><span class="muted">${esc(when)}:</span> ${esc(where)}${mv.note ? ` <span class="muted">– ${esc(mv.note)}</span>` : ''}${mv.sourceId ? ' ' + citeHTML(mv.sourceId, mv.page) : ''}</li>`;
+        return `<li><span class="muted">${esc(when)}:</span>${badge('move:' + mv.id)} ${esc(where)}${mv.note ? ` <span class="muted">– ${esc(mv.note)}</span>` : ''}${mv.sourceId ? ' ' + citeHTML(mv.sourceId, mv.page) : ''}</li>`;
       }).join('') + '</ul>';
     }
+
+    const rels = window.Relations ? Store.relationsFor(m.id) : [];
+    if (rels.length) out += `<h4>Date relations (${rels.length})</h4><ul>` + rels.map(r =>
+      `<li${r.status === 'overruled' ? ' class="muted"' : ''}>⛓ ${esc(Relations.describeRelation(r))}${r.status === 'overruled' ? ' <em>(overruled)</em>' : ''}${r.sourceId ? ' ' + citeHTML(r.sourceId, r.page) : ''}${r.note ? ` <span class="muted">– ${esc(r.note)}</span>` : ''}</li>`).join('') + '</ul>';
 
     const links = Store.linksOf(m.id);
     if (links.length) out += `<h4>Ties (${links.length})</h4><ul>` + links.map(l => tieHTML(l, m.id)).join('') + '</ul>';

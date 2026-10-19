@@ -66,6 +66,7 @@ window.App = (() => {
     try {
       Store.load();
       applyEink(detectEink());
+      Relations.init();
       MapView.init();
       Editor.init();
       Ties.init();
@@ -81,6 +82,12 @@ window.App = (() => {
     document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
     document.getElementById('btn-new-marker').addEventListener('click', newMarker);
     document.getElementById('btn-eink').addEventListener('click', toggleEink);
+    // Conflict badge: visible only while some related dates disagree
+    const cBtn = document.getElementById('btn-conflicts');
+    const paintConflicts = () => { const n = Relations.conflicts().length; cBtn.textContent = `⚠ ${n} conflict${n === 1 ? '' : 's'}`; cBtn.classList.toggle('hidden', n === 0); };
+    document.addEventListener('chrono-conflicts', paintConflicts);
+    cBtn.addEventListener('click', () => Relations.showConflicts());
+    paintConflicts();
     // Sync button: shows the state, click signs in (first time) or syncs now
     const syncBtn = document.getElementById('btn-sync');
     const paintSync = () => {

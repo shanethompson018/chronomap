@@ -15,7 +15,7 @@ window.DataTab = (() => {
   function render() {
     const scroll = host.scrollTop;
     host.innerHTML = '';
-    host.append(syncSection(), sourcesSection(), photosSection(), categoriesSection(), linkTypesSection(), markersSection(), backupSection());
+    host.append(syncSection(), relationsSection(), sourcesSection(), photosSection(), categoriesSection(), linkTypesSection(), markersSection(), backupSection());
     host.scrollTop = scroll;
   }
 
@@ -61,6 +61,34 @@ window.DataTab = (() => {
         folder ? h('a', { href: folder, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)' } }, 'Open the Drive folder ↗') : null,
         h('span', { class: 'spacer' }),
         s.sampleUntouched ? h('span', { class: 'muted', style: { fontSize: '12px' } }, 'This device still shows the untouched sample; the first sync will replace it with what is in Drive.') : null));
+  }
+
+  function relationsSection() {
+    const rels = Store.relations();
+    const conflicts = Relations.conflicts();
+    const undetCount = Relations.undetermined().size;
+    const table = h('table', { class: 'grid' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Relation'), h('th', {}, 'Source'), h('th', {}, 'Note'), h('th', {}, 'Status'), h('th', {}))));
+    const tb = h('tbody'); table.append(tb);
+    for (const r of rels) {
+      const over = r.status === 'overruled';
+      tb.append(h('tr', { class: over ? 'muted' : '' },
+        h('td', {}, Relations.describeRelation(r)),
+        h('td', {}, r.sourceId && Store.source(r.sourceId) ? `${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}` : ''),
+        cell(r.note, v => Store.updateRelation(r.id, { note: v })),
+        h('td', { class: 'narrow' }, over ? 'overruled' : 'active'),
+        h('td', { class: 'narrow' },
+          h('button', { class: 'small', onclick: () => Store.updateRelation(r.id, { status: over ? 'active' : 'overruled' }) }, over ? 'Restore' : 'Overrule'), ' ',
+          h('button', { class: 'small', onclick: () => { const ref = r.to.kind === 'marker' ? r.to : r.from; Editor.open(ref.kind === 'marker' ? ref.id : (Store.link(ref.id) || {}).fromId); } }, '✏️'), ' ',
+          h('button', { class: 'small danger', onclick: () => { if (confirm('Delete this relation?')) Store.deleteRelation(r.id); } }, '✕'))));
+    }
+    if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 5, class: 'muted' }, 'No date relations yet. Open a marker and press ⛓ beside one of its dates.')));
+    return h('div', { class: 'data-section' },
+      h('h2', {}, `Date relations (${rels.length})`, h('span', { class: 'spacer' }),
+        conflicts.length ? h('button', { class: 'small conflict-btn', onclick: () => Relations.showConflicts() }, `⚠ ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`) : h('span', { class: 'muted', style: { fontSize: '12px' } }, 'no conflicts'),
+        undetCount ? h('span', { class: 'muted', style: { fontSize: '12px', marginLeft: '10px' } }, `${undetCount} date${undetCount > 1 ? 's' : ''} undetermined (no anchor)`) : null),
+      h('p', { class: 'hint' }, 'Fixed gaps between dates ("Seth\'s birth = Adam\'s birth + 130 y"). Pinned dates are the anchors; everything else is computed and moves with them. A relation that is overruled stays on record but is left out of the maths.'),
+      table);
   }
 
   function sourcesSection() {

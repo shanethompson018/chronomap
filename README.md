@@ -151,6 +151,28 @@ Images are shrunk to 1600 px on the long side and stored in the browser's own da
 count against the small limit of the main data store. Tick "include photos" when exporting to carry
 them in the backup file.
 
+## Date relations (dates that depend on other dates)
+
+Many texts give gaps instead of dates: "When Adam had lived 130 years, he fathered Seth." A **date
+relation** records exactly that: *Seth · Born = Adam · Born + 130 y*, with the source and the wording.
+
+* In the editor, press **⛓** beside any date (Appears, Disappears, a position's date) or use the
+  *Date relations* section, which also offers the dates of the marker's ties.
+* A date is either **pinned** (🔒, you typed it and it is an anchor) or **computed** (⛓, worked out
+  from a pinned date through the relations; shown in italics with "from Adam · Born + 130 y"). Change a
+  pinned date and every computed date in the chain moves with it. Relations work in both directions, so
+  pinning the other end instead makes the maths run the other way.
+* When you create a relation, whichever end already has a date is pinned automatically. To type a date
+  into a computed slot, pin it first.
+* A chain with no pinned date is **undetermined**: its markers exist and show in the Ties and Network
+  views but not on the time slider.
+* **Conflicts.** If two chains place one date differently, or a pinned date disagrees with a relation,
+  a ⚠ badge appears in the top bar. The conflicts panel shows each disagreement with both values and the
+  route that produced each. Choose *Use this* (the losing relation is kept but marked *overruled*, so the
+  disagreement stays on record) or *Mark undeterminable* (the date shows as "?" and the marker leaves
+  the slider until you decide). Two year-precision dates in the same year are not a conflict.
+* Relations sync between devices like everything else, and every device recomputes the same results.
+
 ## Dates
 
 Written as `YYYY-MM-DD`, `YYYY-MM` or `YYYY`. Add ` BC` for before Christ (`44 BC`, `500 BC`).

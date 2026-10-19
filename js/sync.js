@@ -269,7 +269,7 @@ window.Sync = (() => {
     idleStatus();
     Store.subscribe(evt => {
       if (Store.isApplyingSync()) return;
-      if (['marker', 'link', 'category', 'linkType', 'source', 'photo', 'all'].includes(evt.type)) schedule(5000);
+      if (['marker', 'link', 'category', 'linkType', 'source', 'photo', 'relation', 'relations', 'all'].includes(evt.type)) schedule(5000);
     });
     window.addEventListener('online', () => { if (enabled()) run({ reason: 'online' }); else idleStatus(); });
     window.addEventListener('offline', idleStatus);

@@ -101,5 +101,51 @@ window.Dates = (() => {
     return daysFromCivil(y, m, d);
   }
 
-  return { parse, toDays, format, formatInput, iso, today, isValid, civilFromDays, daysFromCivil, addMonths, yearLabel };
+  // Stored text for a date: "1776-07-04", "1776-07", "1776", or with " BC" for years before 1 AD.
+  function toStore(y, m, d, precision) {
+    const pad = (n, l) => String(n).padStart(l, '0');
+    const core = precision === 'year' ? '' : precision === 'month' ? `-${pad(m, 2)}` : `-${pad(m, 2)}-${pad(d, 2)}`;
+    return y <= 0 ? `${1 - y}${core} BC` : `${pad(y, 4)}${core}`;
+  }
+
+  // Add an offset (years/months/days, may be negative) to a stored date, keeping the coarser precision
+  // unless the offset itself is finer. Returns a stored string, or null if the input is not a date.
+  function addOffset(input, off) {
+    const p = parse(input);
+    if (!p) return null;
+    const Y = Math.trunc(+off.years || 0), M = Math.trunc(+off.months || 0), D = Math.trunc(+off.days || 0);
+    let precision = p.precision;
+    if (M && precision === 'year') precision = 'month';
+    if (D) precision = 'day';
+    const total = p.y * 12 + (p.m - 1) + Y * 12 + M;
+    const y = Math.floor(total / 12), m = total - y * 12 + 1;
+    const d = Math.min(p.d, daysInMonth(y, m));
+    const c = civilFromDays(daysFromCivil(y, m, d) + D);
+    return toStore(c.y, c.m, c.d, precision);
+  }
+
+  // Equal at the coarser of the two precisions ("1776" and "1776-07-04" count as the same date).
+  function sameDate(a, b) {
+    const pa = parse(a), pb = parse(b);
+    if (!pa || !pb) return false;
+    const rank = { year: 0, month: 1, day: 2 };
+    const r = Math.min(rank[pa.precision], rank[pb.precision]);
+    if (pa.y !== pb.y) return false;
+    if (r >= 1 && pa.m !== pb.m) return false;
+    if (r >= 2 && pa.d !== pb.d) return false;
+    return true;
+  }
+
+  function formatOffset(off, withSign = true) {
+    const parts = [];
+    const Y = +off.years || 0, M = +off.months || 0, D = +off.days || 0;
+    const neg = (Y || M || D) < 0 || (Y === 0 && (M < 0 || (M === 0 && D < 0)));
+    if (Y) parts.push(Math.abs(Y) + ' y');
+    if (M) parts.push(Math.abs(M) + ' m');
+    if (D) parts.push(Math.abs(D) + ' d');
+    if (!parts.length) return withSign ? '+ 0' : '0';
+    return (withSign ? (neg ? '− ' : '+ ') : '') + parts.join(' ');
+  }
+
+  return { parse, toDays, format, formatInput, iso, today, isValid, civilFromDays, daysFromCivil, addMonths, yearLabel, toStore, addOffset, sameDate, formatOffset };
 })();

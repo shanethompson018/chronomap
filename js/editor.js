@@ -20,6 +20,7 @@ window.Editor = (() => {
       }
       if (evt.type === 'link' || evt.type === 'linkType') renderLinks();
       if (evt.type === 'source' || evt.type === 'photo' || evt.type === 'photos') render(); // new sources/photos must show up in the pickers
+      if (evt.type === 'relation' || evt.type === 'relations') syncDraftFromStore(true);
       if (evt.type === 'marker' && evt.id === id && evt.deleted) { draft = null; id = null; drawer.classList.add('hidden'); }
     });
   }
@@ -38,6 +39,7 @@ window.Editor = (() => {
     draft.moves = draft.moves || [];
     draft.fields = draft.fields || {};
     draft.fieldSources = draft.fieldSources || {};
+    draft.pinned = draft.pinned || []; draft.undetermined = draft.undetermined || []; draft.derived = draft.derived || {};
     linkForm = null;
     safeRender();
     drawer.classList.remove('hidden');
@@ -47,7 +49,7 @@ window.Editor = (() => {
   function openNew(data = {}) {
     discardNew();
     draft = Object.assign({ id: Store.uid(), name: 'New marker', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '',
-      fields: {}, fieldSources: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [] }, JSON.parse(JSON.stringify(data)));
+      fields: {}, fieldSources: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [], pinned: [], undetermined: [], derived: {} }, JSON.parse(JSON.stringify(data)));
     draft.moves = draft.moves.map(mv => Object.assign({ id: Store.uid(), date: '', lat: null, lng: null, coords: null, label: '', note: '', sourceId: null, page: '' }, mv));
     draft.citations = draft.citations || [];
     id = draft.id; isNew = true; linkForm = null;
@@ -112,6 +114,44 @@ window.Editor = (() => {
     for (const f of cat.fields) if (!(f in draft.fields)) draft.fields[f] = '';
   }
 
+  // Pull pins, undetermined marks and computed dates from the saved marker into the draft (relations are
+  // saved immediately and the solver may have recomputed dates while the editor is open).
+  function syncDraftFromStore(rerender) {
+    const s = !isNew && draft ? Store.marker(id) : null;
+    if (!s) return;
+    draft.pinned = JSON.parse(JSON.stringify(s.pinned || []));
+    draft.undetermined = JSON.parse(JSON.stringify(s.undetermined || []));
+    draft.derived = JSON.parse(JSON.stringify(s.derived || {}));
+    const computed = slot => (draft.derived[slot] && !draft.pinned.includes(slot)) || draft.undetermined.includes(slot);
+    if (computed('start')) draft.start = s.start;
+    if (computed('end')) draft.end = s.end;
+    draft.moves.forEach(mv => { const sm = s.moves.find(x => x.id === mv.id); if (sm && computed('move:' + mv.id)) mv.date = sm.date; });
+    if (rerender) render();
+  }
+
+  // A date box with its relation controls: ⛓ relate, 🔒 pin/unpin, and a caption when the date is computed.
+  function dateField(label, bind, slot, value, placeholder) {
+    const ref = { kind: 'marker', id, slot };
+    const st = !isNew && Store.marker(id) ? Relations.slotState(ref) : null;
+    const derived = !!(st && st.derived && !st.pinned);
+    const undet = !!(st && st.undetermined);
+    const input = h('input', { type: 'text', 'data-bind': bind, value: undet ? '' : (value ?? ''), placeholder: undet ? 'undeterminable' : placeholder,
+      readonly: derived || undet, class: derived ? 'derived-input' : '', title: derived ? 'Computed from a relation. Pin it (🔒) to type a date here.' : '' });
+    const chain = h('button', { type: 'button', class: 'small icon', disabled: isNew, title: isNew ? 'Save the marker first, then relate its dates' : 'Relate this date to another date (e.g. "130 years after Adam was born")',
+      onclick: () => Relations.pick(ref, { onDone: () => syncDraftFromStore(true) }) }, '⛓');
+    const pin = st && (st.related || st.pinned) ? h('button', { type: 'button', class: 'small icon' + (st.pinned ? ' src-on' : ''),
+      title: st.pinned ? 'Pinned: other dates are computed from this one. Click to unpin.' : 'Pin this date so the related dates are computed from it',
+      onclick: () => { Store.setPinned(ref, !st.pinned); syncDraftFromStore(true); } }, '🔒') : null;
+    const restore = undet ? h('button', { type: 'button', class: 'small', title: 'Stop treating this date as undeterminable', onclick: () => { Store.setUndetermined(ref, false); syncDraftFromStore(true); } }, 'Restore') : null;
+    let caption = null;
+    if (derived) caption = h('div', { class: 'rel-caption' }, '⛓ ' + Relations.describeDerived(ref));
+    if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
+    if (undet) caption = h('div', { class: 'rel-caption' }, 'Marked undeterminable: not placed on the timeline.');
+    return h('label', { class: 'field' }, label,
+      h('div', { class: 'row', style: { gap: '4px' } }, input, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),
+      caption);
+  }
+
   // ---------- rendering ----------
   const section = (title, ...kids) => h('div', { class: 'ed-section' }, h('h3', {}, title), ...kids);
   const field = (label, input) => h('label', { class: 'field' }, label, input);
@@ -151,8 +191,8 @@ window.Editor = (() => {
         renderGallery()),
       section('Time span',
         h('p', { class: 'hint' }, 'When the marker exists. Leave blank for "always". Dates: 1776-07-04, 1776-07, 1776, 44 BC.'),
-        row(field('Appears', txt('start', m.start, { placeholder: 'YYYY-MM-DD' })), field('Label', txt('startLabel', m.startLabel, { placeholder: 'e.g. Born' }))),
-        row(field('Disappears', txt('end', m.end, { placeholder: 'YYYY-MM-DD' })), field('Label', txt('endLabel', m.endLabel, { placeholder: 'e.g. Died' }))),
+        row(dateField('Appears', 'start', 'start', m.start, 'YYYY-MM-DD'), field('Label', txt('startLabel', m.startLabel, { placeholder: 'e.g. Born' }))),
+        row(dateField('Disappears', 'end', 'end', m.end, 'YYYY-MM-DD'), field('Label', txt('endLabel', m.endLabel, { placeholder: 'e.g. Died' }))),
       ),
       section('Positions over time', h('p', { class: 'hint' }, m.kind === 'pin'
         ? 'Each row says where the marker is from that date onward. A row with no date is the starting position.'
@@ -174,6 +214,7 @@ window.Editor = (() => {
         h('button', { type: 'button', class: 'small', onclick: () => { draft.citations.push({ sourceId: null, page: '', note: '' }); render(); } }, '+ Add citation'),
         field('Source notes (free text)', h('textarea', { 'data-bind': 'sources', rows: 2, placeholder: 'Anything about the evidence that does not fit a citation' }, m.sources)),
       ),
+      section('Date relations', h('div', { id: 'ed-relations' }, renderRelations())),
       section('Ties / links', h('div', { id: 'ed-links' })),
     );
     drawer.append(
@@ -222,7 +263,7 @@ window.Editor = (() => {
         onclick: () => { App.showTab('map'); MapView.showPosition(draft.moves[i], draft.kind); } }, '🎯 Go to');
       const copyBtn = h('button', { type: 'button', class: 'small', title: 'Use the date currently shown on the map time slider', onclick: () => { const tt = MapView.time(); if (tt != null) { draft.moves[i].date = Dates.iso(tt); render(); } } }, '⏱');
       return h('div', { class: 'card' + (bad ? ' invalid' : '') },
-        row(h('input', { type: 'text', 'data-bind': `moves.${i}.date`, value: mv.date, placeholder: 'from date (blank = start)' }), h('div', { class: 'narrow' }, copyBtn),
+        row(dateField('', `moves.${i}.date`, 'move:' + mv.id, mv.date, 'from date (blank = start)'), h('div', { class: 'narrow' }, copyBtn),
             h('input', { type: 'text', 'data-bind': `moves.${i}.label`, value: mv.label, placeholder: 'place name' })),
         row(where, h('div', { class: 'narrow' }, goBtn), h('div', { class: 'narrow' }, setBtn),
             h('button', { type: 'button', class: 'small narrow', title: 'Remove this position', onclick: () => { draft.moves.splice(i, 1); render(); } }, '✕')),
@@ -231,6 +272,26 @@ window.Editor = (() => {
             h('input', { type: 'text', 'data-bind': `moves.${i}.page`, value: mv.page, placeholder: 'page / location', style: { flex: '0 0 40%' } })),
       );
     });
+  }
+  function renderRelations() {
+    if (isNew) return h('p', { class: 'hint' }, 'Save the marker first, then you can relate its dates to other markers ("130 years after Adam was born").');
+    const rels = Store.relationsFor(id);
+    const out = [h('p', { class: 'hint' }, 'A relation ties one of this marker\'s dates to another date by a fixed gap. Pinned dates (🔒) are the anchors; the rest are computed and move with them.')];
+    if (!rels.length) out.push(h('p', { class: 'muted' }, 'No date relations yet.'));
+    for (const r of rels) {
+      const over = r.status === 'overruled';
+      out.push(h('div', { class: 'tie-item' + (over ? ' overruled' : '') },
+        h('span', { class: 'rel-badge chain' }, '⛓'),
+        h('div', { class: 'grow' }, h('div', {}, Relations.describeRelation(r)),
+          h('div', { class: 'sub' }, [over ? 'overruled' : null, r.note, r.sourceId && Store.source(r.sourceId) ? `📖 ${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}` : null].filter(Boolean).join(' · '))),
+        h('button', { type: 'button', class: 'small', title: over ? 'Use this relation again' : 'Keep the record but leave it out of the maths', onclick: () => Store.updateRelation(r.id, { status: over ? 'active' : 'overruled' }) }, over ? 'Restore' : 'Overrule'),
+        h('button', { type: 'button', class: 'small', title: 'Delete relation', onclick: () => { if (confirm('Delete this relation?')) Store.deleteRelation(r.id); } }, '✕')));
+    }
+    const slots = Store.slotsOfMarker(id);
+    const sel = UI.select(slots.map(s => [Store.refKey(s.ref), s.label]), slots.length ? Store.refKey(slots[0].ref) : '');
+    out.push(h('div', { class: 'row', style: { marginTop: '8px' } }, h('span', { class: 'muted', style: { flex: 'none' } }, 'Relate'), sel,
+      h('button', { type: 'button', class: 'small', style: { flex: 'none' }, onclick: () => { if (!sel.value) return; Relations.pick(Store.parseRefKey(sel.value), { onDone: () => syncDraftFromStore(true) }); } }, '⛓ to another date…')));
+    return out;
   }
   function renderCitations() {
     if (!draft.citations.length) return h('p', { class: 'muted', style: { margin: '2px 0' } }, 'No citations yet.');
@@ -304,9 +365,10 @@ window.Editor = (() => {
       const arrow = type && type.directed ? (isFrom ? '→' : '←') : '—';
       const dates = (l.start || l.end) ? `${Dates.formatInput(l.start)}${l.end ? ' – ' + Dates.formatInput(l.end) : ''}` : '';
       const src = l.sourceId && Store.source(l.sourceId) ? `📖 ${Store.source(l.sourceId).title}${l.page ? ', ' + l.page : ''}` : '';
+      const badges = h('span', { html: Relations.badgesHTML({ kind: 'link', id: l.id, slot: 'start' }) + Relations.badgesHTML({ kind: 'link', id: l.id, slot: 'end' }) });
       host.append(h('div', { class: 'tie-item' },
         h('span', { class: 'swatch sm', style: { background: type ? type.color : '#999' } }),
-        h('div', { class: 'grow' }, h('div', {}, h('strong', {}, type ? type.name : 'Link'), ` ${arrow} `, other ? other.name : '?'),
+        h('div', { class: 'grow' }, h('div', {}, h('strong', {}, type ? type.name : 'Link'), ` ${arrow} `, other ? other.name : '?', ' ', badges),
           h('div', { class: 'sub' }, [dates, l.label, l.note, src].filter(Boolean).join(' · '))),
         h('button', { type: 'button', class: 'small', title: 'Edit', onclick: () => { linkForm = { editId: l.id, typeId: l.typeId, dir: isFrom ? 'from' : 'to', otherId: other ? other.id : null, start: l.start, end: l.end, note: l.note, label: l.label, sourceId: l.sourceId, page: l.page }; renderLinks(); } }, '✏️'),
         h('button', { type: 'button', class: 'small', title: 'Remove tie', onclick: () => { if (confirm('Remove this tie?')) Store.deleteLink(l.id); } }, '✕')));

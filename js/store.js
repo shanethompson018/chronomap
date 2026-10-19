@@ -22,11 +22,11 @@ window.Store = (() => {
 
   // Collections that sync between devices. Every record in them carries updatedAt; deletions leave a
   // tombstone in `deleted` so a removal on one device is not undone by a merge from another.
-  const SYNC_COLLS = ['categories', 'linkTypes', 'markers', 'links', 'sources', 'photos'];
+  const SYNC_COLLS = ['categories', 'linkTypes', 'markers', 'links', 'sources', 'photos', 'relations'];
   const TOMBSTONE_DAYS = 180;
 
   function blank() {
-    return { version: 2, categories: [], linkTypes: [], markers: [], links: [], sources: [], photos: [], deleted: [],
+    return { version: 2, categories: [], linkTypes: [], markers: [], links: [], sources: [], photos: [], relations: [], deleted: [],
       settings: { basemap: 'streets', showTies: true, showLabels: true, networkViews: [], sampleUntouched: false, driveSync: false } };
   }
   // Mark a record as changed now; any data change also means the sample data is no longer pristine.
@@ -36,8 +36,10 @@ window.Store = (() => {
   function normCitation(c) { return Object.assign({ sourceId: null, page: '', note: '' }, c || {}); }
   function normMarker(m) {
     const out = Object.assign({ id: uid(), name: 'Untitled', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '',
-      fields: {}, fieldSources: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [] }, m || {});
+      fields: {}, fieldSources: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [],
+      pinned: [], undetermined: [], derived: {} }, m || {});
     out.moves = (out.moves || []).map(normMove);
+    out.pinned = (out.pinned || []).filter(Boolean); out.undetermined = (out.undetermined || []).filter(Boolean); out.derived = out.derived || {};
     out.citations = (out.citations || []).map(normCitation);
     out.photoIds = (out.photoIds || []).filter(Boolean);
     out.fields = out.fields || {};
@@ -48,7 +50,21 @@ window.Store = (() => {
   }
   function normCategory(c) { const o = Object.assign({ id: uid(), name: 'Category', color: '#4f8cff', icon: '📍', fields: [], defaultKind: 'pin', sourceId: null }, c || {}); o.fields = o.fields || []; return o; }
   function normLinkType(t) { return Object.assign({ id: uid(), name: 'Link', color: '#999999', directed: false, fromLabel: '', toLabel: '', topSide: 'from' }, t || {}); }
-  function normLink(l) { return Object.assign({ id: uid(), typeId: null, fromId: null, toId: null, label: '', start: '', end: '', note: '', sourceId: null, page: '' }, l || {}); }
+  function normLink(l) {
+    const o = Object.assign({ id: uid(), typeId: null, fromId: null, toId: null, label: '', start: '', end: '', note: '', sourceId: null, page: '', pinned: [], undetermined: [], derived: {} }, l || {});
+    o.pinned = (o.pinned || []).filter(Boolean); o.undetermined = (o.undetermined || []).filter(Boolean); o.derived = o.derived || {};
+    return o;
+  }
+  // A date slot: { kind:'marker'|'link', id, slot:'start'|'end'|'move:<moveId>' }
+  function normRef(r) { return r && r.kind && r.id && r.slot ? { kind: r.kind, id: r.id, slot: r.slot } : null; }
+  // Relation: to = from + (years, months, days). status 'overruled' keeps the record but leaves it out of the maths.
+  function normRelation(r) {
+    const o = Object.assign({ id: uid(), from: null, to: null, years: 0, months: 0, days: 0, note: '', sourceId: null, page: '', status: 'active' }, r || {});
+    o.from = normRef(o.from); o.to = normRef(o.to);
+    o.years = Math.trunc(+o.years || 0); o.months = Math.trunc(+o.months || 0); o.days = Math.trunc(+o.days || 0);
+    if (o.status !== 'overruled') o.status = 'active';
+    return o;
+  }
   function normSource(s) { return Object.assign({ id: uid(), title: 'Untitled source', author: '', year: '', where: '', notes: '' }, s || {}); }
   function normPhoto(p) {
     const o = Object.assign({ id: uid(), title: '', caption: '', credit: '', date: '', notes: '', citations: [], w: 0, h: 0, bytes: 0, type: '' }, p || {});
@@ -64,6 +80,7 @@ window.Store = (() => {
     d.links = (d.links || []).map(normLink);
     d.sources = (d.sources || []).map(normSource);
     d.photos = (d.photos || []).map(normPhoto);
+    d.relations = (d.relations || []).map(normRelation);
     delete d.photoData; // image bytes from an export file are handled by Photos.importAll, never kept here
     const cutoff = Date.now() - TOMBSTONE_DAYS * 86400000;
     d.deleted = (d.deleted || []).filter(t => t && t.coll && t.id && t.at > cutoff);
@@ -87,6 +104,15 @@ window.Store = (() => {
     });
     d.links.forEach(l => { if (!has('sources', l.sourceId)) l.sourceId = null; });
     d.photos.forEach(p => { p.citations = (p.citations || []).filter(c => !c.sourceId || has('sources', c.sourceId)); });
+    const refOk = ref => {
+      if (!ref) return false;
+      const o = ref.kind === 'link' ? d.links.find(l => l.id === ref.id) : d.markers.find(m => m.id === ref.id);
+      if (!o) return false;
+      if (ref.slot === 'start' || ref.slot === 'end') return true;
+      return ref.kind === 'marker' && ref.slot.startsWith('move:') && o.moves.some(mv => mv.id === ref.slot.slice(5));
+    };
+    d.relations = d.relations.filter(r => refOk(r.from) && refOk(r.to) && !(r.from.kind === r.to.kind && r.from.id === r.to.id && r.from.slot === r.to.slot));
+    d.relations.forEach(r => { if (!has('sources', r.sourceId)) r.sourceId = null; });
   }
 
   function load() {
@@ -170,6 +196,8 @@ window.Store = (() => {
   const linkTypes = () => S.linkTypes;
   const links = () => S.links;
   const sources = () => S.sources;
+  const relations = () => S.relations;
+  const relation = id => S.relations.find(r => r.id === id) || null;
   const photos = () => S.photos;
   const photo = id => S.photos.find(p => p.id === id) || null;
   const settings = () => S.settings;
@@ -207,6 +235,77 @@ window.Store = (() => {
   }
   // Markers that use a photo (as profile picture or in their gallery).
   const photoUsers = id => S.markers.filter(m => m.photoId === id || (m.photoIds || []).includes(id));
+
+  // ---------- date slots (for relations) ----------
+  const refKey = ref => `${ref.kind}:${ref.id}:${ref.slot}`;
+  function parseRefKey(k) { const i = k.indexOf(':'), j = k.indexOf(':', i + 1); return { kind: k.slice(0, i), id: k.slice(i + 1, j), slot: k.slice(j + 1) }; }
+  const sameRef = (a, b) => !!a && !!b && a.kind === b.kind && a.id === b.id && a.slot === b.slot;
+  function slotOwner(ref) { return !ref ? null : ref.kind === 'link' ? link(ref.id) : marker(ref.id); }
+  function refExists(ref) {
+    const o = slotOwner(ref); if (!o) return false;
+    if (ref.slot === 'start' || ref.slot === 'end') return true;
+    return ref.kind === 'marker' && ref.slot.startsWith('move:') && o.moves.some(mv => mv.id === ref.slot.slice(5));
+  }
+  function slotValue(ref) {
+    const o = slotOwner(ref); if (!o) return '';
+    if (ref.slot.startsWith('move:')) { const mv = o.moves.find(m => m.id === ref.slot.slice(5)); return mv ? (mv.date || '') : ''; }
+    return o[ref.slot] || '';
+  }
+  function setSlotRaw(o, slot, v) {
+    if (slot.startsWith('move:')) { const mv = o.moves.find(m => m.id === slot.slice(5)); if (mv) mv.date = v; }
+    else o[slot] = v;
+  }
+  const isPinned = ref => { const o = slotOwner(ref); return !!o && (o.pinned || []).includes(ref.slot); };
+  const isUndetermined = ref => { const o = slotOwner(ref); return !!o && (o.undetermined || []).includes(ref.slot); };
+  const derivedInfo = ref => { const o = slotOwner(ref); return (o && o.derived && o.derived[ref.slot]) || null; };
+  function setPinned(ref, on) {
+    const o = slotOwner(ref); if (!o) return;
+    const set = new Set(o.pinned || []); if (on) set.add(ref.slot); else set.delete(ref.slot);
+    o.pinned = [...set]; touch(o); commit({ type: ref.kind, id: o.id });
+  }
+  function setUndetermined(ref, on) {
+    const o = slotOwner(ref); if (!o) return;
+    const set = new Set(o.undetermined || []); if (on) { set.add(ref.slot); setSlotRaw(o, ref.slot, ''); o.pinned = (o.pinned || []).filter(s => s !== ref.slot); } else set.delete(ref.slot);
+    o.undetermined = [...set]; touch(o); if (o.moves) sortMovesInPlace(o); commit({ type: ref.kind, id: o.id });
+  }
+  // Set a slot's date and pin it in one go (used when the user picks a value in the conflicts panel).
+  function pinValue(ref, value) {
+    const o = slotOwner(ref); if (!o) return;
+    setSlotRaw(o, ref.slot, value);
+    o.pinned = [...new Set([...(o.pinned || []), ref.slot])];
+    o.undetermined = (o.undetermined || []).filter(s => s !== ref.slot);
+    if (o.moves) sortMovesInPlace(o);
+    touch(o); commit({ type: ref.kind, id: o.id });
+  }
+  // Human label for a slot: "Adam · Born", "Washington · position Cambridge", "Adams Member of Congress · from".
+  function slotLabel(ref) {
+    const o = slotOwner(ref); if (!o) return '(missing)';
+    if (ref.kind === 'link') {
+      const t = linkType(o.typeId), a = marker(o.fromId), b = marker(o.toId);
+      return `${a ? a.name : '?'} ${t ? t.name : 'tie'} ${b ? b.name : '?'} · ${ref.slot === 'start' ? 'from' : 'until'}`;
+    }
+    if (ref.slot === 'start') return `${o.name} · ${o.startLabel || 'Appears'}`;
+    if (ref.slot === 'end') return `${o.name} · ${o.endLabel || 'Disappears'}`;
+    const mv = o.moves.find(m => m.id === ref.slot.slice(5));
+    return `${o.name} · position${mv ? (mv.label ? ' ' + mv.label : (mv.date ? ' ' + Dates.formatInput(mv.date) : '')) : ''}`;
+  }
+  // Every date slot that belongs to a marker: its own dates, its positions, and the dates of its ties.
+  function slotsOfMarker(markerId) {
+    const m = marker(markerId); if (!m) return [];
+    const out = [{ ref: { kind: 'marker', id: m.id, slot: 'start' }, label: m.startLabel || 'Appears' }, { ref: { kind: 'marker', id: m.id, slot: 'end' }, label: m.endLabel || 'Disappears' }];
+    sortedMoves(m).forEach(mv => out.push({ ref: { kind: 'marker', id: m.id, slot: 'move:' + mv.id }, label: `Position: ${mv.label || Dates.formatInput(mv.date) || 'unnamed'}` }));
+    linksOf(m.id).forEach(l => {
+      const t = linkType(l.typeId), other = marker(l.fromId === m.id ? l.toId : l.fromId);
+      const name = `Tie: ${t ? t.name : 'tie'} ${l.fromId === m.id ? '→' : '←'} ${other ? other.name : '?'}`;
+      out.push({ ref: { kind: 'link', id: l.id, slot: 'start' }, label: name + ' · from' }, { ref: { kind: 'link', id: l.id, slot: 'end' }, label: name + ' · until' });
+    });
+    return out;
+  }
+  function relationsFor(markerId) {
+    const mine = ref => ref && ((ref.kind === 'marker' && ref.id === markerId) || (ref.kind === 'link' && (() => { const l = link(ref.id); return l && (l.fromId === markerId || l.toId === markerId); })()));
+    return S.relations.filter(r => mine(r.from) || mine(r.to));
+  }
+  const relationsOfRef = ref => S.relations.filter(r => sameRef(r.from, ref) || sameRef(r.to, ref));
   const displayColor = m => m.color || category(m.categoryId)?.color || '#888888';
   const displayIcon = m => m.icon || category(m.categoryId)?.icon || '';
 
@@ -279,6 +378,41 @@ window.Store = (() => {
     });
     commit({ type: 'photo', id, deleted: true });
   }
+  function addRelation(data) {
+    const r = touch(normRelation(data));
+    if (!r.from || !r.to) return null;
+    S.relations.push(r);
+    // anchor rule: an end that already has a typed date becomes pinned, so the other end is computed from it.
+    // A date that is itself computed from another relation is left alone, so chains stay anchored at one place.
+    [r.from, r.to].forEach(ref => {
+      const o = slotOwner(ref);
+      if (o && slotValue(ref) && !(o.pinned || []).includes(ref.slot) && !isUndetermined(ref) && !derivedInfo(ref)) { o.pinned = [...(o.pinned || []), ref.slot]; touch(o); }
+    });
+    commit({ type: 'relation', id: r.id }); return r;
+  }
+  function updateRelation(id, patch) { const r = relation(id); if (!r) return null; Object.assign(r, normRelation(Object.assign({}, r, clone(patch), { id }))); touch(r); commit({ type: 'relation', id }); return r; }
+  function deleteRelation(id) { if (relation(id)) tombstone('relations', id); S.relations = S.relations.filter(r => r.id !== id); commit({ type: 'relation', id, deleted: true }); }
+
+  // Write the solver's results: derived dates and the "where this came from" notes. Only slots whose
+  // value actually changed are marked as edited, so a recomputation that changes nothing causes no sync traffic.
+  function applySolved(results, undeterminedKeys) {
+    let changed = false;
+    const owners = [...S.markers.map(m => ({ kind: 'marker', o: m })), ...S.links.map(l => ({ kind: 'link', o: l }))];
+    for (const { kind, o } of owners) {
+      const nd = {};
+      for (const [k, res] of results) {
+        if (res.ref.kind !== kind || res.ref.id !== o.id) continue;
+        if (res.derived) nd[res.ref.slot] = res.derived;
+        const cur = slotValue(res.ref);
+        if ((o.undetermined || []).includes(res.ref.slot)) continue;
+        if (res.value !== cur) { setSlotRaw(o, res.ref.slot, res.value); touch(o); changed = true; }
+      }
+      if (JSON.stringify(nd) !== JSON.stringify(o.derived || {})) { o.derived = nd; changed = true; }
+      if (o.moves && changed) sortMovesInPlace(o);
+    }
+    if (changed) commit({ type: 'relations' });
+    return changed;
+  }
   function setSetting(k, v) { S.settings[k] = v; save(); }
 
   // ---------- backup ----------
@@ -295,7 +429,7 @@ window.Store = (() => {
     else {
       const upsert = (list, items) => items.forEach(it => { const i = list.findIndex(x => x.id === it.id); if (i >= 0) list[i] = it; else list.push(it); });
       upsert(S.categories, obj.categories); upsert(S.linkTypes, obj.linkTypes);
-      upsert(S.markers, obj.markers); upsert(S.links, obj.links); upsert(S.sources, obj.sources); upsert(S.photos, obj.photos);
+      upsert(S.markers, obj.markers); upsert(S.links, obj.links); upsert(S.sources, obj.sources); upsert(S.photos, obj.photos); upsert(S.relations, obj.relations);
       S.deleted = S.deleted.concat(obj.deleted || []);
     }
     // imported records count as changed now, so they win over older copies on other devices
@@ -343,8 +477,10 @@ window.Store = (() => {
 
   return {
     load, subscribe, notify, uid,
-    markers, categories, linkTypes, links, sources, photos, settings, marker, category, linkType, link, source, photo, linksOf, displayColor, displayIcon,
+    markers, categories, linkTypes, links, sources, photos, relations, settings, marker, category, linkType, link, source, photo, relation, linksOf, displayColor, displayIcon,
     sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
+    refKey, parseRefKey, sameRef, slotOwner, refExists, slotValue, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
+    slotLabel, slotsOfMarker, relationsFor, relationsOfRef, addRelation, updateRelation, deleteRelation, applySolved,
     sortedMoves, hasLocation, positionAt, visibleAt, linkActiveAt, firstDay, timeRange,
     addMarker, updateMarker, deleteMarker, addLink, updateLink, deleteLink,
     addCategory, updateCategory, deleteCategory, addLinkType, updateLinkType, deleteLinkType,
