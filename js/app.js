@@ -54,6 +54,7 @@ window.App = (() => {
     else if (action === 'network') { showTab('network'); Network.setCenter(id); }
     else if (action === 'ties') { showTab('ties'); Ties.setHub(id); }
     else if (action === 'view-photo') { e.preventDefault(); Photos.view(el.dataset.photo); }
+    else if (action === 'change-border') { showTab('map'); Editor.changeBorderHere(id); }
     else if (action === 'goto-marker') {
       if (current === 'map') MapView.locate(id);
       else if (current === 'ties') Ties.select(id);

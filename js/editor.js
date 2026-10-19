@@ -322,10 +322,16 @@ window.Editor = (() => {
     if (w && w.kind === 'point') {
       parts.push(h('input', { type: 'text', 'data-bind': `facts.${i}.where.lat`, value: w.lat ?? '', placeholder: 'lat' }), h('input', { type: 'text', 'data-bind': `facts.${i}.where.lng`, value: w.lng ?? '', placeholder: 'lng' }),
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', onclick: () => { App.showTab('map'); MapView.pickPoint(ll => { if (!draft) return; draft.facts[i].where = { kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) }; render(); }, `Click on the map to place "${Store.factTitle(f)}"`); } }, '📍 Place on map')),
+        w.lat != null && w.lat !== '' ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Drag the pin to a new place; nothing changes until you press Done', onclick: () => { App.showTab('map'); MapView.movePoint({ lat: w.lat, lng: w.lng }, ll => { if (!draft) return; draft.facts[i].where = { kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) }; render(); UI.toast('Pin moved in the editor. Press Save to keep it.'); }, `Drag "${Store.factTitle(f)}" to its new place (or click the map), then press Done`); } }, '✥ Move pin')) : null,
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: w.lat == null, title: 'Move the map to this place', onclick: () => { App.showTab('map'); MapView.showPosition({ lat: w.lat, lng: w.lng }, 'pin'); } }, '🎯')));
     } else if (w && (w.kind === 'area' || w.kind === 'route')) {
-      parts.push(h('span', { class: 'muted' }, w.coords && w.coords.length ? `${w.coords.length} points` : 'not drawn yet'),
-        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', onclick: () => { App.showTab('map'); MapView.drawShape(w.kind === 'area' ? 'area' : 'path', w.coords || [], coords => { if (!draft) return; const cur = draft.facts[i].where || {}; draft.facts[i].where = Object.assign({}, cur, { kind: w.kind, coords: coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]) }); if (cur.rough) draft.facts[i].where.rough = cur.rough.filter(x => x < coords.length); render(); }); } }, '✏️ Draw on map')),
+      const has = !!(w.coords && w.coords.length);
+      const fromPicture = (coords, rough) => { if (!draft) return; draft.facts[i].where = Object.assign({}, draft.facts[i].where, { kind: w.kind, coords, rough: w.kind === 'area' ? rough : [] }); render(); UI.toast('Outline drafted from the picture. Press Save to keep it.'); };
+      parts.push(h('span', { class: 'muted' }, has ? `${w.coords.length} corners` : 'not drawn yet'),
+        has ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Drag, add or delete corners and simplify; nothing changes until you press Done', onclick: () => startEdit(i, 'coords') }, w.kind === 'area' ? '✥ Edit border' : '✥ Edit route')) : null,
+        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: has ? 'Throw the outline away and click a new one' : 'Click the corners on the map', onclick: () => { App.showTab('map'); MapView.drawShape(w.kind === 'area' ? 'area' : 'path', [], coords => { if (!draft) return; const cur = draft.facts[i].where || {}; draft.facts[i].where = Object.assign({}, cur, { kind: w.kind, coords: coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]), rough: [] }); render(); }); } }, has ? '↺ Redraw' : '✏️ Draw on map')),
+        window.Overlay && Overlay.isActive() ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Click inside a tinted region of the overlaid picture; its outline becomes this shape', onclick: () => Overlay.fill(fromPicture) }, '⬚ Fill from picture')) : null,
+        window.Overlay && Overlay.isActive() ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Click a drawn line on the overlaid picture; the app follows it', onclick: () => Overlay.trace(fromPicture) }, '〰 Trace from picture')) : null,
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: !(w.coords && w.coords.length), title: 'Move the map to this shape', onclick: () => { App.showTab('map'); MapView.showPosition({ coords: w.coords }, w.kind === 'area' ? 'area' : 'path'); } }, '🎯')));
     } else if (w && w.kind === 'marker') {
       parts.push(UI.markerSelect({ value: w.markerId, exclude: [id], placeholder: 'which marker (an area, a town, an event)…', onChange: v => { draft.facts[i].where = { kind: 'marker', markerId: v }; } }));
@@ -345,12 +351,47 @@ window.Editor = (() => {
     return h('div', { class: 'row', style: { gap: '6px', marginTop: '4px', flexWrap: 'wrap' } },
       h('span', { class: 'muted', style: { fontSize: '12px', flex: 'none' } }, sum.length ? sum.join(' · ') : 'all edges firm, no extent'),
       h('button', { type: 'button', class: 'small', title: 'Mark which edges of the outline are only guessed', onclick: () => roughEdgesDialog(i, 'coords') }, 'Firm / rough edges…'),
-      h('button', { type: 'button', class: 'small', title: hasExt ? 'Redraw the largest possible extent' : 'Draw a second outline: the furthest the territory might reach', onclick: () => {
+      hasExt ? h('button', { type: 'button', class: 'small', title: 'Drag, add or delete the extent\'s corners; nothing changes until you press Done', onclick: () => startEdit(i, 'extent') }, '✥ Edit extent') : null,
+      h('button', { type: 'button', class: 'small', title: hasExt ? 'Throw the extent away and click a new one' : 'Draw a second outline: the furthest the territory might reach', onclick: () => {
         App.showTab('map');
-        MapView.drawShape('area', w.extent || w.coords, coords => { if (!draft) return; draft.facts[i].where.extent = coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]); render(); });
-      } }, hasExt ? '⬠ Redraw extent' : '⬠ Draw extent'),
+        MapView.drawShape('area', hasExt ? [] : w.coords, coords => { if (!draft) return; draft.facts[i].where.extent = coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]); draft.facts[i].where.extentRough = []; render(); });
+      } }, hasExt ? '↺ Redraw extent' : '⬠ Draw extent'),
       hasExt ? h('button', { type: 'button', class: 'small', onclick: () => roughEdgesDialog(i, 'extent') }, 'Extent edges…') : null,
       hasExt ? h('button', { type: 'button', class: 'small', title: 'Remove the extent outline', onclick: () => { delete draft.facts[i].where.extent; delete draft.facts[i].where.extentRough; render(); } }, '✕ extent') : null);
+  }
+  // Explicit edit mode for an outline: the corners become draggable on the map; Done writes the result into
+  // the draft (and Save keeps it), Cancel changes nothing.
+  function startEdit(i, which) {
+    const w = draft.facts[i].where;
+    const coords = which === 'extent' ? w.extent : w.coords, key = which === 'extent' ? 'extentRough' : 'rough';
+    App.showTab('map');
+    MapView.editShape(w.kind === 'area' ? 'area' : 'path', coords, (pts, rough) => {
+      if (!draft) return;
+      const ww = draft.facts[i].where;
+      if (which === 'extent') ww.extent = pts; else ww.coords = pts;
+      ww[key] = rough;
+      render(); UI.toast('Outline updated in the editor. Press Save to keep it.');
+    }, { rough: w[key] || [] });
+  }
+  // "Change border here": copy the border in force at the slider's date into a new dated fact and open it for
+  // editing, so only the corners that moved need dragging. The earlier border stays as it was.
+  function changeBorderHere(markerId) {
+    const m = Store.marker(markerId); if (!m) return;
+    const tt = MapView.time();
+    if (tt == null) { UI.toast('Untick "Show all times" and move the slider to the date of the new border first', 'error'); return; }
+    const mv = Store.positionAt(m, tt);
+    if (!mv || !(mv.coords && mv.coords.length)) { UI.toast('No border is in force at this date', 'error'); return; }
+    open(markerId);
+    let i = draft.facts.findIndex(f => f.id === mv.id);
+    const src = i >= 0 ? draft.facts[i] : null;
+    if (!src || Dates.toDays(src.date) !== tt) {
+      const where = JSON.parse(JSON.stringify(src && src.where ? src.where : { kind: 'area', coords: mv.coords, extent: mv.extent || undefined, rough: mv.rough || [], extentRough: mv.extentRough || [] }));
+      draft.facts.push({ id: Store.uid(), typeId: src ? src.typeId : 'ft_border', label: '', date: Dates.iso(tt), dateEnd: '', where, placeLabel: src ? src.placeLabel : '', participants: [], details: {}, note: '', sourceId: null, page: '', confidence: '', reason: '' });
+      i = draft.facts.length - 1;
+      render();
+      UI.toast(`New border dated ${Dates.format(tt)}: drag the corners that moved, press Done, then Save`);
+    }
+    startEdit(i, 'coords');
   }
   function roughEdgesDialog(i, which) {
     const w = draft.facts[i].where;
@@ -500,5 +541,5 @@ window.Editor = (() => {
     return out;
   }
 
-  return { init, open, openNew, cancel, isOpen };
+  return { init, open, openNew, cancel, isOpen, changeBorderHere };
 })();

@@ -6,7 +6,7 @@ window.MapView = (() => {
   const primary = new Map();         // markerId -> the copy with the highest weight (used for ties and locate)
   let t = 0, range = { min: 0, max: 1 }, ignoreTime = false, playTimer = null;
   let hiddenCats = new Set(), search = '', sourceFilter = '';
-  let pick = null;                   // { type:'point'|'shape', kind, cb, points, layer, verts }
+  let pick = null;                   // { type:'point'|'shape'|'edit'|'move', kind, cb, points, layer, verts, ... }
   let showLabels = true, showTies = true;
 
   // ---------- init ----------
@@ -64,6 +64,8 @@ window.MapView = (() => {
     $('m-add-pin').onclick = () => addPin();
     $('m-add-area').onclick = () => addShape('area');
     $('m-add-path').onclick = () => addShape('path');
+    $('m-overlay').onclick = () => Overlay.open();
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && pick && !document.querySelector('.modal-overlay:not(.side-modal)')) cancelPick(); });
 
     Store.subscribe(onStore);
     resetRange(true);
@@ -491,9 +493,9 @@ window.MapView = (() => {
   }
   function hideBanner() { $('map-banner').classList.add('hidden'); }
 
-  function pickPoint(cb, text) {
+  function pickPoint(cb, text, onCancel) {
     cancelPick();
-    pick = { type: 'point', cb };
+    pick = { type: 'point', cb, onCancel };
     $('map').classList.add('picking');
     banner(text || 'Click on the map to place the point', [{ label: 'Cancel', fn: cancelPick }]);
   }
@@ -526,18 +528,130 @@ window.MapView = (() => {
   }
   function cancelPick() {
     if (!pick) return;
+    const was = pick;
     if (pick.layer) map.removeLayer(pick.layer);
     if (pick.verts) map.removeLayer(pick.verts);
     pick = null;
     map.doubleClickZoom.enable();
-    $('map').classList.remove('picking');
+    $('map').classList.remove('picking'); $('map').classList.remove('editing');
     hideBanner();
+    if (was.onCancel) was.onCancel();
   }
   function onMapClick(e) {
     if (!pick) return;
-    if (pick.type === 'point') { const cb = pick.cb; cancelPick(); cb(e.latlng); }
-    else { pick.points.push([e.latlng.lat, e.latlng.lng]); redrawTemp(); }
+    if (pick.type === 'point') { const cb = pick.cb; pick.onCancel = null; cancelPick(); cb(e.latlng); }
+    else if (pick.type === 'shape') { pick.points.push([e.latlng.lat, e.latlng.lng]); redrawTemp(); }
+    else if (pick.type === 'move') pick.layer.setLatLng(e.latlng);
   }
+  // ---------- edit modes ----------
+  // Nothing on the map moves by accident: corners and pins only become draggable inside one of these modes,
+  // and the change reaches the editor only on Done (Cancel throws it away; Save in the editor keeps it).
+  const editColor = () => (App.isEink() ? '#000' : '#ffb84f');
+  function editShape(kind, initial, cb, opts = {}) {
+    cancelPick();
+    const points = (initial || []).map(p => [+p[0], +p[1]]);
+    pick = { type: 'edit', kind, cb, points, rough: new Set(opts.rough || []), history: [], selected: null, text: opts.text || '' };
+    pick.layer = (kind === 'area' ? L.polygon : L.polyline)(points, { color: editColor(), weight: 3, fillOpacity: 0.12, interactive: false }).addTo(map);
+    pick.verts = L.layerGroup().addTo(map);
+    map.doubleClickZoom.disable();
+    $('map').classList.add('editing');
+    if (points.length && !map.getBounds().contains(L.latLngBounds(points))) goToBounds(L.latLngBounds(points));
+    redrawEdit(); editBanner();
+  }
+  function editBanner() {
+    const text = pick.text || 'Drag a corner to move it · click a ＋ to add a corner · click a corner to select it';
+    banner(text, [
+      pick.selected != null ? { label: `Delete corner ${pick.selected + 1}`, fn: () => deleteCorner(pick.selected) } : null,
+      { label: 'Simplify', fn: simplifyEdit },
+      { label: 'Undo', fn: undoEdit },
+      { label: 'Done', fn: finishEdit }, { label: 'Cancel', fn: cancelPick }].filter(Boolean));
+  }
+  function snapshot() { pick.history.push({ points: pick.points.map(p => p.slice()), rough: new Set(pick.rough) }); if (pick.history.length > 60) pick.history.shift(); }
+  function undoEdit() { const s = pick.history.pop(); if (!s) { UI.toast('Nothing to undo'); return; } pick.points = s.points; pick.rough = s.rough; pick.selected = null; redrawEdit(); editBanner(); }
+  function redrawEdit() {
+    pick.layer.setLatLngs(pick.points);
+    pick.verts.clearLayers();
+    const n = pick.points.length, closed = pick.kind === 'area';
+    pick.points.forEach((p, i) => {
+      const mk = L.marker(p, { draggable: true, icon: L.divIcon({ className: 'edit-vert' + (pick.selected === i ? ' selected' : ''), html: '<span></span>', iconSize: [16, 16], iconAnchor: [8, 8] }), zIndexOffset: 1000, autoPan: true, title: `corner ${i + 1}` });
+      mk.on('dragstart', snapshot);
+      mk.on('drag', e => { const ll = e.target.getLatLng(); pick.points[i] = [ll.lat, ll.lng]; pick.layer.setLatLngs(pick.points); });
+      mk.on('dragend', () => { pick.selected = i; redrawEdit(); editBanner(); });
+      mk.on('click', e => { L.DomEvent.stop(e); pick.selected = pick.selected === i ? null : i; redrawEdit(); editBanner(); });
+      mk.on('contextmenu', e => { L.DomEvent.stop(e); deleteCorner(i); });
+      pick.verts.addLayer(mk);
+    });
+    const edges = closed ? n : n - 1;
+    for (let i = 0; i < edges; i++) {
+      const a = pick.points[i], b = pick.points[(i + 1) % n], mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const mk = L.marker(mid, { icon: L.divIcon({ className: 'edit-mid' + (pick.rough.has(i) ? ' rough' : ''), html: '<span>+</span>', iconSize: [14, 14], iconAnchor: [7, 7] }), zIndexOffset: 900, title: 'Add a corner here' });
+      mk.on('click', e => { L.DomEvent.stop(e); insertCorner(i, mid); });
+      pick.verts.addLayer(mk);
+    }
+  }
+  function insertCorner(edge, p) {
+    snapshot();
+    pick.points.splice(edge + 1, 0, p);
+    // the split edge keeps its firm/rough mark on both halves; later edges move up one
+    const r = new Set();
+    for (const k of pick.rough) { if (k < edge) r.add(k); else if (k === edge) { r.add(edge); r.add(edge + 1); } else r.add(k + 1); }
+    pick.rough = r; pick.selected = edge + 1; redrawEdit(); editBanner();
+  }
+  function deleteCorner(i) {
+    const min = pick.kind === 'area' ? 3 : 2;
+    if (pick.points.length <= min) { UI.toast(`${pick.kind === 'area' ? 'An area' : 'A route'} needs at least ${min} corners`, 'error'); return; }
+    snapshot(); removeCornerFrom(pick, i);
+    pick.selected = null; redrawEdit(); editBanner();
+  }
+  // Remove corner i: the two edges that met there merge into one, rough if either was.
+  function removeCornerFrom(st, i) {
+    const n = st.points.length, closed = st.kind === 'area', prev = (i - 1 + n) % n;
+    const hasPrev = closed || i > 0, hasNext = closed || i < n - 1;
+    const rough = new Set();
+    for (const k of st.rough) { if (k === i || (hasPrev && k === prev)) continue; rough.add(k > i ? k - 1 : k); }
+    if (hasPrev && hasNext && (st.rough.has(prev) || st.rough.has(i))) rough.add(i === 0 ? n - 2 : i - 1);
+    st.points.splice(i, 1); st.rough = rough;
+  }
+  // Drop corners that barely bend the outline at the current zoom (under 6 screen pixels), least bend first.
+  function simplifyEdit() {
+    const min = pick.kind === 'area' ? 3 : 2, closed = pick.kind === 'area', tol = 6;
+    snapshot();
+    let removed = 0;
+    for (;;) {
+      const n = pick.points.length; if (n <= min) break;
+      const pts = pick.points.map(p => map.latLngToLayerPoint(p));
+      let best = -1, bestD = Infinity;
+      for (let i = 0; i < n; i++) {
+        if (!closed && (i === 0 || i === n - 1)) continue;
+        const d = L.LineUtil.pointToSegmentDistance(pts[i], pts[(i - 1 + n) % n], pts[(i + 1) % n]);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      if (best < 0 || bestD > tol) break;
+      removeCornerFrom(pick, best); removed++;
+    }
+    if (!removed) { pick.history.pop(); UI.toast('Nothing to simplify at this zoom. Zoom out and press Simplify again to merge more corners.'); }
+    else UI.toast(`${removed} corner${removed > 1 ? 's' : ''} removed (Undo brings them back)`);
+    pick.selected = null; redrawEdit(); editBanner();
+  }
+  function finishEdit() {
+    const st = pick, cb = st.cb;
+    const coords = st.points.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]);
+    const edges = st.kind === 'area' ? coords.length : coords.length - 1;
+    const rough = [...st.rough].filter(k => k < edges).sort((a, b) => a - b);
+    cancelPick(); cb(coords, rough);
+  }
+  // Move one pin: drag it (or click the map), then Done.
+  function movePoint(latlng, cb, text) {
+    cancelPick();
+    const ll = latlng && latlng.lat != null && latlng.lat !== '' ? L.latLng(+latlng.lat, +latlng.lng) : map.getCenter();
+    pick = { type: 'move', cb };
+    pick.layer = L.marker(ll, { draggable: true, icon: L.divIcon({ className: 'edit-vert big', html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11] }), zIndexOffset: 1000, autoPan: true }).addTo(map);
+    if (!map.getBounds().contains(ll)) goTo(ll, Math.max(map.getZoom(), 7));
+    $('map').classList.add('editing');
+    banner(text || 'Drag the pin to its new place (or click the map), then press Done', [
+      { label: 'Done', fn: () => { const p = pick.layer.getLatLng(), done = pick.cb; cancelPick(); done(p); } }, { label: 'Cancel', fn: cancelPick }]);
+  }
+
 
   function defaultMoveDate() { return ignoreTime ? '' : Dates.iso(t); }
   function defaultCategory(kind) { return Store.categories().find(c => (c.defaultKind || 'pin') === kind)?.id || Store.categories()[0]?.id || null; }
@@ -556,5 +670,5 @@ window.MapView = (() => {
     });
   }
 
-  return { init, show, refresh, locate, showPosition, setTime, time, pickPoint, drawShape, cancelPick, fitAll, showVertexNumbers, hideVertexNumbers, isPicking: () => !!pick };
+  return { init, show, refresh, locate, showPosition, setTime, time, pickPoint, drawShape, editShape, movePoint, cancelPick, fitAll, goToBounds, showVertexNumbers, hideVertexNumbers, isPicking: () => !!pick, leaflet: () => map };
 })();

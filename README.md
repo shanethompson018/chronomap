@@ -171,6 +171,49 @@ categories (default source), to markers (citations), to each fact, each field an
   river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the
   corners are numbered on the map while you tick.
 
+## Editing shapes: nothing moves by accident
+
+Pins and outlines are never draggable on their own. Editing always starts from a button, happens in a
+clearly marked mode, and reaches the marker only when you press **Done** and then **Save**; **Cancel**
+(or Esc) throws the change away.
+
+* **Move pin** (beside a point fact's coordinates): the pin becomes a draggable handle; drag it or click
+  the map, then Done.
+* **Edit border / Edit route / Edit extent** (beside an outline): every corner becomes a handle you can
+  drag; a small **＋** on each edge adds a corner there; click a corner to select it and press
+  *Delete corner* (or right-click it). **Simplify** drops corners that barely bend the outline at the
+  current zoom (zoom out to merge more), **Undo** steps back. Firm and rough edges keep their marks
+  through all of this: a split edge passes its mark to both halves, merged edges are rough if either was.
+* **Change border here** (in an area's bubble): borders over time are one dated outline per period, and
+  the slider shows the one in force. Move the slider to the date of the change, press the button, and
+  the border in force is copied into a new fact dated at the slider; you then drag only the corners that
+  moved. The earlier border stays exactly as it was.
+* **Redraw** starts the outline again from nothing (click the corners); the old outline is replaced
+  when you finish.
+
+## Drafting borders from a picture
+
+An old map, a scanned atlas page or a photograph of a wall map can be laid over the real map and traced.
+Press **Picture overlay…** in the Map sidebar.
+
+1. **Choose the picture** from the image library (or upload it on the spot). It appears see-through in
+   the middle of the view.
+2. **Line it up** with control points: press *Add control point*, click a spot you can recognise on
+   the picture (a city, a cape, a river mouth), then click the same spot on the real map underneath.
+   Two points fit the picture's scale, rotation and position; a third also corrects stretch and skew,
+   and the panel reports the worst mismatch in pixels. The points are saved with the image, so the
+   picture is ready next time (and on your other devices).
+3. **Draft an outline.** *Fill region*: click inside a tinted territory on the picture and its outline
+   is traced from the pixels (every pixel of a similar colour that touches the one you clicked).
+   *Trace line*: click a drawn border line and the app follows it as far as its colour continues; a line
+   that closes on itself becomes an area, otherwise a route. The *colour tolerance* slider decides how
+   similar a colour must be: lower it if the fill floods the page, raise it if it stops short. The
+   result always opens in the edit mode above, simplified, for you to correct corner by corner before
+   it reaches the editor. Nothing is guessed: no coordinates are invented, only pixels you clicked on
+   are followed.
+   The same two buttons appear beside an existing fact's "where" in the editor while an overlay is on,
+   so a picture can supply the border of a marker you already have.
+
 ## Time gaps (dates that depend on other dates)
 
 Many texts give gaps instead of dates: "When Adam had lived 130 years, he fathered Seth." A **time
@@ -242,7 +285,8 @@ js/dates.js       flexible date parsing (BC dates, year/month precision)
 js/facts.js       fact types, derivation of spans/locations/ties, conversion of old data
 js/store.js       data model, saving, import/export
 js/sample.js      the sample dataset
-js/map.js         Map tab
+js/map.js         Map tab (markers, time slider, pick/draw and edit modes)
+js/overlay.js     picture overlay: georeferencing, fill and trace tools
 js/editor.js      marker editor drawer
 js/graph.js       graph drawing (used by Ties and Network)
 js/ties.js        Ties tab

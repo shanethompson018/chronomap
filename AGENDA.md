@@ -110,11 +110,18 @@ Going through these in order:
 
 ## 3. Markers
 
-- [ ] **Areas.** What areas and borders should be able to do beyond the current draw-a-shape: changing
+- [x] **Areas.** What areas and borders should be able to do beyond the current draw-a-shape: changing
       shape over time more easily, labels inside the area, relations between an area and the people and
       events inside it, areas following a person (a kingdom's extent at a ruler's death), importing real
       border data. Overlaps with 1b (rough borders: core/extent outlines, firm/rough edges, decided there).
-      Decisions so far (build later):
+      **Built 19 Oct 2026**: explicit edit modes (Move pin, Edit border / route / extent with draggable
+      corners, ＋ handles to add, select + Delete corner, Simplify, Undo, Done / Cancel; rough-edge marks
+      survive edits), "Change border here" in an area's bubble (copies the border in force into a new fact
+      dated at the slider), and the picture overlay (js/overlay.js: image from the library, 2–3 control
+      points saved on the image as `georef`, see-through canvas layer, fill and trace tools on the
+      picture's pixels, results opened in the edit mode). Not built, still open: labels inside areas, areas
+      following a person, importing real border data.
+      Decisions:
       - Borders over time already keep one dated shape per period and the slider shows the one in
         force; the earlier shape stays untouched when a later one is added. Keep this.
       - New editing flow: at the slider's date press "Change border here"; the app copies the shape in

@@ -214,6 +214,7 @@ window.UI = (() => {
 
     if (!opts.noActions) {
       out += `<div class="info-actions"><button data-action="edit" data-id="${esc(m.id)}">✏️ Edit</button>`
+        + (m.kind === 'area' && t != null ? `<button data-action="change-border" data-id="${esc(m.id)}" title="Copy the border in force at the slider's date into a new dated border and drag only the corners that moved">✥ Change border here</button>` : '')
         + `<button data-action="locate" data-id="${esc(m.id)}">🗺️ Map</button>`
         + `<button data-action="network" data-id="${esc(m.id)}">🕸️ Network</button>`
         + `<button data-action="ties" data-id="${esc(m.id)}">🔗 Ties</button></div>`;
@@ -288,7 +289,7 @@ window.UI = (() => {
 
   // Centred dialog over everything. Returns { close, box }. Closes on ✕, Escape or a click on the backdrop.
   function modal({ title, body, width, onClose, side }) {
-    const overlay = h('div', { class: 'modal-overlay' + (side ? ' side' : '') }); // side: no backdrop, the map stays usable
+    const overlay = h('div', { class: 'modal-overlay' + (side ? ' side-modal' : '') }); // side: no backdrop, the map stays usable
     const close = () => { if (!overlay.isConnected) return; overlay.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
     const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
     const box = h('div', { class: 'modal', style: width ? { width } : null },

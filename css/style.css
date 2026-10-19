@@ -100,10 +100,25 @@ main { flex: 1; min-height: 0; position: relative; }
 .map-banner {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1000;
   background: var(--accent2); color: #1a1200; padding: 8px 14px; border-radius: var(--radius);
-  box-shadow: 0 4px 16px rgba(0,0,0,.4); display: flex; gap: 10px; align-items: center; font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4); display: flex; gap: 8px 10px; align-items: center; font-weight: 500;
+  flex-wrap: wrap; justify-content: center; max-width: calc(100% - 40px); text-align: center;
 }
+.map-banner > span { flex: 1 1 100%; }
 .map-banner button { background: rgba(0,0,0,.15); border-color: rgba(0,0,0,.25); color: #1a1200; }
 #map.picking { cursor: crosshair; }
+/* edit modes: draggable corners, + handles on edges, the moving pin */
+.edit-vert { background: none; border: none; }
+.edit-vert span { display: block; width: 12px; height: 12px; margin: 2px; border-radius: 50%; background: #fff; border: 3px solid #ffb84f; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: grab; }
+.edit-vert.selected span { background: #ffb84f; border-color: #fff; }
+.edit-vert.big span { width: 16px; height: 16px; margin: 3px; border-width: 4px; }
+.edit-mid { background: none; border: none; }
+.edit-mid span { display: flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,184,79,.9); color: #1a1200; font-size: 12px; font-weight: 700; line-height: 1; cursor: copy; border: 1px solid #1a1200; }
+.edit-mid.rough span { background: rgba(255,255,255,.85); border: 1px dashed #b07a1e; }
+.overlay-raster { pointer-events: none; }
+.overlay-panel h4 { font-size: 13px; }
+body.eink .edit-vert span { border-color: #000; box-shadow: none; }
+body.eink .edit-vert.selected span { background: #000; border-color: #fff; }
+body.eink .edit-mid span { background: #fff; border: 2px solid #000; }
 .pulse { animation: pulse 1.2s ease-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes pulse { 0% { opacity: 1; } 100% { opacity: 0.35; } }
 .pin-icon { background: none; border: none; }
@@ -373,8 +388,8 @@ body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px soli
 /* ---------- rough borders: numbered corners while editing ---------- */
 .vertex-num { background: none; border: none; }
 .vertex-num span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #ffb84f; color: #1a1200; font-size: 11px; font-weight: 700; border: 1px solid #1a1200; }
-.modal-overlay.side { justify-content: flex-start; align-items: flex-start; background: none; pointer-events: none; }
-.modal-overlay.side .modal { pointer-events: auto; margin: 60px 0 0 300px; }
+.modal-overlay.side-modal { justify-content: flex-start; align-items: flex-start; background: none; pointer-events: none; }
+.modal-overlay.side-modal .modal { pointer-events: auto; margin: 60px 0 0 300px; max-height: calc(100% - 80px); }
 
 /* ---------- grading: Confidence badges and Reliability tags ---------- */
 .grade-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 50%; font-size: 9px; font-weight: 700; color: #fff; border: 1.5px solid #fff; vertical-align: middle; cursor: help; line-height: 1; }
