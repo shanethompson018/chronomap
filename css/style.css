@@ -358,3 +358,20 @@ body.eink .graph-empty { color: #000; }
 .fact-details { margin: 4px 0 6px; }
 .fact-list li { margin: 3px 0; }
 body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px solid #ccc; }
+
+/* ---------- approximation ---------- */
+.approx-row { margin-top: 3px; }
+.approx-row input { font-size: 12px; padding: 3px 6px; }
+.rel-approx { margin: 4px 0 8px 10px; padding: 6px 8px; background: rgba(255,255,255,.03); border-radius: 6px; }
+
+/* ---------- pins inside an area, fading copies ---------- */
+.pin-wrap { position: relative; width: 28px; height: 28px; }
+.pin-wrap .pin-dot { position: absolute; left: 0; top: 0; }
+.pin-ring { position: absolute; left: -5px; top: -5px; width: 34px; height: 34px; border-radius: 50%; border: 2px dashed #4f8cff; pointer-events: none; }
+.inside-hatch { pointer-events: none; }
+
+/* ---------- rough borders: numbered corners while editing ---------- */
+.vertex-num { background: none; border: none; }
+.vertex-num span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #ffb84f; color: #1a1200; font-size: 11px; font-weight: 700; border: 1px solid #1a1200; }
+.modal-overlay.side { justify-content: flex-start; align-items: flex-start; background: none; pointer-events: none; }
+.modal-overlay.side .modal { pointer-events: auto; margin: 60px 0 0 300px; }

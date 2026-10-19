@@ -71,8 +71,8 @@ window.Editor = (() => {
     if (!draft.name.trim()) bad.push('Name is required');
     draft.facts.forEach(f => {
       const t = Store.factType(f.typeId), title = f.label || (t ? t.name : 'fact');
-      if (!Dates.isValid(f.date)) bad.push(`${title}: "${f.date}" is not a date I understand`);
-      if (!Dates.isValid(f.dateEnd)) bad.push(`${title}: "${f.dateEnd}" is not a date I understand`);
+      for (const k of ['date', 'dateMin', 'dateMax', 'dateEnd', 'dateEndMin', 'dateEndMax']) if (!Dates.isValid(f[k])) bad.push(`${title}: "${f[k]}" is not a date I understand`);
+      if ((f.dateMin && !f.dateMax) || (!f.dateMin && f.dateMax)) { /* one-sided limit: allowed */ }
     });
     if (bad.length) { UI.toast(bad[0], 'error'); return; }
     draft.name = draft.name.trim();
@@ -130,15 +130,28 @@ window.Editor = (() => {
     if (rerender) render();
   }
 
-  // A date box with its time-gap controls: ⛓ relate, 🔒 anchor, and a caption when the date is reckoned.
-  function dateField(label, bind, slot, value, placeholder) {
+  // A date box with its time-gap controls: ⛓ relate, 🔒 anchor, a caption when the date is reckoned, and an
+  // "approximate" tick box that opens earliest / latest boxes (the main box is then the most-likely date).
+  const approxOpen = new Set(); // slots whose earliest/latest boxes are shown
+  function dateField(label, bind, slot, value, placeholder, approx) {
     const ref = { kind: 'marker', id, slot };
     const inStore = !isNew && Store.refExists(ref);
     const st = inStore ? Relations.slotState(ref) : null;
     const reckoned = !!(st && st.derived && !st.pinned);
     const undet = !!(st && st.undetermined);
-    const input = h('input', { type: 'text', 'data-bind': bind, value: undet ? '' : (value ?? ''), placeholder: undet ? 'undeterminable' : placeholder,
+    const hasRange = approx && !!(approx.min || approx.max);
+    const open = hasRange || approxOpen.has(slot);
+    const input = h('input', { type: 'text', 'data-bind': bind, value: undet ? '' : (value ?? ''), placeholder: undet ? 'undeterminable' : (open ? 'most likely (optional)' : placeholder),
       readonly: reckoned || undet, class: reckoned ? 'derived-input' : '', title: reckoned ? 'Reckoned from a time gap. Anchor it (🔒) to type a date here.' : '' });
+    let approxRow = null, approxTick = null;
+    if (approx && !undet) {
+      approxTick = h('input', { type: 'checkbox', checked: open, title: 'Approximate: give the earliest and latest it could be', disabled: reckoned, onchange: e => { if (e.target.checked) approxOpen.add(slot); else { approxOpen.delete(slot); const f = draft.facts[approx.i]; if (approx.end) { f.dateEndMin = ''; f.dateEndMax = ''; } else { f.dateMin = ''; f.dateMax = ''; } } render(); } });
+      if (open) approxRow = h('div', { class: 'row approx-row', style: { gap: '4px' } },
+        h('span', { class: 'muted', style: { flex: 'none', fontSize: '11px' } }, 'earliest'),
+        h('input', { type: 'text', 'data-bind': approx.minBind, value: approx.min || '', placeholder: 'YYYY', readonly: reckoned, class: reckoned ? 'derived-input' : '' }),
+        h('span', { class: 'muted', style: { flex: 'none', fontSize: '11px' } }, 'latest'),
+        h('input', { type: 'text', 'data-bind': approx.maxBind, value: approx.max || '', placeholder: 'YYYY', readonly: reckoned, class: reckoned ? 'derived-input' : '' }));
+    }
     const chain = h('button', { type: 'button', class: 'small icon', disabled: !inStore, title: !inStore ? 'Save the marker first, then you can add a time gap to this date' : 'Time gap: relate this date to another date (e.g. "130 years after Adam was born")',
       onclick: () => Relations.pick(ref, { onDone: () => syncDraftFromStore(true) }) }, '⛓');
     const pin = st && (st.related || st.pinned) ? h('button', { type: 'button', class: 'small icon' + (st.pinned ? ' src-on' : ''),
@@ -146,12 +159,12 @@ window.Editor = (() => {
       onclick: () => { Store.setPinned(ref, !st.pinned); syncDraftFromStore(true); } }, '🔒') : null;
     const restore = undet ? h('button', { type: 'button', class: 'small', title: 'Stop treating this date as undeterminable', onclick: () => { Store.setUndetermined(ref, false); syncDraftFromStore(true); } }, 'Restore') : null;
     let caption = null;
-    if (reckoned) caption = h('div', { class: 'rel-caption' }, '⛓ reckoned from ' + Relations.describeDerived(ref));
+    if (reckoned) caption = h('div', { class: 'rel-caption' }, '⛓ reckoned from ' + Relations.describeDerived(ref) + (st.range && st.range.min !== st.range.max ? ` → ${Dates.formatRange(st.range.date, st.range.min, st.range.max)}` : ''));
     if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
     if (undet) caption = h('div', { class: 'rel-caption' }, 'Marked undeterminable: not placed on the timeline.');
     return h('label', { class: 'field' }, label,
-      h('div', { class: 'row', style: { gap: '4px' } }, input, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),
-      caption);
+      h('div', { class: 'row', style: { gap: '4px' } }, input, approxTick ? h('div', { class: 'narrow', title: 'approximate' }, approxTick) : null, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),
+      approxRow, caption);
   }
 
   // ---------- rendering ----------
@@ -267,8 +280,8 @@ window.Editor = (() => {
       h('button', { type: 'button', class: 'small narrow', title: 'Remove this fact', onclick: () => { if (confirm(`Remove the fact "${Store.factTitle(f)}"?`)) { draft.facts.splice(i, 1); render(); } } }, '✕')));
     // dates
     if (t.hasDate !== false) {
-      const dates = [dateField(t.hasEnd ? 'From' : 'When', `facts.${i}.date`, 'fact:' + f.id, f.date, 'YYYY-MM-DD, 1776, 44 BC')];
-      if (t.hasEnd) dates.push(dateField('Until', `facts.${i}.dateEnd`, 'fact:' + f.id + ':end', f.dateEnd, 'optional'));
+      const dates = [dateField(t.hasEnd ? 'From' : 'When', `facts.${i}.date`, 'fact:' + f.id, f.date, 'YYYY-MM-DD, 1776, 44 BC', { i, end: false, min: f.dateMin, max: f.dateMax, minBind: `facts.${i}.dateMin`, maxBind: `facts.${i}.dateMax` })];
+      if (t.hasEnd) dates.push(dateField('Until', `facts.${i}.dateEnd`, 'fact:' + f.id + ':end', f.dateEnd, 'optional', { i, end: true, min: f.dateEndMin, max: f.dateEndMax, minBind: `facts.${i}.dateEndMin`, maxBind: `facts.${i}.dateEndMax` }));
       const copyBtn = h('button', { type: 'button', class: 'small', title: 'Use the date shown on the map time slider', onclick: () => { const tt = MapView.time(); if (tt != null) { draft.facts[i].date = Dates.iso(tt); render(); } } }, '⏱');
       card.append(row(...dates, h('div', { class: 'narrow', style: { alignSelf: 'flex-end', paddingBottom: '2px' } }, copyBtn)));
     }
@@ -310,14 +323,56 @@ window.Editor = (() => {
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: w.lat == null, title: 'Move the map to this place', onclick: () => { App.showTab('map'); MapView.showPosition({ lat: w.lat, lng: w.lng }, 'pin'); } }, '🎯')));
     } else if (w && (w.kind === 'area' || w.kind === 'route')) {
       parts.push(h('span', { class: 'muted' }, w.coords && w.coords.length ? `${w.coords.length} points` : 'not drawn yet'),
-        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', onclick: () => { App.showTab('map'); MapView.drawShape(w.kind === 'area' ? 'area' : 'path', w.coords || [], coords => { if (!draft) return; draft.facts[i].where = { kind: w.kind, coords: coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]) }; render(); }); } }, '✏️ Draw on map')),
+        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', onclick: () => { App.showTab('map'); MapView.drawShape(w.kind === 'area' ? 'area' : 'path', w.coords || [], coords => { if (!draft) return; const cur = draft.facts[i].where || {}; draft.facts[i].where = Object.assign({}, cur, { kind: w.kind, coords: coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]) }); if (cur.rough) draft.facts[i].where.rough = cur.rough.filter(x => x < coords.length); render(); }); } }, '✏️ Draw on map')),
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: !(w.coords && w.coords.length), title: 'Move the map to this shape', onclick: () => { App.showTab('map'); MapView.showPosition({ coords: w.coords }, w.kind === 'area' ? 'area' : 'path'); } }, '🎯')));
     } else if (w && w.kind === 'marker') {
       parts.push(UI.markerSelect({ value: w.markerId, exclude: [id], placeholder: 'which marker (an area, a town, an event)…', onChange: v => { draft.facts[i].where = { kind: 'marker', markerId: v }; } }));
     }
     const line = row(...parts);
     const label = h('input', { type: 'text', 'data-bind': `facts.${i}.placeLabel`, value: f.placeLabel, placeholder: 'place name (e.g. Philadelphia)' });
-    return h('div', { class: 'fact-where' }, line, w ? row(label) : null);
+    const roughRow = w && w.kind === 'area' && w.coords && w.coords.length >= 3 ? renderRoughBorder(i) : null;
+    return h('div', { class: 'fact-where' }, line, w ? row(label) : null, roughRow);
+  }
+  // Rough borders: a "largest possible extent" outline and firm/rough marking of each edge.
+  function renderRoughBorder(i) {
+    const w = draft.facts[i].where;
+    const rough = w.rough || [], hasExt = !!(w.extent && w.extent.length >= 3);
+    const sum = [];
+    if (rough.length) sum.push(`${rough.length} rough edge${rough.length > 1 ? 's' : ''}`);
+    if (hasExt) sum.push(`extent: ${w.extent.length} points${w.extentRough && w.extentRough.length ? ` (${w.extentRough.length} rough)` : ''}`);
+    return h('div', { class: 'row', style: { gap: '6px', marginTop: '4px', flexWrap: 'wrap' } },
+      h('span', { class: 'muted', style: { fontSize: '12px', flex: 'none' } }, sum.length ? sum.join(' · ') : 'all edges firm, no extent'),
+      h('button', { type: 'button', class: 'small', title: 'Mark which edges of the outline are only guessed', onclick: () => roughEdgesDialog(i, 'coords') }, 'Firm / rough edges…'),
+      h('button', { type: 'button', class: 'small', title: hasExt ? 'Redraw the largest possible extent' : 'Draw a second outline: the furthest the territory might reach', onclick: () => {
+        App.showTab('map');
+        MapView.drawShape('area', w.extent || w.coords, coords => { if (!draft) return; draft.facts[i].where.extent = coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]); render(); });
+      } }, hasExt ? '⬠ Redraw extent' : '⬠ Draw extent'),
+      hasExt ? h('button', { type: 'button', class: 'small', onclick: () => roughEdgesDialog(i, 'extent') }, 'Extent edges…') : null,
+      hasExt ? h('button', { type: 'button', class: 'small', title: 'Remove the extent outline', onclick: () => { delete draft.facts[i].where.extent; delete draft.facts[i].where.extentRough; render(); } }, '✕ extent') : null);
+  }
+  function roughEdgesDialog(i, which) {
+    const w = draft.facts[i].where;
+    const coords = which === 'extent' ? w.extent : w.coords;
+    const key = which === 'extent' ? 'extentRough' : 'rough';
+    const set = new Set(w[key] || []);
+    App.showTab('map');
+    MapView.showVertexNumbers(coords);
+    MapView.showPosition({ coords }, 'area');
+    const boxes = coords.map((c, k) => {
+      const cb = h('input', { type: 'checkbox', checked: set.has(k) });
+      cb.addEventListener('change', () => { if (cb.checked) set.add(k); else set.delete(k); });
+      return h('label', { style: { display: 'inline-flex', gap: '4px', alignItems: 'center', padding: '3px 10px 3px 0' } }, cb, `${k + 1} → ${((k + 1) % coords.length) + 1}`);
+    });
+    const body = h('div', {},
+      h('p', { class: 'hint' }, 'The outline\'s corners are numbered on the map. Tick the edges that are only guessed (they draw dashed with a soft band); leave firm edges unticked (coast, river, treaty line).'),
+      h('div', {}, ...boxes),
+      h('div', { class: 'row', style: { marginTop: '10px' } },
+        h('button', { class: 'small', onclick: () => { boxes.forEach(b => { b.querySelector('input').checked = true; }); coords.forEach((_, k) => set.add(k)); } }, 'All rough'),
+        h('button', { class: 'small', onclick: () => { boxes.forEach(b => { b.querySelector('input').checked = false; }); set.clear(); } }, 'All firm'),
+        h('span', { class: 'spacer' }),
+        h('button', { class: 'primary', onclick: () => { if (!draft) return; draft.facts[i].where[key] = [...set].sort((a, b) => a - b); m.close(); render(); } }, 'Done'),
+        h('button', { onclick: () => m.close() }, 'Cancel')));
+    const m = UI.modal({ title: which === 'extent' ? 'Edges of the extent outline' : 'Edges of the border', body, width: '420px', side: true, onClose: () => MapView.hideVertexNumbers() });
   }
   function renderRole(i, role) {
     const f = draft.facts[i];

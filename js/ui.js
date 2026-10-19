@@ -133,8 +133,8 @@ window.UI = (() => {
 
     const rows = []; // [label, html, depth]
     const span = [];
-    if (m.start) span.push(`${esc(m.startLabel || 'Begins')} ${esc(Dates.formatInput(m.start))}`);
-    if (m.end) span.push(`${esc(m.endLabel || 'Ends')} ${esc(Dates.formatInput(m.end))}`);
+    if (m.start) span.push(`${esc(m.startLabel || 'Begins')} ${esc(Dates.formatRange(m.start, m.startMin, m.startMax))}`);
+    if (m.end) span.push(`${esc(m.endLabel || 'Ends')} ${esc(Dates.formatRange(m.end, m.endMin, m.endMax))}`);
     if (span.length) rows.push(['Span', span.join(' · '), 0]);
     const pos = Store.positionAt(m, t);
     if (pos && Store.hasLocation(pos)) {
@@ -202,7 +202,9 @@ window.UI = (() => {
     const t = Store.factType(f.typeId);
     const bits = [];
     let when = '';
-    if (f.date) when = esc(Dates.formatInput(f.date)) + (t && t.hasEnd && f.dateEnd ? ' – ' + esc(Dates.formatInput(f.dateEnd)) : '');
+    const w = Facts.when(f);
+    if (w.date) when = esc(Dates.formatRange(w.date, w.min, w.max)) + (t && t.hasEnd && w.dateEnd ? ' – ' + esc(Dates.formatRange(w.dateEnd, w.endMin, w.endMax)) : '');
+    else if (f.dateMin || f.dateMax) when = esc(f.dateMin ? 'after ' + Dates.formatInput(f.dateMin) : 'before ' + Dates.formatInput(f.dateMax));
     else if ((m.undetermined || []).includes('fact:' + f.id)) when = '<span class="muted">undeterminable</span>';
     const b = badge ? badge('fact:' + f.id) + (t && t.hasEnd && f.dateEnd ? badge('fact:' + f.id + ':end') : '') : '';
     const title = `<strong>${esc(f.label || (t ? t.name : 'Fact'))}</strong>`;
@@ -260,8 +262,8 @@ window.UI = (() => {
   }
 
   // Centred dialog over everything. Returns { close, box }. Closes on ✕, Escape or a click on the backdrop.
-  function modal({ title, body, width, onClose }) {
-    const overlay = h('div', { class: 'modal-overlay' });
+  function modal({ title, body, width, onClose, side }) {
+    const overlay = h('div', { class: 'modal-overlay' + (side ? ' side' : '') }); // side: no backdrop, the map stays usable
     const close = () => { if (!overlay.isConnected) return; overlay.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
     const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
     const box = h('div', { class: 'modal', style: width ? { width } : null },

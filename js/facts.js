@@ -145,22 +145,33 @@ window.Facts = (() => {
   const typeOf = (d, f) => d.factTypes.find(t => t.id === f.typeId) || null;
   const factLabel = (d, f) => f.label || (typeOf(d, f) || {}).name || 'Fact';
   const dayOf = s => (s ? Dates.toDays(s) : null);
+  // Effective dates of a fact: the most-likely date (typed, or the midpoint of earliest/latest) plus its range.
+  function when(f) {
+    const date = f.date || Dates.midpoint(f.dateMin, f.dateMax) || '';
+    const dateEnd = f.dateEnd || Dates.midpoint(f.dateEndMin, f.dateEndMax) || '';
+    return { date, min: f.dateMin || date, max: f.dateMax || date, dateEnd, endMin: f.dateEndMin || dateEnd, endMax: f.dateEndMax || dateEnd,
+      approx: !!(f.dateMin && f.dateMax && f.dateMin !== f.dateMax), approxEnd: !!(f.dateEndMin && f.dateEndMax && f.dateEndMin !== f.dateEndMax) };
+  }
 
   // Fill marker.start/startLabel/end/endLabel/moves and d.links from every marker's facts.
   function derive(d) {
     const links = [];
     for (const m of d.markers) {
       const facts = m.facts || [];
-      const dated = facts.filter(f => f.date && dayOf(f.date) != null);
-      const begins = dated.filter(f => (typeOf(d, f) || {}).begins).sort((a, b) => dayOf(a.date) - dayOf(b.date));
-      const endsList = facts.filter(f => { const t = typeOf(d, f); if (!t || !t.ends) return false; const v = t.hasEnd ? (f.dateEnd || f.date) : f.date; return v && dayOf(v) != null; });
-      const endVal = f => { const t = typeOf(d, f); return t.hasEnd ? (f.dateEnd || f.date) : f.date; };
+      const W = new Map(facts.map(f => [f.id, when(f)]));
+      const dated = facts.filter(f => W.get(f.id).date && dayOf(W.get(f.id).date) != null);
+      const begins = dated.filter(f => (typeOf(d, f) || {}).begins).sort((a, b) => dayOf(W.get(a.id).date) - dayOf(W.get(b.id).date));
+      const endVal = f => { const t = typeOf(d, f), w = W.get(f.id); return t && t.hasEnd ? (w.dateEnd || w.date) : w.date; };
+      const endRange = f => { const t = typeOf(d, f), w = W.get(f.id); return t && t.hasEnd && w.dateEnd ? { min: w.endMin, max: w.endMax } : { min: w.min, max: w.max }; };
+      const endsList = facts.filter(f => { const t = typeOf(d, f); if (!t || !t.ends) return false; const v = endVal(f); return v && dayOf(v) != null; });
       endsList.sort((a, b) => dayOf(endVal(b)) - dayOf(endVal(a)));
       const b = begins[0] || facts.find(f => (typeOf(d, f) || {}).begins) || null;
       const e = endsList[0] || facts.find(f => (typeOf(d, f) || {}).ends) || null;
-      m.start = b && b.date ? b.date : '';
+      m.start = b ? (W.get(b.id).date || '') : '';
+      m.startMin = b ? (W.get(b.id).min || '') : ''; m.startMax = b ? (W.get(b.id).max || '') : '';
       m.startLabel = b ? factLabel(d, b) : '';
       m.end = e ? (endVal(e) || '') : '';
+      m.endMin = e ? (endRange(e).min || '') : ''; m.endMax = e ? (endRange(e).max || '') : '';
       m.endLabel = e ? factLabel(d, e) : '';
       m.moves = [];
       for (const f of facts) {
@@ -168,9 +179,11 @@ window.Facts = (() => {
         let where = f.where;
         if (!where && t && t.placeFrom) { const p = (f.participants || []).find(x => x.roleId === t.placeFrom); if (p) where = { kind: 'marker', markerId: p.markerId }; }
         if (!where) continue;
-        const mv = { id: f.id, date: f.date || '', lat: null, lng: null, coords: null, atMarkerId: null, label: f.placeLabel || '', note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f) };
+        const w = W.get(f.id);
+        const mv = { id: f.id, date: w.date, dateMin: w.min, dateMax: w.max, dateEnd: t && t.hasEnd ? w.dateEnd : '', dateEndMin: t && t.hasEnd ? w.endMin : '', dateEndMax: t && t.hasEnd ? w.endMax : '',
+          lat: null, lng: null, coords: null, atMarkerId: null, label: f.placeLabel || '', note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f) };
         if (where.kind === 'point') { mv.lat = where.lat; mv.lng = where.lng; }
-        else if (where.kind === 'area' || where.kind === 'route') mv.coords = where.coords;
+        else if (where.kind === 'area' || where.kind === 'route') { mv.coords = where.coords; mv.extent = where.extent || null; mv.rough = where.rough || []; mv.extentRough = where.extentRough || []; }
         else if (where.kind === 'marker') { mv.atMarkerId = where.markerId; if (!mv.label) { const o = d.markers.find(x => x.id === where.markerId); mv.label = o ? o.name : ''; } }
         else continue;
         m.moves.push(mv);
@@ -182,9 +195,10 @@ window.Facts = (() => {
           const role = t.roles.find(r => r.id === p.roleId); if (!role || !role.tieTypeId || !p.markerId) continue;
           if (!d.markers.some(x => x.id === p.markerId) || !d.linkTypes.some(x => x.id === role.tieTypeId)) continue;
           const toOther = role.direction !== 'other-to-this';
+          const w = W.get(f.id);
           links.push({ id: `${f.id}|${role.id}|${p.markerId}`, typeId: role.tieTypeId, fromId: toOther ? m.id : p.markerId, toId: toOther ? p.markerId : m.id,
-            label: f.label || '', start: f.date || '', end: t.hasEnd ? (f.dateEnd || '') : '', note: f.note || '', sourceId: f.sourceId || null, page: f.page || '',
-            factId: f.id, ownerId: m.id, roleName: role.name });
+            label: f.label || '', start: w.date || '', startMin: w.min || '', startMax: w.max || '', end: t.hasEnd ? (w.dateEnd || '') : '', endMin: t.hasEnd ? (w.endMin || '') : '', endMax: t.hasEnd ? (w.endMax || '') : '',
+            note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factId: f.id, ownerId: m.id, roleName: role.name });
         }
       }
     }
@@ -198,5 +212,5 @@ window.Facts = (() => {
     return key ? DEFAULTS_BY_CATEGORY[key] : [];
   }
 
-  return { ensureSeeds, migrateV2, derive, factLabel, defaultTypeIdsFor, TIE_DEFAULTS };
+  return { ensureSeeds, migrateV2, derive, when, factLabel, defaultTypeIdsFor, TIE_DEFAULTS };
 })();

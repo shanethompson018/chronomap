@@ -146,6 +146,31 @@ categories (default source), to markers (citations), to each fact, each field an
 **Images** – a library of pictures on the Library tab, each with its own sources. A marker can have one
 **portrait** (also used on its map pin and graph node) and a gallery of further images.
 
+## Approximate dates, gaps and places
+
+* **A date that is only roughly known.** Tick *approximate* beside any fact date (or end date) and
+  three boxes appear: the main box becomes the **most likely** date, with **earliest** and **latest**
+  beside it. Any of them may be blank: leave the most likely blank and the midpoint is used; leave
+  earliest or latest blank for a one-sided limit ("after 1000 BC"). The bubble shows
+  "c. 1736 (1730 – 1744)".
+* **A gap that is only roughly known.** In the time-gap dialog, tick *approximate gap* and give the
+  smallest and largest the gap could be. A reckoned date then carries a range: the anchor's range
+  combined with the gap's range, end to end, so ranges widen along a chain of rough steps and stay the
+  same width through exact ones. Two values only conflict when their ranges cannot both be true.
+* **On the map.** A marker whose Begins date is a range fades in: 50% at the earliest date, 75% at the
+  most likely, solid from the latest. A location known only to a range fades in the same way and, if it
+  has no "until", fades out again as the next location fades in, so during the overlap the marker is
+  shown in **both places**, each at its own strength. A Disappears range fades out in reverse. When no
+  most-likely date was given, a flat 60% is used across the range. An exact-dated location trims any
+  overlapping range: at that moment only the exact one shows.
+* **Somewhere in an area.** A fact's "where" can be *at / inside another marker*. The pin then sits at
+  that marker's centre (following its border as it changes), gets a dashed ring, fans out beside other
+  pins in the same area, and hovering it lights the area up in the pin's colour.
+* **Rough borders.** An area outline can carry a second, lighter dashed outline: the **largest possible
+  extent** ("Draw extent"). Each edge of either outline can be marked **firm** (solid: a coast, a
+  river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the
+  corners are numbered on the map while you tick.
+
 ## Time gaps (dates that depend on other dates)
 
 Many texts give gaps instead of dates: "When Adam had lived 130 years, he fathered Seth." A **time

@@ -7,7 +7,7 @@ cross items off as they land. We go through it one item at a time.
 
 Going through these in order:
 
-- [ ] **1a. Approximate times.** Dates and relation gaps that are not exact: "about 40 years",
+- [x] **1a. Approximate times.** Built 19 Oct 2026. Dates and relation gaps that are not exact: "about 40 years",
       "between 30 and 50 years", "at least 40 years", "before Noah died". How to write them, how they
       carry through date relations, how the conflict check treats overlapping ranges, how they show on
       the slider and in the bubble.
@@ -27,7 +27,7 @@ Going through these in order:
         than location the app shows both facts side by side and leaves the judgement to the grade.
       - How "possibly here" looks compared with "known here" (fade, hollow pin, symbol) is NOT decided
         here: tabled to item 2, Grading of information, because the look must also carry the grade.
-- [ ] **1b. Approximate areas and locations.** Country boundaries that are only roughly known; where a
+- [x] **1b. Approximate areas and locations.** Built 19 Oct 2026 (inside-area pins with ring and hover; core/extent outlines with firm/rough edges). Country boundaries that are only roughly known; where a
       person was at a time when the text gives a region rather than a place ("in the land of Nod").
       Decisions so far (build later):
       - A position can be "inside an area" (pointing at an existing area marker) instead of a point.
@@ -46,7 +46,7 @@ Going through these in order:
         area; a plain single outline stays the default. Watch that it does not muddy the map; adjust
         later if it does.
       - If any of this does not work well in practice, adjust later.
-- [ ] **1c. Approximate ties.** Ties that are likely but not certain, or whose dates are rough.
+- [x] **1c. Approximate ties.** Tie dates are fact dates, so 1a covers them; confidence follows in item 2. Ties that are likely but not certain, or whose dates are rough.
       Decisions so far (build later):
       - Tie dates get the 1a tick box (earliest / most likely / latest), nothing new needed.
       - The tie itself carries its own confidence ("probably her brother"), separate from the grade

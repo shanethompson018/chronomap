@@ -63,13 +63,25 @@ window.Store = (() => {
   function normWhere(w) {
     if (!w || !w.kind) return null;
     if (w.kind === 'point') return (w.lat == null || w.lng == null || w.lat === '' || w.lng === '') ? null : { kind: 'point', lat: +w.lat, lng: +w.lng };
-    if (w.kind === 'area' || w.kind === 'route') return (w.coords && w.coords.length) ? { kind: w.kind, coords: w.coords } : null;
+    if (w.kind === 'area' || w.kind === 'route') {
+      if (!(w.coords && w.coords.length)) return null;
+      const o = { kind: w.kind, coords: w.coords };
+      if (w.kind === 'area') {
+        if (w.extent && w.extent.length >= 3) o.extent = w.extent;              // largest possible outline
+        const rough = (w.rough || []).map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < w.coords.length);
+        if (rough.length) o.rough = rough;                                      // indexes of edges that are only guessed
+        if (w.extentRough && w.extent) { const er = w.extentRough.map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < w.extent.length); if (er.length) o.extentRough = er; }
+      }
+      return o;
+    }
     if (w.kind === 'marker') return w.markerId ? { kind: 'marker', markerId: w.markerId } : null;
     return null;
   }
   function normFact(f) {
-    const o = Object.assign({ id: uid(), typeId: 'ft_note', label: '', date: '', dateEnd: '', where: null, placeLabel: '', participants: [], details: {}, note: '', sourceId: null, page: '' }, f || {});
+    const o = Object.assign({ id: uid(), typeId: 'ft_note', label: '', date: '', dateMin: '', dateMax: '', dateEnd: '', dateEndMin: '', dateEndMax: '', where: null, placeLabel: '', participants: [], details: {}, note: '', sourceId: null, page: '' }, f || {});
     o.where = normWhere(o.where);
+    // a range needs both ends; a lone bound is kept as typed but does not count as a range
+    ['date', 'dateEnd'].forEach(k => { if (o[k + 'Min'] && o[k + 'Max'] && Dates.toDays(o[k + 'Min']) != null && Dates.toDays(o[k + 'Max']) != null && Dates.toDays(o[k + 'Min']) > Dates.toDays(o[k + 'Max'])) { const t = o[k + 'Min']; o[k + 'Min'] = o[k + 'Max']; o[k + 'Max'] = t; } });
     o.participants = (o.participants || []).filter(p => p && p.roleId && p.markerId).map(p => ({ roleId: p.roleId, markerId: p.markerId }));
     o.details = o.details || {};
     return o;
@@ -82,10 +94,12 @@ window.Store = (() => {
   // A date slot: { kind:'marker'|'link', id, slot:'start'|'end'|'move:<moveId>' }
   function normRef(r) { return r && r.kind && r.id && r.slot ? { kind: r.kind, id: r.id, slot: r.slot } : null; }
   // Relation: to = from + (years, months, days). status 'overruled' keeps the record but leaves it out of the maths.
+  function normOffset(x) { return x && (x.years || x.months || x.days) ? { years: Math.trunc(+x.years || 0), months: Math.trunc(+x.months || 0), days: Math.trunc(+x.days || 0) } : null; }
   function normRelation(r) {
-    const o = Object.assign({ id: uid(), from: null, to: null, years: 0, months: 0, days: 0, note: '', sourceId: null, page: '', status: 'active' }, r || {});
+    const o = Object.assign({ id: uid(), from: null, to: null, years: 0, months: 0, days: 0, min: null, max: null, note: '', sourceId: null, page: '', status: 'active' }, r || {});
     o.from = normRef(o.from); o.to = normRef(o.to);
     o.years = Math.trunc(+o.years || 0); o.months = Math.trunc(+o.months || 0); o.days = Math.trunc(+o.days || 0);
+    o.min = normOffset(o.min); o.max = normOffset(o.max); // approximate gap: smallest and largest it could be
     if (o.status !== 'overruled') o.status = 'active';
     return o;
   }
@@ -196,7 +210,7 @@ window.Store = (() => {
       if (g.coords) { const c = centroid(g.coords); return c ? { lat: c[0], lng: c[1], inside: o.kind === 'area' ? o.id : null, coords: null } : null; }
       return { lat: g.lat, lng: g.lng, inside: null };
     }
-    if (mv.coords && mv.coords.length) return { coords: mv.coords };
+    if (mv.coords && mv.coords.length) return { coords: mv.coords, extent: mv.extent || null, rough: mv.rough || [], extentRough: mv.extentRough || [] };
     if (mv.lat != null && mv.lng != null && mv.lat !== '' && mv.lng !== '') return { lat: +mv.lat, lng: +mv.lng };
     return null;
   }
@@ -311,13 +325,25 @@ window.Store = (() => {
   function slotParts(slot) { const isEnd = slot.endsWith(':end'); return { factId: slot.slice(5).replace(/:end$/, ''), isEnd }; }
   function slotFact(o, slot) { if (!o || !slot.startsWith('fact:')) return null; const { factId } = slotParts(slot); return (o.facts || []).find(f => f.id === factId) || null; }
   function refExists(ref) { const o = slotOwner(ref); return !!(o && slotFact(o, ref.slot)); }
+  // The slot's most-likely date (typed, or the midpoint of its range when only earliest/latest were given).
   function slotValue(ref) {
     const o = slotOwner(ref); const f = slotFact(o, ref.slot); if (!f) return '';
-    return (slotParts(ref.slot).isEnd ? f.dateEnd : f.date) || '';
+    const e = slotParts(ref.slot).isEnd;
+    return (e ? f.dateEnd : f.date) || Dates.midpoint(e ? f.dateEndMin : f.dateMin, e ? f.dateEndMax : f.dateMax) || '';
   }
-  function setSlotRaw(o, slot, v) {
+  // { date, min, max } for a slot; min/max fall back to the date itself.
+  function slotRange(ref) {
+    const o = slotOwner(ref); const f = slotFact(o, ref.slot); if (!f) return null;
+    const e = slotParts(ref.slot).isEnd;
+    const date = slotValue(ref);
+    const min = (e ? f.dateEndMin : f.dateMin) || date, max = (e ? f.dateEndMax : f.dateMax) || date;
+    return { date, min, max };
+  }
+  function setSlotRaw(o, slot, v, min, max) {
     const f = slotFact(o, slot); if (!f) return;
-    if (slotParts(slot).isEnd) f.dateEnd = v; else f.date = v;
+    const e = slotParts(slot).isEnd;
+    if (e) { f.dateEnd = v; if (min !== undefined) { f.dateEndMin = min; f.dateEndMax = max; } }
+    else { f.date = v; if (min !== undefined) { f.dateMin = min; f.dateMax = max; } }
   }
   const factRef = (markerId, factId, isEnd) => ({ kind: 'marker', id: markerId, slot: 'fact:' + factId + (isEnd ? ':end' : '') });
   const isPinned = ref => { const o = slotOwner(ref); return !!o && (o.pinned || []).includes(ref.slot); };
@@ -502,9 +528,13 @@ window.Store = (() => {
       for (const [k, res] of results) {
         if (res.ref.kind !== kind || res.ref.id !== o.id) continue;
         if (res.derived) nd[res.ref.slot] = res.derived;
-        const cur = slotValue(res.ref);
         if ((o.undetermined || []).includes(res.ref.slot)) continue;
-        if (res.value !== cur) { setSlotRaw(o, res.ref.slot, res.value); touch(o); changed = true; }
+        if (!res.derived) continue; // anchors keep what the user typed
+        const cur = slotRange(res.ref);
+        const min = res.min && res.min !== res.value ? res.min : '', max = res.max && res.max !== res.value ? res.max : '';
+        if (!cur || res.value !== cur.date || min !== ((slotParts(res.ref.slot).isEnd ? slotFact(o, res.ref.slot).dateEndMin : slotFact(o, res.ref.slot).dateMin) || '') || max !== ((slotParts(res.ref.slot).isEnd ? slotFact(o, res.ref.slot).dateEndMax : slotFact(o, res.ref.slot).dateMax) || '')) {
+          setSlotRaw(o, res.ref.slot, res.value, min, max); touch(o); changed = true;
+        }
       }
       if (JSON.stringify(nd) !== JSON.stringify(o.derived || {})) { o.derived = nd; changed = true; }
       if (o.moves && changed) sortMovesInPlace(o);
@@ -583,7 +613,7 @@ window.Store = (() => {
     load, subscribe, notify, uid,
     markers, categories, linkTypes, factTypes, links, sources, photos, relations, settings, marker, category, linkType, factType, link, source, photo, relation, linksOf, displayColor, displayIcon,
     sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
-    refKey, parseRefKey, sameRef, factRef, slotOwner, refExists, slotValue, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
+    refKey, parseRefKey, sameRef, factRef, slotOwner, refExists, slotValue, slotRange, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
     slotLabel, slotsOfMarker, factTitle, mentionsOf, relationsFor, relationsOfRef, addRelation, updateRelation, deleteRelation, applySolved,
     addFactType, updateFactType, deleteFactType,
     sortedMoves, hasLocation, positionAt, visibleAt, linkActiveAt, firstDay, timeRange,
