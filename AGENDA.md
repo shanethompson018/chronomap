@@ -65,12 +65,20 @@ Going through these in order:
       - The source's reliability stays separate and informational; it never overrides the fact grade.
 - [x] Date relations (fixed gaps, pinned vs computed, conflicts, undeterminable) – built 19 Oct 2026.
 
-## 2. Grading of information (name to be decided)
+## 2. Grading of information: Reliability and Confidence
 
 - [ ] A grade on every piece of input (dates, positions, areas, ties, fields, sources) saying how far it
-      can be trusted. Name still open: credibility, reliability, certainty, veracity, probability,
-      validity. Levels to be decided. To be discussed alongside the approximation items, since
-      "approximate" and "uncertain" overlap.
+      can be trusted. Two dials, judged independently (modelled on the Admiralty Code's source/information split).
+      Decisions so far (build later):
+      - **Reliability** is the grade of a *source* (set once on the source, inherited by everything
+        that cites it). Levels: Highly Reliable, Reliable, Questionable, Unreliable.
+      - **Confidence** is the user's own grade on a *fact* (a tie, date, position, area, field).
+        Levels: High Confidence, Reasonable Confidence, Low Confidence, No Confidence.
+        "No Confidence" means "recorded because a source says it, but I do not believe it".
+      - Ungraded is simply blank: no grade entered, no special level for "cannot be judged".
+      - Confidence is never derived from reliability or from the source's wording (see 1c); a reason
+        box sits beside every confidence grade.
+      - Still open: how each level looks (map, Ties, Network, bubble), and the items carried in below.
       Carried in from 1a:
       - Each grade should look different on the map and in the bubble (transparency, symbol, outline…).
       - The same look must also show "possibly here" (inside a range) versus "known here" (exact date).
