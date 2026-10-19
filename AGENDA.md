@@ -121,6 +121,9 @@ Going through these in order:
         region) and a trace tool (click a drawn border line → follow it), both run in the browser on
         the picture's pixels; the draft is simplified and then corrected by dragging corners. No AI
         guessing of coordinates.
+      - Rule: nothing on the map moves by accident. Pins and shapes are never draggable by default
+        (true today). Editing is always: select the marker, press "Edit border" / "Change border
+        here" / "Move pin", make the change, then Done or Cancel; nothing is saved until Done.
 
 ## 4. Fields and ties
 
