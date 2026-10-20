@@ -3,6 +3,10 @@
 window.Editor = (() => {
   const { h, esc } = UI;
   let drawer, draft = null, id = null, isNew = false;
+  let openFacts = new Set(); // fact ids whose full card is open (the rest show as one summary line)
+  const SECTIONS_KEY = 'chronomap.editorSections';
+  function sectionState() { try { return JSON.parse(localStorage.getItem(SECTIONS_KEY)) || {}; } catch (e) { return {}; } }
+  function setSectionOpen(key, open) { const st = sectionState(); st[key] = open; try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(st)); } catch (e) { /* ignore */ } }
 
   function init() {
     drawer = document.getElementById('drawer');
@@ -43,6 +47,7 @@ window.Editor = (() => {
     discardNew();
     id = markerId; isNew = false;
     draft = tidy(JSON.parse(JSON.stringify(m)));
+    openFacts = new Set();
     safeRender();
     drawer.classList.remove('hidden');
     drawer.querySelector('[data-bind="name"]')?.focus();
@@ -52,6 +57,7 @@ window.Editor = (() => {
     discardNew();
     draft = tidy(Object.assign(blankMarker(), JSON.parse(JSON.stringify(data))));
     draft.facts.forEach(f => { f.id = f.id || Store.uid(); });
+    openFacts = new Set(draft.facts.map(f => f.id));
     id = draft.id; isNew = true;
     applyCategoryFields();
     safeRender();
@@ -168,7 +174,24 @@ window.Editor = (() => {
   }
 
   // ---------- rendering ----------
-  const section = (title, ...kids) => h('div', { class: 'ed-section' }, h('h3', {}, title), ...kids);
+  // A section: heading row that opens/closes it (remembered per device; long sections start closed), a count,
+  // and a ⓘ whose hint shows on hover or on tap.
+  function section(title, opts, ...kids) {
+    const { key = title.toLowerCase(), hint = '', count = null } = opts || {};
+    const st = sectionState();
+    const open = key in st ? !!st[key] : !(count != null && count > 8);
+    const head = h('h3', { class: 'ed-head', title: open ? 'Close this section' : 'Open this section' },
+      h('span', { class: 'ed-arrow' }, open ? '▾' : '▸'), h('span', { class: 'ed-title' }, title),
+      count != null ? h('span', { class: 'ed-count' }, `(${count})`) : null);
+    if (hint) {
+      const pop = h('div', { class: 'hint-pop' }, hint);
+      const info = h('button', { type: 'button', class: 'ed-info', title: hint, onclick: e => { e.stopPropagation(); pop.classList.toggle('open'); } }, 'ⓘ');
+      head.append(h('span', { class: 'ed-info-wrap' }, info, pop));
+    }
+    head.addEventListener('click', () => { setSectionOpen(key, !open); render(); });
+    const body = h('div', { class: 'ed-body' + (open ? '' : ' hidden') }, ...kids);
+    return h('div', { class: 'ed-section' + (open ? '' : ' closed') }, head, body);
+  }
   const field = (label, input) => h('label', { class: 'field' }, label, input);
   const row = (...kids) => h('div', { class: 'ed-row' }, ...kids);
   const txt = (bind, value, extra = {}) => h('input', Object.assign({ type: 'text', 'data-bind': bind, value: value ?? '' }, extra));
@@ -191,43 +214,47 @@ window.Editor = (() => {
     const colorInput = h('input', { type: 'color', value: m.color || Store.displayColor(m), 'data-bind': 'color', title: 'Override colour' });
     const colorReset = h('button', { type: 'button', class: 'small', title: 'Use the category colour', onclick: () => { draft.color = ''; render(); } }, m.color ? 'Use category colour' : 'Category colour ✓');
 
+    const saved = Store.marker(draft.id);
+    const mirrorCount = saved && saved.mirrors ? saved.mirrors.length : 0;
+    const filledFields = Object.values(m.fields || {}).filter(v => v !== '' && v != null).length;
     const body = h('div', { class: 'drawer-body' },
-      section('Basics',
-        field('Name', txt('name', m.name)),
-        row(field('Shape', UI.select([['pin', '📍 Point'], ['area', '⬠ Area'], ['path', '➡️ Route']], m.kind, { 'data-bind': 'kind' })),
-            field('Category', catSel)),
+      section('Basics', { key: 'basics' },
+        h('div', { class: 'ed-top' },
+          renderPortrait(),
+          h('div', { class: 'ed-top-fields' },
+            field('Name', txt('name', m.name)),
+            row(field('Shape', UI.select([['pin', '📍 Point'], ['area', '⬠ Area'], ['path', '➡️ Route']], m.kind, { 'data-bind': 'kind' })),
+                field('Category', catSel)))),
         row(field('Colour', row(h('div', { class: 'narrow' }, colorInput), colorReset)),
             field('Icon (emoji)', txt('icon', m.icon, { placeholder: cat ? cat.icon : '📍', maxlength: 4 }))),
-        h('div', { class: 'field' }, 'Portrait', renderPortrait()),
         row(field('Summary (one line)', txt('summary', m.summary)),
             field('Sex (for brother/sister wording)', UI.select([['', '— not said —'], ['male', 'Male'], ['female', 'Female']], m.sex || '', { 'data-bind': 'sex', title: 'Used only to word derived sibling ties as brother or sister' }))),
       ),
-      section('Facts',
-        h('p', { class: 'hint' }, 'Everything that happened: when, where, with whom, and the source. Begins/Ends, locations and ties all follow from the facts.'),
+      section('Facts', { key: 'facts', count: m.facts.length + mirrorCount, hint: 'Everything that happened: when, where, with whom, and the source. Begins/Ends, locations and ties all follow from the facts. Click a line to open or close its card.' },
         h('div', { id: 'ed-facts' }, renderFacts()),
         renderAddFact()),
-      section('Fields',
-        h('p', { class: 'hint' }, 'Undated details (occupation, tribe, nationality…). Press ＋ beside a field for sub-fields, 📖 for its source.'),
+      section('Fields', { key: 'fields', count: filledFields, hint: 'Undated details (occupation, tribe, nationality…). Press ＋ beside a field for sub-fields, 📖 for its source.' },
         h('div', { id: 'ed-fields' }, renderFields()),
         h('button', { type: 'button', class: 'small', onclick: () => { const k = prompt('Field name:'); if (k && k.trim() && !(k.trim() in draft.fields)) { draft.fields[k.trim()] = ''; render(); } } }, '+ Add field'),
         field('Tags (comma separated)', txt('tags', Array.isArray(m.tags) ? m.tags.join(', ') : m.tags)),
         field('Notes', h('textarea', { 'data-bind': 'description', rows: 4 }, m.description)),
       ),
-      section('Images',
-        h('p', { class: 'hint' }, 'Extra pictures shown in the bubble. Every image lives in the library and can carry its own sources.'),
+      section('Images', { key: 'images', count: m.photoIds.length, hint: 'Extra pictures shown in the bubble. Every image lives in the library and can carry its own sources.' },
         renderGallery()),
-      section('Sources',
-        h('p', { class: 'hint' }, cat && cat.sourceId && Store.source(cat.sourceId)
+      section('Sources', { key: 'sources', count: m.citations.length, hint: cat && cat.sourceId && Store.source(cat.sourceId)
           ? `Default source for ${cat.name}: ${Store.sourceLabel(cat.sourceId)}. Add citations below when this marker draws on something else; each fact can also cite its own source.`
-          : 'Citations for the marker as a whole. Each fact can also cite its own source and page.'),
+          : 'Citations for the marker as a whole. Each fact can also cite its own source and page.' },
         h('div', { id: 'ed-cites' }, renderCitations()),
         h('button', { type: 'button', class: 'small', onclick: () => { draft.citations.push({ sourceId: null, page: '', note: '' }); render(); } }, '+ Add citation'),
         field('Source notes (free text)', h('textarea', { 'data-bind': 'sources', rows: 2, placeholder: 'Anything about the evidence that does not fit a citation' }, m.sources)),
       ),
-      section('Time gaps', h('div', { id: 'ed-relations' }, renderRelations())),
+      section('Time gaps', { key: 'gaps', count: isNew ? 0 : Store.relationsFor(id).length, hint: 'A time gap ties one of this marker\'s dates to another date by a fixed gap. Anchors (🔒) are the fixed dates; the rest are reckoned from them.' },
+        h('div', { id: 'ed-relations' }, renderRelations())),
     );
     drawer.append(
-      h('div', { class: 'drawer-head' }, h('h2', {}, isNew ? 'New marker' : 'Edit marker'), h('button', { class: 'icon-btn', title: 'Close without saving', onclick: cancel }, '✕')),
+      h('div', { class: 'drawer-head' }, h('h2', {}, isNew ? 'New marker' : 'Edit marker'), h('span', { class: 'spacer' }),
+        h('button', { class: 'primary small', onclick: save }, 'Save'),
+        h('button', { class: 'icon-btn', title: 'Close without saving', onclick: cancel }, '✕')),
       body,
       h('div', { class: 'drawer-foot' },
         h('button', { class: 'primary', onclick: save }, 'Save'),
@@ -267,8 +294,37 @@ window.Editor = (() => {
     }).map(x => x.i);
   }
   function renderFacts() {
-    const cards = draft.facts.length ? sortedFactIndexes().map(i => renderFact(i)) : [h('p', { class: 'muted' }, 'No facts yet. Add one below: Born, Died, Located at, Took place…')];
-    return [...cards, ...renderMirrors()];
+    if (!draft.facts.length) return [h('p', { class: 'muted' }, 'No facts yet. Add one below: Born, Died, Located at, Took place…'), ...renderMirrors()];
+    const out = [];
+    let sawUndated = false;
+    for (const i of sortedFactIndexes()) {
+      const f = draft.facts[i];
+      if (!sawUndated && !f.date && out.length) { sawUndated = true; out.push(h('div', { class: 'ed-sep' }, 'undated')); }
+      else if (!f.date) sawUndated = true;
+      out.push(openFacts.has(f.id) ? renderFact(i) : renderFactLine(i));
+    }
+    return [...out, ...renderMirrors()];
+  }
+  // One line per closed fact: "1 Jan 1901 BC · Born · Father: Abraham · Beersheba"; click to open the card.
+  function renderFactLine(i) {
+    const f = draft.facts[i];
+    const t = Store.factType(f.typeId);
+    const bits = [];
+    const w = Facts.when(f);
+    if (w.date) bits.push(Dates.formatRange(w.date, w.min, w.max) + (t && t.hasEnd && w.dateEnd ? ' – ' + Dates.formatRange(w.dateEnd, w.endMin, w.endMax) : ''));
+    else if (f.dateMin || f.dateMax) bits.push(f.dateMin ? 'after ' + Dates.formatInput(f.dateMin) : 'before ' + Dates.formatInput(f.dateMax));
+    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${r ? r.name : 'with'}: ${o.name}` : ''; }).filter(Boolean).join(', ');
+    let place = f.placeLabel || '';
+    if (!place && f.where && f.where.kind === 'marker') place = (Store.marker(f.where.markerId) || {}).name || '';
+    else if (!place && f.where && f.where.kind === 'point') place = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
+    else if (!place && f.where && f.where.coords) place = `${f.where.coords.length}-point ${f.where.kind}`;
+    const line = h('div', { class: 'fact-line', title: 'Open this fact', onclick: () => { openFacts.add(f.id); render(); } },
+      h('span', { class: 'ed-arrow' }, '▸'),
+      bits.length ? h('span', { class: 'muted' }, bits.join(' ') + ' · ') : null,
+      h('strong', {}, f.label || (t ? t.name : 'Fact')),
+      who ? ' · ' + who : '', place ? ' · ' + place : '',
+      f.confidence ? h('span', { html: ' ' + UI.gradeBadgeHTML(f.confidence, f.reason) }) : null);
+    return line;
   }
   // Facts typed on other markers that name this one (Son: Isaac from Isaac's Born fact). Read-only here.
   function renderMirrors() {
@@ -291,6 +347,7 @@ window.Editor = (() => {
     const card = h('div', { class: 'card fact-card' });
     // title row
     card.append(row(
+      h('button', { type: 'button', class: 'small narrow ed-close-fact', title: 'Close this fact (keeps it)', onclick: () => { openFacts.delete(f.id); render(); } }, '▾'),
       typeSelect(f.typeId, v => { draft.facts[i].typeId = v; render(); }),
       h('input', { type: 'text', 'data-bind': `facts.${i}.label`, value: f.label, placeholder: `label (default: ${t.name})`, title: 'Optional wording shown instead of the type name, e.g. "Created" for Adam' }),
       h('button', { type: 'button', class: 'small narrow', title: 'Remove this fact', onclick: () => { if (confirm(`Remove the fact "${Store.factTitle(f)}"?`)) { draft.facts.splice(i, 1); render(); } } }, '✕')));
@@ -455,7 +512,7 @@ window.Editor = (() => {
     const tt = MapView.time();
     if (t.hasDate !== false && tt != null && t.id !== 'ft_born' && t.id !== 'ft_died') f.date = '';
     draft.facts.push(f);
-    render();
+    draft.facts.slice(-1).forEach(f => openFacts.add(f.id)); render();
     const cards = drawer.querySelectorAll('.fact-card');
     const last = cards[sortedFactIndexes().indexOf(draft.facts.length - 1)];
     if (last) { last.scrollIntoView({ block: 'center' }); const first = last.querySelector('input[type=text]:not([readonly])'); if (first) first.focus(); }
