@@ -86,7 +86,8 @@ The Google side lives in a Google Cloud project owned by the same account; its c
   the slider to when it first appears. Categories and the source dropdown filter what's on the map.
 
 ### Ties
-"Everyone joined by one kind of tie." Pick a tie type (e.g. *Signed by*) and optionally a centre marker
+"Everyone joined by one kind of tie." The tab opens with nothing chosen, so the whole graph is never
+drawn by accident. Pick a tie type (e.g. *Signed by*) and optionally a centre marker
 (e.g. *Declaration of Independence*) to see just that group. Directed tie types are drawn as a
 hierarchy (family tree, org chart); undirected ones are scattered randomly. Drag nodes around, scroll
 to zoom, click a node to read about it.
@@ -94,7 +95,8 @@ to zoom, click a node to read about it.
 ### Network
 Pick a centre marker and a number of degrees of separation. 1 shows its direct ties; 2 adds the ties of
 those markers; and so on. Untick tie types or categories you don't want to see. **Saved views** remember
-a whole set-up (centre, degrees, filters) under a name.
+a whole set-up (centre, degrees, filters) under a name. In the Ties, Network and Family views, a
+drawing of more than 300 markers shows its size and a *Draw it* button instead of drawing at once.
 
 ### Family
 A family tree drawn from the *Parent of* and *Spouse of* ties, around one **root** person: parents and

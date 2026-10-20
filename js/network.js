@@ -1,7 +1,7 @@
 /* Network tab: one marker and everything within N degrees of it, with link-type and category filters. */
 window.Network = (() => {
   const $ = id => document.getElementById(id);
-  let centerId = null, degrees = 1, layout = 'force', selectedId = null, centerSel, fresh = false;
+  let centerId = null, degrees = 1, layout = 'force', selectedId = null, centerSel, fresh = false, guardOk = '';
   let hiddenTypes = new Set(), hiddenCats = new Set();
 
   function init() {
@@ -68,9 +68,12 @@ window.Network = (() => {
 
   function draw() {
     const { nodes, links } = compute();
-    $('net-stats').textContent = centerId ? `${nodes.length} markers · ${links.length} ties within ${degrees} degree${degrees > 1 ? 's' : ''}` : '';
+    const key = (centerId || '') + ':' + degrees + ':' + [...hiddenTypes].join(',') + ':' + [...hiddenCats].join(',');
+    const tooBig = nodes.length > UI.GRAPH_LIMIT && guardOk !== key;
+    $('net-stats').textContent = centerId ? `${nodes.length} markers · ${links.length} ties within ${degrees} degree${degrees > 1 ? 's' : ''}${tooBig ? ' · not drawn yet' : ''}` : '';
     Graph.render($('net-graph'), {
       nodes, links, layout, selectedId, fresh, cacheKey: 'net:' + (centerId || ''),
+      guard: tooBig ? UI.sizeGuard({ count: nodes.length, noun: 'markers', onDraw: () => { guardOk = key; fresh = true; draw(); } }) : null,
       showLinkLabels: $('net-labels').checked,
       emptyText: centerId ? 'No ties match the current filters.' : 'Pick a marker on the left to see its network.',
       onNodeClick: id => { selectedId = id; draw(); },

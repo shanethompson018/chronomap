@@ -9,13 +9,14 @@ window.Graph = (() => {
   const R = 20;
 
   function render(container, opts) {
-    const { nodes, links, layout = 'force', onNodeClick, selectedId, showLinkLabels = true, cacheKey = 'default', emptyText, fresh = false } = opts;
+    const { nodes, links, layout = 'force', onNodeClick, selectedId, showLinkLabels = true, cacheKey = 'default', emptyText, fresh = false, guard = null } = opts;
     if (sim) { sim.stop(); sim = null; }
     const eink = document.body.classList.contains('eink');
     d3.select(container).selectAll('svg').interrupt(); // stop any zoom transition on the old drawing
     container.innerHTML = '';
     const w = container.clientWidth || 900, hgt = container.clientHeight || 600;
     if (!nodes.length) { container.append(UI.h('div', { class: 'graph-empty' }, emptyText || 'Nothing to show')); return; }
+    if (guard) { container.append(guard); return; } // too big to draw unasked: the guard carries the count and a Draw button
 
     if (fresh) posCache.delete(cacheKey);
     const cache = posCache.get(cacheKey) || new Map();
