@@ -93,13 +93,38 @@ window.DataTab = (() => {
       table);
   }
 
+  // ISBN box with a Look up button: fills the empty boxes of the source from the book services.
+  function isbnCell(s) {
+    const inp = h('input', { type: 'text', value: s.isbn || '', placeholder: '978…', inputmode: 'numeric', style: { width: '120px' } });
+    inp.addEventListener('change', () => Store.updateSource(s.id, { isbn: Isbn.clean(inp.value) }));
+    const btn = h('button', { class: 'small', title: 'Fill in title, author, year and publisher from the ISBN (needs an internet connection)' }, '🔍');
+    btn.addEventListener('click', async () => {
+      if (!inp.value.trim()) { inp.focus(); return; }
+      btn.disabled = true; btn.textContent = '…';
+      try {
+        const hit = await Isbn.lookup(inp.value);
+        if (!hit) { UI.toast('No book found with that ISBN', 'error'); return; }
+        const cur = Store.source(s.id); const patch = { isbn: hit.isbn }; const filled = [];
+        for (const k of ['title', 'author', 'year', 'where']) {
+          if (hit[k] && (!cur[k] || cur[k] === 'Untitled source')) { patch[k] = hit[k]; filled.push(k === 'where' ? 'publisher' : k); }
+        }
+        Store.updateSource(s.id, patch);
+        UI.toast(filled.length ? `Filled ${filled.join(', ')} from ${hit.from}` : `Found "${hit.title}" on ${hit.from}; every box was already filled, so nothing changed`);
+      } catch (e) { UI.toast(e.message, 'error'); }
+      finally { btn.disabled = false; btn.textContent = '🔍'; }
+    });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+    return h('td', { class: 'narrow' }, h('div', { class: 'row', style: { gap: '4px' } }, inp, btn));
+  }
+
   function sourcesSection() {
     const table = h('table', { class: 'grid' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Title'), h('th', {}, 'Author'), h('th', {}, 'Year'), h('th', {}, 'Reliability'), h('th', {}, 'Where (URL, library, archive…)'), h('th', {}, 'Notes'), h('th', {}, 'Used'), h('th', {}))));
+      h('thead', {}, h('tr', {}, h('th', {}, 'ISBN'), h('th', {}, 'Title'), h('th', {}, 'Author'), h('th', {}, 'Year'), h('th', {}, 'Reliability'), h('th', {}, 'Where (publisher, URL, library, archive…)'), h('th', {}, 'Notes'), h('th', {}, 'Used'), h('th', {}))));
     const tb = h('tbody'); table.append(tb);
     for (const s of Store.sources()) {
       const used = Store.sourceUseCount(s.id);
       tb.append(h('tr', {},
+        isbnCell(s),
         cell(s.title, v => Store.updateSource(s.id, { title: v })),
         cell(s.author, v => Store.updateSource(s.id, { author: v })),
         cell(s.year, v => Store.updateSource(s.id, { year: v }), { style: { width: '70px' } }),
@@ -109,10 +134,10 @@ window.DataTab = (() => {
         h('td', { class: 'narrow muted', title: 'Categories, markers, positions and ties that cite this source' }, used),
         h('td', { class: 'narrow' }, h('button', { class: 'small danger', onclick: () => { if (confirm(`Delete source "${s.title}"? It is cited in ${used} place(s); those citations will be removed.`)) Store.deleteSource(s.id); } }, '✕'))));
     }
-    if (!Store.sources().length) tb.append(h('tr', {}, h('td', { colspan: 7, class: 'muted' }, 'No sources yet. Add the texts you are working from, then attach them to categories, markers, positions and ties.')));
+    if (!Store.sources().length) tb.append(h('tr', {}, h('td', { colspan: 9, class: 'muted' }, 'No sources yet. Add the texts you are working from, then attach them to categories, markers, positions and ties.')));
     return h('div', { class: 'data-section' },
       h('h2', {}, 'Sources', h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => UI.promptNewSource() }, '+ Add source')),
-      h('p', { class: 'hint' }, 'The texts, documents and people your information comes from, each with a Reliability grade (how far the source can be trusted in general). Every fact, field and time gap can cite a source with a page, and carries its own Confidence grade, which is your judgement and is never taken from the source. The map can be filtered to a single source.'),
+      h('p', { class: 'hint' }, 'The texts, documents and people your information comes from, each with a Reliability grade (how far the source can be trusted in general). For a book, type its ISBN and press 🔍 to fill in the title, author, year and publisher (needs an internet connection; empty boxes are filled, anything already typed is kept). Every fact, field and time gap can cite a source with a page, and carries its own Confidence grade, which is your judgement and is never taken from the source. The map can be filtered to a single source.'),
       table);
   }
 

@@ -142,6 +142,11 @@ above the other in the Ties view.
 
 **Source** – a book, document, website or witness, kept in a list on the Library tab. Sources attach to
 categories (default source), to markers (citations), to each fact, each field and each time gap.
+For a book, type its **ISBN** (the 10- or 13-digit number on the back cover) and press *Look up*:
+the title, author, year and publisher are filled in from Open Library, or from Google Books when
+Open Library has no record. This needs an internet connection at that moment only; the result is
+editable, and anything already typed in the Sources table is kept. Bible passages, websites and
+manuscripts have no ISBN and are typed by hand as before.
 
 **Images** – a library of pictures on the Library tab, each with its own sources. A marker can have one
 **portrait** (also used on its map pin and graph node) and a gallery of further images.
@@ -282,6 +287,7 @@ Precision is kept: a marker that "disappears" in `1776` stays until 31 December 
 index.html        page layout
 css/style.css     styling
 js/dates.js       flexible date parsing (BC dates, year/month precision)
+js/isbn.js        ISBN lookup (Open Library, then Google Books)
 js/facts.js       fact types, derivation of spans/locations/ties, conversion of old data
 js/store.js       data model, saving, import/export
 js/sample.js      the sample dataset

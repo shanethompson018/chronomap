@@ -6,7 +6,7 @@
  * Category: { id, name, color, icon, fields:[names], defaultKind }
  * LinkType: { id, name, color, directed, fromLabel, toLabel, topSide:'from'|'to' }
  * Link:     { id, typeId, fromId, toId, label, start, end, note, sourceId, page }
- * Source:   { id, title, author, year, where, notes }      (a book, document, website, witness…)
+ * Source:   { id, title, author, year, where, isbn, notes } (a book, document, website, witness…)
  * Citation: { sourceId, page, note }                        (markers carry a list of these; categories carry a default sourceId)
  * A marker's fieldSources maps a field name to { sourceId, page } for that one field's value.
  * Photo:    { id, title, caption, credit, date, notes, citations:[Citation], w, h, bytes, type }
@@ -110,7 +110,7 @@ window.Store = (() => {
   }
   const RELIABILITY = ['high', 'reliable', 'questionable', 'unreliable'];
   const CONFIDENCE = ['high', 'reasonable', 'low', 'none'];
-  function normSource(s) { const o = Object.assign({ id: uid(), title: 'Untitled source', author: '', year: '', where: '', notes: '', reliability: '' }, s || {}); if (!RELIABILITY.includes(o.reliability)) o.reliability = ''; return o; }
+  function normSource(s) { const o = Object.assign({ id: uid(), title: 'Untitled source', author: '', year: '', where: '', isbn: '', notes: '', reliability: '' }, s || {}); if (!RELIABILITY.includes(o.reliability)) o.reliability = ''; return o; }
   function normPhoto(p) {
     const o = Object.assign({ id: uid(), title: '', caption: '', credit: '', date: '', notes: '', citations: [], w: 0, h: 0, bytes: 0, type: '' }, p || {});
     o.citations = (o.citations || []).map(normCitation);

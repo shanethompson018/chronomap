@@ -71,21 +71,57 @@ window.UI = (() => {
     const sel = select(opts, value || '', attrs);
     sel.addEventListener('change', () => {
       if (sel.value === '__new') {
-        const s = promptNewSource();
-        sel.value = s ? s.id : (value || '');
-        if (!s) return;
+        sel.value = value || '';
+        promptNewSource(s => {
+          sel.insertBefore(h('option', { value: s.id }, Store.sourceLabel(s.id)), sel.lastElementChild);
+          sel.value = s.id; value = s.id;
+          onChange && onChange(value);
+        });
+        return;
       }
       value = sel.value || null;
       onChange && onChange(value);
     });
     return sel;
   }
-  function promptNewSource() {
-    const title = prompt('Title of the source (book, document, website, witness…):');
-    if (!title || !title.trim()) return null;
-    const author = prompt('Author (optional):') || '';
-    const year = prompt('Year (optional):') || '';
-    return Store.addSource({ title: title.trim(), author: author.trim(), year: year.trim() });
+  // New-source dialog. For a book, type the ISBN and press Look up: title, author, year and publisher are
+  // filled in (and stay editable). onDone(source) fires after Save.
+  function promptNewSource(onDone) {
+    const inp = (ph, attrs = {}) => h('input', Object.assign({ type: 'text', placeholder: ph }, attrs));
+    const isbn = inp('ISBN, e.g. 978-0-19-528881-0', { inputmode: 'numeric', autocomplete: 'off' });
+    const title = inp('Title of the source (book, document, website, witness…)');
+    const author = inp('Author (optional)');
+    const year = inp('Year (optional)', { style: { maxWidth: '110px' } });
+    const where = inp('Publisher, URL, library or archive (optional)');
+    const status = h('span', { class: 'muted', style: { fontSize: '12px' } });
+    const lookupBtn = h('button', { class: 'small', type: 'button', title: 'Fill the details from the ISBN (needs an internet connection)' }, '🔍 Look up');
+    const rowOf = (label, el) => h('label', { class: 'field-row' }, h('span', { class: 'field-label' }, label), el);
+    async function lookup() {
+      if (!isbn.value.trim()) { isbn.focus(); return; }
+      lookupBtn.disabled = true; status.textContent = 'Looking up…';
+      try {
+        const hit = await Isbn.lookup(isbn.value);
+        if (!hit) { status.textContent = 'No book found with that ISBN. Type the details by hand.'; return; }
+        title.value = hit.title; author.value = hit.author; year.value = hit.year; where.value = hit.where; isbn.value = hit.isbn;
+        status.textContent = `Filled from ${hit.from}. Check it, then Save.`;
+      } catch (e) { status.textContent = e.message; }
+      finally { lookupBtn.disabled = false; }
+    }
+    lookupBtn.addEventListener('click', lookup);
+    isbn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); lookup(); } });
+    const save = () => {
+      if (!title.value.trim()) { title.focus(); toast('A source needs a title', 'error'); return; }
+      const s = Store.addSource({ title: title.value.trim(), author: author.value.trim(), year: year.value.trim(), where: where.value.trim(), isbn: Isbn.clean(isbn.value) });
+      m.close(); onDone && onDone(s);
+    };
+    const body = h('div', { class: 'source-dialog' },
+      rowOf('ISBN', h('div', { class: 'row' }, isbn, lookupBtn)),
+      h('p', { class: 'hint' }, 'For a book, type the number from the back cover (10 or 13 digits) and press Look up: the title, author, year and publisher are filled in from Open Library or Google Books. Anything else (a Bible passage, a website, a witness) is typed by hand.'),
+      rowOf('Title', title), rowOf('Author', author), rowOf('Year', year), rowOf('Where', where),
+      h('div', { class: 'row', style: { marginTop: '10px' } }, status, h('span', { class: 'spacer' }), h('button', { class: 'primary', type: 'button', onclick: save }, 'Save')));
+    body.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target !== isbn && e.target.tagName === 'INPUT') { e.preventDefault(); save(); } });
+    const m = modal({ title: 'New source', body, width: '520px' });
+    setTimeout(() => isbn.focus(), 0);
   }
   // Grading: Reliability belongs to a source, Confidence is the user's own grade on a fact.
   const RELIABILITY_LABELS = { high: 'Highly Reliable', reliable: 'Reliable', questionable: 'Questionable', unreliable: 'Unreliable' };
