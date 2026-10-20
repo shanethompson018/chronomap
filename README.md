@@ -105,7 +105,8 @@ icon, the name, the Begins and Ends dates and the sex. Click a person for their 
 to make them the root. The 🌳 Family button in a person's bubble opens the tree on them.
 
 ### Library
-Sync, time gaps, sources, images, categories, fact types, tie types, the full marker table, and backup.
+A strip of sub-tabs, one section at a time: Sync, Time gaps, Sources, Images, Categories, Fact types,
+Tie types, Markers and Backup. The last sub-tab opened is remembered on each device.
 
 ## The building blocks: a marker is a list of facts
 
@@ -146,7 +147,11 @@ path with a slash: `Born/Date, Born/Place`.
 
 **Tie type** – open-ended: *Parent of*, *Spouse of*, *Member of*, *Signed by*… A type is **directed**
 (one-way, drawn as an arrow) or mutual. For directed types, "Top of hierarchy" says which end is drawn
-above the other in the Ties view.
+above the other in the Ties view. Tick *directed* when the two ends are different kinds of thing
+(parent and child, killer and killed, document and signatory): the tie is drawn as an arrow, shown
+with → / ← in the bubble, named by the From and To labels, and stacked in the Ties tab. Leave it
+unticked when the ends are the same kind of thing (Spouse of, Sibling of, Allied with): no arrow,
+no hierarchy. A test: swap the two markers; if the sentence still means the same, it is mutual.
 
 **Both sides of a fact.** A fact that names another marker in a role shows on that marker too,
 derived from the original rather than copied, with the same date, place, details, note, source and

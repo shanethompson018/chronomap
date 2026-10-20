@@ -605,7 +605,7 @@ window.Editor = (() => {
   function renderRelations() {
     if (isNew) return h('p', { class: 'hint' }, 'Save the marker first, then you can relate its dates to other markers ("130 years after Adam was born").');
     const rels = Store.relationsFor(id);
-    const out = [h('p', { class: 'hint' }, 'A time gap ties one of this marker\'s dates to another date by a fixed gap. Anchors (🔒) are the fixed dates; the rest are reckoned from them.')];
+    const out = [];
     if (!rels.length) out.push(h('p', { class: 'muted' }, 'No time gaps yet.'));
     for (const r of rels) {
       const over = r.status === 'overruled';

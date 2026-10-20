@@ -2,20 +2,29 @@
 window.DataTab = (() => {
   const { h } = UI;
   let host, search = '';
+  // Sub-tabs: one section shows at a time; the last one opened is remembered on this device.
+  const SUBS = [['sync', 'Sync', () => syncSection()], ['gaps', 'Time gaps', () => relationsSection()], ['sources', 'Sources', () => sourcesSection()],
+    ['images', 'Images', () => photosSection()], ['categories', 'Categories', () => categoriesSection()], ['facttypes', 'Fact types', () => factTypesSection()],
+    ['tietypes', 'Tie types', () => linkTypesSection()], ['markers', 'Markers', () => markersSection()], ['backup', 'Backup', () => backupSection()]];
+  const SUB_KEY = 'chronomap.librarySub';
+  let sub = (() => { try { return localStorage.getItem(SUB_KEY) || 'sync'; } catch (e) { return 'sync'; } })();
+  function setSub(key) { if (!SUBS.some(s => s[0] === key)) return; sub = key; try { localStorage.setItem(SUB_KEY, key); } catch (e) { /* ignore */ } render(); }
 
   function init() {
     host = document.getElementById('data-page');
     Store.subscribe(evt => { if (App.currentTab() === 'data' && !(evt.type === 'photos' && document.activeElement && host.contains(document.activeElement))) render(); });
     document.addEventListener('chrono-sync', e => { if (App.currentTab() === 'data' && e.detail && e.detail.state !== 'syncing' && !(document.activeElement && host.contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) render(); });
   }
-  function show() { render(); }
+  function show(which) { if (which) setSub(which); else render(); }
 
   const KIND_OPTS = [['pin', 'Pin'], ['area', 'Area'], ['path', 'Path']];
 
   function render() {
     const scroll = host.scrollTop;
     host.innerHTML = '';
-    host.append(syncSection(), relationsSection(), sourcesSection(), photosSection(), categoriesSection(), factTypesSection(), linkTypesSection(), markersSection(), backupSection());
+    const cur = SUBS.find(s => s[0] === sub) || SUBS[0];
+    host.append(h('div', { class: 'subtabs' }, ...SUBS.map(([key, label]) => h('button', { class: 'subtab' + (key === cur[0] ? ' active' : ''), onclick: () => setSub(key) }, label))));
+    host.append(cur[2]());
     host.scrollTop = scroll;
   }
 
@@ -209,7 +218,7 @@ window.DataTab = (() => {
     const tb = h('tbody'); table.append(tb);
     for (const t of Store.linkTypes()) {
       const count = Store.links().filter(l => l.typeId === t.id).length;
-      const dir = h('input', { type: 'checkbox', checked: t.directed });
+      const dir = h('input', { type: 'checkbox', checked: t.directed, title: 'Directed: the two ends are different kinds of thing (parent and child, killer and killed, document and signatory). Drawn as an arrow, shown with → / ← in the bubble, named by the From and To labels, and stacked by "Top of hierarchy" in the Ties tab. Unticked = mutual (Spouse of, Allied with): no arrow, no hierarchy. Test: swap the two markers; if the sentence still means the same, leave it unticked.' });
       dir.addEventListener('change', () => Store.updateLinkType(t.id, { directed: dir.checked }));
       const top = UI.select([['from', '"From" side'], ['to', '"To" side']], t.topSide || 'from', { disabled: !t.directed });
       top.addEventListener('change', () => Store.updateLinkType(t.id, { topSide: top.value }));
@@ -409,5 +418,5 @@ window.DataTab = (() => {
     return '#' + [f(0), f(8), f(4)].map(x => Math.round(255 * x).toString(16).padStart(2, '0')).join('');
   }
 
-  return { init, show, editFactType, pickFactTypes };
+  return { init, show, editFactType, pickFactTypes, setSub };
 })();
