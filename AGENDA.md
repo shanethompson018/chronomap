@@ -191,27 +191,46 @@ Raised after the first days of real data entry. Discussed before building; decis
 they are made.
 
 - [ ] **7.1 Cleaning up the bubble.**
-      - [ ] 7.1a A collapse / open button on the Facts section (and the same on Fields, Ties, Images and
-            Notes). Proposal: every section heading is a toggle with a count ("Facts (12) ▾"); the
-            bubble remembers which sections are open on this device; long sections start collapsed.
-      - [ ] 7.1b Descriptors shown on hover over the name they describe (the "(as Father)", "from
-            Isaac's Born fact", role words, reasons). Proposal: lines stay compact by default; hovering
-            a name shows the descriptor on the PC; because the Boox has no hover, a "Details" switch
-            at the top of the bubble reveals all descriptors, notes, reasons and citations at once.
-      - [ ] 7.1c Other ideas to make it more presentable (to choose from): an icon per fact type
-            (born, died, married, located…); dates in a column of their own; citations as small
-            numbers with a sources list at the foot; ties grouped by type with counts; portrait and
-            name as a proper header; a tab strip inside the bubble (Facts · Ties · Images) instead of
-            one long scroll; icon-only action buttons; a wider bubble on the PC.
-- [ ] **7.2 Save keeps the window open.** Pressing Save currently closes the editor (and the map bubble
-      is rebuilt). Wanted: stay open after Save, with the saved state shown.
-- [ ] **7.3 Library sub-tabs.** One strip of sub-tabs inside the Library: Google Drive sync, Time gaps,
-      Sources, Images, Categories, Fact types, Tie types, Markers, Backup & restore. The app remembers
-      the last one opened.
-- [ ] **7.4 Tie types: what "directed" means** (explained in chat 20 Oct 2026; see the README).
-- [ ] **7.5 Family tree: unlimited generations.** Typed number boxes for Up and Down, plus an "All"
-      choice, with the people count shown so a huge tree is a deliberate choice.
-- [ ] **7.6 Ties tab opens with nothing selected.** No tie type chosen on entry, so the whole graph is
-      never drawn by accident. Also a size guard: when a selection would draw more than a set number
-      of ties, show the count and a "Draw anyway" button instead of drawing at once. The same guard
-      for the Family tree and the Network view.
+      - [ ] 7.1a **Agreed 20 Oct, build later.** Every section heading in the bubble (Facts, Fields, Ties,
+            Mentioned in, Images, Notes) is a toggle with its count ("Facts (12) ▾" / "▸"); the whole
+            heading row is the touch target; open/closed is remembered per section on each device;
+            a section with more than eight lines starts closed the first time. Same headings in the
+            Ties, Network and Family side panels.
+      - [ ] 7.1b **Agreed 20 Oct, build later.** "Descriptors" = the hint paragraphs under the EDITOR's
+            section headings (Facts, Fields, Images, Sources, Time gaps). They leave the page; hovering
+            the heading word shows the hint in a small box; a ⓘ after the heading shows it on tap for
+            the Boox (tap again hides). Editor only: Library and side-panel hints stay as they are.
+            One-line labels inside the sections stay. ("Bubble" in this round means the editor drawer.)
+      - [ ] 7.1c **Agreed 20 Oct, build later.** Editor presentation:
+            - Each fact shows as one summary line ("1 Jan 1901 BC · Born · Father: Abraham") with a ▸
+              that opens the full card; any number of cards may be open at once; a new fact opens.
+            - A thin separator between dated and undated facts; mirrored lines under their own heading.
+            - Section headings larger with a rule under them; Basics in two columns on the PC.
+            - Save also at the top of the drawer; Delete in a clearer red.
+            - Portrait larger at the top beside the name, like the map bubble.
+- [ ] **7.2 Save keeps the editor open. Agreed 20 Oct, build later.** Save writes the marker, shows the
+      toast and keeps the drawer open on the same marker with the saved state (mirrored lines and
+      derived dates refreshed in place). Cancel becomes Close (asks first when there are unsaved
+      changes). Delete still closes. A new marker stays open after its first save as an existing
+      marker. An open map pop-up for that marker is refreshed, not closed.
+- [ ] **7.3 Library sub-tabs. Agreed 20 Oct, build later.** A strip of pills under the main tabs: Sync ·
+      Time gaps · Sources · Images · Categories · Fact types · Tie types · Markers · Backup. Plain
+      labels, no counts. One section shows at a time; the last sub-tab opened is remembered per
+      device; the ⚠ conflicts badge and other links into the Library open the right sub-tab; the
+      strip wraps to two lines on a narrow screen; the Images storage total moves into its sub-tab.
+- [ ] **7.4 Tie types: what "directed" means. Explained 20 Oct; small build folded into 7.3.** Ticked = the
+      two ends are different kinds of thing (parent/child, killer/killed, document/signatory): drawn
+      as an arrow, → / ← in the bubble, From/To labels, stacked by "Top of hierarchy" in the Ties tab.
+      Unticked = mutual (Spouse of, Sibling of, Allied with): no arrow, scattered layout. Test: swap
+      the two markers and ask whether the sentence still means the same. To build: a hover hint on
+      the tick box in the Tie types table and a short README paragraph under Tie type.
+- [ ] **7.5 Family tree: unlimited generations. Agreed 20 Oct, build later.** Up and Down become typed
+      number boxes (0 upwards) with − / + buttons for the Boox, each with an "All" tick that greys the
+      box; default is All in both directions; settings remembered per device; the people count stays
+      in the side panel. Size guard shared with 7.6: above 300 people the tab shows "This tree has N
+      people. Draw it?" with a Draw button instead of drawing at once (limit adjustable later).
+- [ ] **7.6 Ties tab opens with nothing selected. Agreed 20 Oct, build later.** No tie type chosen on
+      entry ("Pick a tie type, or a centre marker…"); "All tie types" stays in the list but is never
+      the start; the choice survives tab switches within a session, not a restart; the 🔗 Ties bubble
+      button still opens that marker's group with all types. Size guard (300 markers) with a Draw
+      button in Ties, Network and Family. Build order for section 7: 1, 2, 3 (+4), 5, 6.
