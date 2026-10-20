@@ -74,7 +74,7 @@ window.Sync = (() => {
         resolve(token);
       };
       tokenClient.error_callback = err => { clearTimeout(timeout); reject(new Error(err && err.type === 'popup_failed_to_open' ? 'the Google sign-in window was blocked; allow popups for this site and click Sync again' : (err && err.type === 'popup_closed' ? 'sign-in cancelled' : 'sign-in failed'))); };
-      tokenClient.requestAccessToken({ prompt: '' });
+      tokenClient.requestAccessToken({ prompt: interactive ? 'select_account' : '' }); // the Sign in button always offers the account chooser, so a device on the wrong Google account can be switched
     });
   }
   async function signIn() {
