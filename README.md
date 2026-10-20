@@ -102,7 +102,9 @@ grandparents above (as far up as the *Up* setting), brothers and sisters beside,
 person and their children hanging from the line between them (down to the *Down* setting). A solid
 line joins spouses; a dashed line joins two people who only share a child. Boxes show the portrait or
 icon, the name, the Begins and Ends dates and the sex. Click a person for their details; double-click
-to make them the root. The 🌳 Family button in a person's bubble opens the tree on them.
+to make them the root. The 🌳 Family button in a person's bubble opens the tree on them. *Up* and
+*Down* are typed numbers of generations, or *All* (the default) to follow the ties as far as they go;
+a tree of more than 300 people shows its size and a *Draw it* button rather than drawing at once.
 
 ### Library
 A strip of sub-tabs, one section at a time: Sync, Time gaps, Sources, Images, Categories, Fact types,

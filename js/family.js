@@ -9,14 +9,37 @@
 window.Family = (() => {
   const $ = id => document.getElementById(id);
   const W = 150, H = 64, GX = 18, ROW = 124, BUS = 20; // box size, gap between boxes, row pitch, bus height above a row
-  let rootId = null, up = 3, down = 3, showSibs = true, selectedId = null, rootSel, svg, g, zoom;
+  let rootId = null, selectedId = null, rootSel, svg, g, zoom;
+  // generation limits: a number each way, or All; remembered on this device
+  const PREF_KEY = 'chronomap.family';
+  const pref = Object.assign({ up: 3, down: 3, upAll: true, downAll: true, showSibs: true }, (() => { try { return JSON.parse(localStorage.getItem(PREF_KEY)) || {}; } catch (e) { return {}; } })());
+  function savePref() { try { localStorage.setItem(PREF_KEY, JSON.stringify(pref)); } catch (e) { /* ignore */ } }
+  const upLimit = () => (pref.upAll ? Infinity : Math.max(0, +pref.up || 0));
+  const downLimit = () => (pref.downAll ? Infinity : Math.max(0, +pref.down || 0));
+  let guardOk = ''; // settings key for which the user said "Draw it"
 
+  function paintControls() {
+    $('fam-up').value = pref.up; $('fam-down').value = pref.down;
+    $('fam-up-all').checked = pref.upAll; $('fam-down-all').checked = pref.downAll;
+    $('fam-up').disabled = pref.upAll; $('fam-down').disabled = pref.downAll;
+    $('fam-up-minus').disabled = pref.upAll; $('fam-up-plus').disabled = pref.upAll;
+    $('fam-down-minus').disabled = pref.downAll; $('fam-down-plus').disabled = pref.downAll;
+    $('fam-sibs').checked = pref.showSibs;
+  }
   function init() {
     rootSel = UI.markerSelect({ onChange: v => { rootId = v; selectedId = v; draw(true); }, placeholder: 'e.g. Noah' });
     $('fam-root').append(rootSel);
-    $('fam-up').addEventListener('change', e => { up = +e.target.value; draw(true); });
-    $('fam-down').addEventListener('change', e => { down = +e.target.value; draw(true); });
-    $('fam-sibs').addEventListener('change', e => { showSibs = e.target.checked; draw(true); });
+    const change = () => { savePref(); paintControls(); draw(true); };
+    $('fam-up').addEventListener('change', e => { pref.up = Math.max(0, Math.min(99, +e.target.value || 0)); change(); });
+    $('fam-down').addEventListener('change', e => { pref.down = Math.max(0, Math.min(99, +e.target.value || 0)); change(); });
+    $('fam-up-minus').onclick = () => { pref.up = Math.max(0, pref.up - 1); change(); };
+    $('fam-up-plus').onclick = () => { pref.up = Math.min(99, pref.up + 1); change(); };
+    $('fam-down-minus').onclick = () => { pref.down = Math.max(0, pref.down - 1); change(); };
+    $('fam-down-plus').onclick = () => { pref.down = Math.min(99, pref.down + 1); change(); };
+    $('fam-up-all').addEventListener('change', e => { pref.upAll = e.target.checked; change(); });
+    $('fam-down-all').addEventListener('change', e => { pref.downAll = e.target.checked; change(); });
+    $('fam-sibs').addEventListener('change', e => { pref.showSibs = e.target.checked; change(); });
+    paintControls();
     $('fam-fit').onclick = () => fit();
     $('fam-info-close').onclick = () => { selectedId = null; draw(); };
     Store.subscribe(() => { if (App.currentTab() === 'family') draw(); });
@@ -58,7 +81,7 @@ window.Family = (() => {
   // Descendant unit: a person, their partners beside them, and each partner's children underneath.
   function unit(R, id, depth, visited) {
     const u = { id, persons: [id], groups: [], width: W };
-    if (depth >= down || visited.has(id)) return u;
+    if (depth >= downLimit() || visited.has(id)) return u;
     const seen = new Set(visited).add(id);
     const kids = R.children(id);
     const parts = R.partners(id).filter(p => p !== id);
@@ -80,7 +103,7 @@ window.Family = (() => {
   // Pedigree node: the parents above one person, recursively.
   function ped(R, id, depth, visited) {
     const n = { id, parents: [], width: W };
-    if (depth >= up || visited.has(id)) return n;
+    if (depth >= upLimit() || visited.has(id)) return n;
     const seen = new Set(visited).add(id);
     n.parents = orderParents(R.parents(id)).map(p => ped(R, p, depth + 1, seen));
     if (n.parents.length) n.width = n.parents.reduce((s, p) => s + p.width, 0) + GX * (n.parents.length - 1);
@@ -146,7 +169,7 @@ window.Family = (() => {
     // root row: the root's unit with brothers and sisters (leaf boxes) in birth order
     const visited = new Set();
     const rootUnit = unit(R, rootId, 0, visited);
-    const sibIds = showSibs ? [...new Set(R.parents(rootId).flatMap(p => R.children(p)))].filter(s => s !== rootId) : [];
+    const sibIds = pref.showSibs ? [...new Set(R.parents(rootId).flatMap(p => R.children(p)))].filter(s => s !== rootId) : [];
     const row = byBirth([rootId, ...sibIds]).map(id => id === rootId ? rootUnit : { id, persons: [id], groups: [], width: W });
     const rowW = row.reduce((s, u) => s + u.width, 0) + GX * (row.length - 1);
     const pedRoot = ped(R, rootId, 0, new Set());
@@ -179,9 +202,15 @@ window.Family = (() => {
     const empty = $('fam-empty');
     if (!tree) {
       empty.textContent = Store.markers().length ? 'Pick a person on the left, or press 🌳 Family in a person\'s bubble.' : 'No markers yet.';
-      empty.classList.remove('hidden'); $('fam-stats').textContent = ''; renderInfo(); return;
+      empty.classList.remove('hidden'); empty.classList.remove('ask'); $('fam-stats').textContent = ''; renderInfo(); return;
     }
-    empty.classList.add('hidden');
+    const key = [rootId, upLimit(), downLimit(), pref.showSibs].join('|');
+    if (tree.count > UI.GRAPH_LIMIT && guardOk !== key) {
+      empty.innerHTML = ''; empty.append(UI.sizeGuard({ count: tree.count, noun: 'people', onDraw: () => { guardOk = key; draw(true); } }));
+      empty.classList.remove('hidden'); empty.classList.add('ask');
+      $('fam-stats').textContent = `${tree.count} people (not drawn yet)`; renderInfo(); return;
+    }
+    empty.classList.add('hidden'); empty.classList.remove('ask');
     $('fam-stats').textContent = `${tree.count} people`;
     g.selectAll('path.ft-line').data(tree.lines).join('path')
       .attr('class', d => 'ft-line' + (d.marriage ? ' marriage' : '') + (d.dashed ? ' dashed' : ''))

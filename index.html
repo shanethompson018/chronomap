@@ -149,12 +149,12 @@
       </div>
       <div class="side-section">
         <div class="side-title">Generations</div>
-        <label class="field">Up (ancestors)
-          <select id="fam-up"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option></select>
-        </label>
-        <label class="field">Down (descendants)
-          <select id="fam-down"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option></select>
-        </label>
+        <div class="field">Up (ancestors)
+          <div class="gen-row"><button class="small" id="fam-up-minus" title="One generation fewer">−</button><input type="number" id="fam-up" min="0" max="99" value="3" inputmode="numeric"><button class="small" id="fam-up-plus" title="One generation more">+</button><label><input type="checkbox" id="fam-up-all" checked> All</label></div>
+        </div>
+        <div class="field">Down (descendants)
+          <div class="gen-row"><button class="small" id="fam-down-minus" title="One generation fewer">−</button><input type="number" id="fam-down" min="0" max="99" value="3" inputmode="numeric"><button class="small" id="fam-down-plus" title="One generation more">+</button><label><input type="checkbox" id="fam-down-all" checked> All</label></div>
+        </div>
         <label><input type="checkbox" id="fam-sibs" checked> Show brothers and sisters</label>
         <button id="fam-fit" class="small">Fit to window</button>
       </div>

@@ -361,6 +361,15 @@ window.UI = (() => {
     return { close, box };
   }
 
+  // Size guard for the graph views: instead of drawing a huge graph at once, say how big it is and offer a button.
+  const GRAPH_LIMIT = 300;
+  function sizeGuard({ count, noun = 'markers', onDraw }) {
+    return h('div', { class: 'graph-empty ask' },
+      h('div', {}, h('div', { style: { fontSize: '15px', marginBottom: '10px' } }, `This would draw ${count.toLocaleString()} ${noun}.`),
+        h('div', { class: 'muted', style: { marginBottom: '14px' } }, 'A graph this size can be slow on a tablet. Narrow the choice, or draw it anyway.'),
+        h('button', { class: 'primary', onclick: onDraw }, 'Draw it')));
+  }
+
   function download(filename, text) {
     const blob = new Blob([text], { type: 'application/json' });
     const a = h('a', { href: URL.createObjectURL(blob), download: filename });
@@ -368,6 +377,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download,
+  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();
