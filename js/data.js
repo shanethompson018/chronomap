@@ -42,7 +42,16 @@ window.DataTab = (() => {
       statusLine.innerHTML = '';
       statusLine.append(h('strong', {}, { off: 'Not signed in', signin: 'Signed out (sign in to sync)', syncing: cur.text, ok: 'Signed in · ' + cur.text, error: 'Sync failed', offline: 'Offline' }[cur.state] || cur.text));
       if (cur.state === 'error' && Sync.lastError()) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, Sync.lastError().message));
-      if (Store.settings().driveLastSync) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, 'Last successful sync: ' + new Date(Store.settings().driveLastSync).toLocaleString()));
+      const ss = Store.settings();
+      if (ss.driveUser) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, 'Google account: ', h('strong', {}, ss.driveUser), ' (every device must show the same account)'));
+      if (ss.driveLastSync) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, 'Last successful sync: ' + new Date(ss.driveLastSync).toLocaleString()));
+      const rp = ss.driveLastReport;
+      if (rp && rp.after) {
+        const c = x => `${x.markers} marker${x.markers === 1 ? '' : 's'}, ${x.sources} source${x.sources === 1 ? '' : 's'}, ${x.photos} image${x.photos === 1 ? '' : 's'}`;
+        statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } },
+          `Drive file had ${c(rp.remote)}` + (rp.remoteModified ? ` (last written ${new Date(rp.remoteModified).toLocaleString()})` : '') + `; this device had ${c(rp.before)}; now both have ${c(rp.after)}`
+          + (rp.uploaded ? ' · this device wrote the file' : ' · nothing to write') + (rp.copies > 1 ? ` · merged ${rp.copies} copies of the file` : '') + (rp.extraFolders ? ` · ${rp.extraFolders} extra "Chrono Map" folder(s) in Drive are ignored` : '')));
+      }
     };
     paint();
     document.addEventListener('chrono-sync', paint);

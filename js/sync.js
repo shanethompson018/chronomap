@@ -122,21 +122,26 @@ window.Sync = (() => {
     const r = await api('files?fields=id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return (await r.json()).id;
   }
+  const oldestFirst = files => files.slice().sort((a, b) => String(a.createdTime || '').localeCompare(String(b.createdTime || '')));
+  // The app's folder: always the OLDEST folder of that name, so two devices that both created one on
+  // their first sync end up sharing the same folder instead of each keeping its own.
   async function ensureFolders() {
     const s = Store.settings();
-    let folderId = (await stillThere(s.driveFolderId)) ? s.driveFolderId : null;
-    if (!folderId) {
-      const f = await findOne(`name='${cfg().driveFolderName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-      folderId = f ? f.id : await createFolder(cfg().driveFolderName);
-      Store.setSetting('drivePhotosFolderId', null); Store.setSetting('driveDataFileId', null);
-    }
-    let photosId = (await stillThere(Store.settings().drivePhotosFolderId)) ? Store.settings().drivePhotosFolderId : null;
-    if (!photosId) {
-      const f = await findOne(`name='photos' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${folderId}' in parents`);
-      photosId = f ? f.id : await createFolder('photos', folderId);
-    }
+    const folders = oldestFirst(await listAll(`name='${cfg().driveFolderName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`, 'id,name,createdTime'));
+    let folderId = folders.length ? folders[0].id : await createFolder(cfg().driveFolderName);
+    if (folderId !== s.driveFolderId) { Store.setSetting('drivePhotosFolderId', null); Store.setSetting('driveDataFileId', null); }
+    const photos = oldestFirst(await listAll(`name='photos' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${folderId}' in parents`, 'id,name,createdTime'));
+    const photosId = photos.length ? photos[0].id : await createFolder('photos', folderId);
     Store.setSetting('driveFolderId', folderId); Store.setSetting('drivePhotosFolderId', photosId);
-    return { folderId, photosId };
+    return { folderId, photosId, extraFolders: folders.length - 1 };
+  }
+  // Who is signed in (asked once per token; shown in the Library so two devices can be compared).
+  async function whoAmI() {
+    try {
+      const j = await (await api('about?fields=user(emailAddress,displayName)')).json();
+      const email = (j.user && j.user.emailAddress) || '';
+      if (email && email !== Store.settings().driveUser) Store.setSetting('driveUser', email);
+    } catch (e) { /* not essential */ }
   }
   function relatedBody(metadata, blob) {
     const boundary = 'chrono' + Math.random().toString(36).slice(2);
@@ -188,15 +193,19 @@ window.Sync = (() => {
     try {
       if (!navigator.onLine) throw new Error('offline');
       await getToken(interactive);
-      const { folderId, photosId } = await ensureFolders();
+      if (!Store.settings().driveUser) await whoAmI();
+      const { folderId, photosId, extraFolders } = await ensureFolders();
 
-      // 1. the data file
-      let dataId = (await stillThere(Store.settings().driveDataFileId)) ? Store.settings().driveDataFileId : null;
-      if (!dataId) { const f = await findOne(`name='${DATA_NAME}' and '${folderId}' in parents and trashed=false`); dataId = f ? f.id : null; }
+      // 1. the data file. Every copy the app can see (two devices may each have created one on their first
+      //    sync) is merged in; the oldest copy is kept as the shared file and the others are moved to the bin.
+      const copies = oldestFirst(await listAll(`name='${DATA_NAME}' and trashed=false`, 'id,name,createdTime,modifiedTime,parents'));
+      let dataId = copies.length ? copies[0].id : null;
       let remote = null, remoteText = null;
-      if (dataId) {
-        remoteText = await (await download(dataId)).text();
-        try { remote = Store.normalizeDoc(JSON.parse(remoteText)); } catch (e) { remote = null; } // brings an older layout up to date before merging
+      const parse = txt => { try { return Store.normalizeDoc(JSON.parse(txt)); } catch (e) { return null; } }; // brings an older layout up to date before merging
+      if (dataId) { remoteText = await (await download(dataId)).text(); remote = parse(remoteText); }
+      for (const extra of copies.slice(1)) {
+        const doc = parse(await (await download(extra.id)).text());
+        if (doc) remote = remote ? mergeDocs(remote, doc) : doc;
       }
       const local = Store.exportSyncDoc();
       let merged;
@@ -207,13 +216,20 @@ window.Sync = (() => {
       Store.setSetting('sampleUntouched', false);
       const finalDoc = Store.exportSyncDoc();
       const text = docText(finalDoc);
+      let uploaded = false;
       if (!dataId) {
         const j = await uploadNew({ name: DATA_NAME, parents: [folderId], mimeType: 'application/json' }, new Blob([text], { type: 'application/json' }));
-        dataId = j.id;
+        dataId = j.id; uploaded = true;
       } else if (text !== remoteText) {
-        await uploadUpdate(dataId, new Blob([text], { type: 'application/json' }));
+        await uploadUpdate(dataId, new Blob([text], { type: 'application/json' })); uploaded = true;
       }
       Store.setSetting('driveDataFileId', dataId);
+      for (const extra of copies.slice(1)) { // only once the merged result is safely in the shared file
+        try { await api(`files/${extra.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); } catch (e) { /* next time */ }
+      }
+      const count = doc => ({ markers: (doc && doc.markers ? doc.markers : []).length, sources: (doc && doc.sources ? doc.sources : []).length, photos: (doc && doc.photos ? doc.photos : []).length });
+      Store.setSetting('driveLastReport', { at: Date.now(), reason, remote: count(remote), before: count(local), after: count(finalDoc), uploaded,
+        remoteModified: copies.length ? copies[0].modifiedTime : null, copies: copies.length, extraFolders });
 
       // 2. photos
       await syncPhotos(photosId);
@@ -262,7 +278,15 @@ window.Sync = (() => {
   function schedule(ms) {
     if (!enabled()) return;
     clearTimeout(timer);
-    timer = setTimeout(() => run({ reason: 'change' }), ms);
+    timer = setTimeout(() => { timer = null; run({ reason: 'change' }); }, ms);
+    if (!running) setStatus('syncing', 'Change waiting to sync…');
+  }
+  // Pending changes go up at once when the app is hidden or closed: on a tablet the app may be stopped
+  // before the timer fires, and the change would otherwise wait until the next time it is opened.
+  function flush() {
+    if (!timer || !enabled()) return;
+    clearTimeout(timer); timer = null;
+    run({ reason: 'hidden' });
   }
   function init() {
     loadToken();
@@ -274,12 +298,14 @@ window.Sync = (() => {
     window.addEventListener('online', () => { if (enabled()) run({ reason: 'online' }); else idleStatus(); });
     window.addEventListener('offline', idleStatus);
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && enabled() && Date.now() - (Store.settings().driveLastSync || 0) > 60000) run({ reason: 'visible' });
+      if (document.visibilityState === 'hidden') flush();
+      else if (document.visibilityState === 'visible' && enabled() && Date.now() - (Store.settings().driveLastSync || 0) > 60000) run({ reason: 'visible' });
     });
+    window.addEventListener('pagehide', flush);
     setInterval(() => { if (status.state === 'ok') idleStatus(); }, 60000);
     if (enabled()) setTimeout(() => run({ reason: 'startup' }), 1500);
   }
   function folderUrl() { const id = Store.settings().driveFolderId; return id ? `https://drive.google.com/drive/folders/${id}` : null; }
 
-  return { init, run, signIn, signOut, schedule, mergeDocs, folderUrl, status: () => status, lastError: () => lastError, enabled, configured, hasToken, timeAgo };
+  return { init, run, signIn, signOut, schedule, flush, mergeDocs, folderUrl, status: () => status, lastError: () => lastError, enabled, configured, hasToken, timeAgo };
 })();
