@@ -267,8 +267,23 @@ window.Editor = (() => {
     }).map(x => x.i);
   }
   function renderFacts() {
-    if (!draft.facts.length) return h('p', { class: 'muted' }, 'No facts yet. Add one below: Born, Died, Located at, Took place…');
-    return sortedFactIndexes().map(i => renderFact(i));
+    const cards = draft.facts.length ? sortedFactIndexes().map(i => renderFact(i)) : [h('p', { class: 'muted' }, 'No facts yet. Add one below: Born, Died, Located at, Took place…')];
+    return [...cards, ...renderMirrors()];
+  }
+  // Facts typed on other markers that name this one (Son: Isaac from Isaac's Born fact). Read-only here.
+  function renderMirrors() {
+    const saved = Store.marker(draft.id);
+    const list = saved && saved.mirrors ? saved.mirrors : [];
+    if (!list.length) return [];
+    return [h('p', { class: 'hint', style: { marginTop: '10px' } }, 'From other markers (edit them there):'),
+      ...list.map(mi => {
+        const o = Store.marker(mi.markerId); if (!o) return null;
+        const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
+        return h('div', { class: 'card fact-card mirror-card' },
+          h('div', { class: 'row' },
+            h('span', {}, when, h('strong', {}, mi.word + ': '), o.name, h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact`)),
+            h('button', { type: 'button', class: 'small narrow', title: `Open ${o.name} to edit that fact`, onclick: () => open(o.id) }, '✏️ ' + o.name)));
+      }).filter(Boolean)];
   }
   function renderFact(i) {
     const f = draft.facts[i];

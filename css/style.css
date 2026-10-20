@@ -393,6 +393,11 @@ body.eink .graph-empty { color: #000; }
 
 /* ---------- facts in the editor and bubble ---------- */
 .fact-card { border-left: 3px solid var(--accent); }
+.mirror-card { border-left-color: var(--muted); border-left-style: dashed; }
+.mirror-card .row > span { flex: 1; font-size: 13px; }
+.mirror-card .row > button { flex: none; }
+.fact-list li.mirror { opacity: .85; }
+.mirror-from { font-size: 11px; }
 .fact-card .ed-row { margin-bottom: 6px; }
 .fact-card select { min-width: 0; }
 .fact-where, .fact-role { margin: 4px 0 6px; padding: 6px 8px; background: rgba(255,255,255,.03); border-radius: 6px; }

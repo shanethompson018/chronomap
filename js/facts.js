@@ -34,6 +34,7 @@ window.Facts = (() => {
     const T = (id, name, extra) => Object.assign({ id, name, hasDate: true, hasEnd: false, place: 'any', roles: [], begins: false, ends: false, details: [], placeFrom: null }, extra);
     return [
       T('ft_born', 'Born', { roles: [{ id: 'father', name: 'Father', tieTypeId: tie('Parent of'), direction: 'other-to-this' }, { id: 'mother', name: 'Mother', tieTypeId: tie('Parent of'), direction: 'other-to-this' }], begins: true }),
+      T('ft_had_child', 'Had child', { roles: [{ id: 'child', name: 'Child', tieTypeId: tie('Parent of'), direction: 'this-to-other' }] }),
       T('ft_died', 'Died', { ends: true, details: ['Cause'] }),
       T('ft_located', 'Located at', { hasEnd: true }),
       T('ft_married', 'Married', { roles: [{ id: 'spouse', name: 'Spouse', tieTypeId: tie('Spouse of'), direction: 'this-to-other' }] }),
@@ -54,7 +55,7 @@ window.Facts = (() => {
   }
   // Which seeded types a category offers first, by the category's name (a fallback when it lists none).
   const DEFAULTS_BY_CATEGORY = {
-    person: ['ft_born', 'ft_died', 'ft_located', 'ft_married', 'ft_present', 'ft_member', 'ft_signed', 'ft_note'],
+    person: ['ft_born', 'ft_had_child', 'ft_died', 'ft_located', 'ft_married', 'ft_present', 'ft_member', 'ft_signed', 'ft_note'],
     event: ['ft_took_place', 'ft_located', 'ft_note'],
     document: ['ft_written', 'ft_adopted', 'ft_located', 'ft_note'],
     organization: ['ft_founded', 'ft_destroyed', 'ft_located', 'ft_ruled_by', 'ft_note'],
@@ -253,7 +254,43 @@ window.Facts = (() => {
       }
     }
     deriveSiblings(d, links);
+    deriveMirrors(d, links);
     d.links = links;
+  }
+
+  // ---------- mirrored facts ----------
+  // A Born fact on Isaac naming Father: Abraham shows on Abraham's marker as "Son: Isaac"; a Had child fact on
+  // Adam naming Seth shows on Seth's as "Father: Adam"; a Married fact shows on the spouse as "Husband/Wife".
+  // Mirrors are derived from the original fact (never stored), so there is one place to type and correct.
+  function mirrorWord(tieName, ownerIsFrom, ownerSex) {
+    if (tieName === 'spouse of') return ownerSex === 'male' ? 'Husband' : ownerSex === 'female' ? 'Wife' : 'Spouse';
+    if (ownerIsFrom) return ownerSex === 'male' ? 'Father' : ownerSex === 'female' ? 'Mother' : 'Parent'; // the owner is the parent
+    return ownerSex === 'male' ? 'Son' : ownerSex === 'female' ? 'Daughter' : 'Child';                      // the owner is the child
+  }
+  function deriveMirrors(d, links) {
+    const tieName = new Map(d.linkTypes.map(t => [t.id, t.name.trim().toLowerCase()]));
+    const byId = new Map(d.markers.map(m => [m.id, m]));
+    for (const m of d.markers) m.mirrors = [];
+    for (const l of links) {
+      const tn = tieName.get(l.typeId);
+      if (!l.factId || !l.ownerId || (tn !== 'parent of' && tn !== 'spouse of')) continue;
+      const owner = byId.get(l.ownerId), other = byId.get(l.fromId === l.ownerId ? l.toId : l.fromId);
+      if (!owner || !other || owner === other) continue;
+      const f = (owner.facts || []).find(x => x.id === l.factId); if (!f) continue;
+      other.mirrors.push({ id: 'mirror|' + l.id, word: mirrorWord(tn, l.fromId === owner.id, sexOf(owner)), tie: tn, markerId: owner.id, factId: f.id, factTitle: factLabel(d, f),
+        date: l.start || '', dateMin: l.startMin || '', dateMax: l.startMax || '', dateEnd: l.end || '', dateEndMin: l.endMin || '', dateEndMax: l.endMax || '',
+        note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
+    }
+    // A parent's dated Had child fact is the child's birth when the child has no dated Begins of its own.
+    for (const m of d.markers) {
+      if (m.start) continue;
+      const births = m.mirrors.filter(x => x.tie === 'parent of' && (x.word === 'Father' || x.word === 'Mother' || x.word === 'Parent') && x.date && dayOf(x.date) != null)
+        .sort((a, b) => dayOf(a.date) - dayOf(b.date));
+      if (!births.length) continue;
+      const b = births[0];
+      m.start = b.date; m.startMin = b.dateMin || b.date; m.startMax = b.dateMax || b.date;
+      m.startLabel = 'Born'; m.startFrom = b.markerId;
+    }
   }
 
   function defaultTypeIdsFor(category) {

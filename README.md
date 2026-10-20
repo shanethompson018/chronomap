@@ -148,6 +148,15 @@ path with a slash: `Born/Date, Born/Place`.
 (one-way, drawn as an arrow) or mutual. For directed types, "Top of hierarchy" says which end is drawn
 above the other in the Ties view.
 
+**Both sides of a family fact.** A fact typed on one marker shows on the other person's marker too,
+derived from the original rather than copied: Isaac's Born fact with Father: Abraham gives Abraham a
+*Son: Isaac* line; Adam's **Had child** fact naming Seth gives Seth a *Father: Adam* line; a Married
+fact gives the spouse a *Husband* or *Wife* line (Parent, Child or Spouse when the sex is not said).
+These lines sit among the marker's facts in the bubble and, greyed, at the end of the editor's Facts
+section with a button to open the marker where the fact was typed. Edit or delete the original and the
+mirrored line follows. A dated Had child fact also counts as the child's birth when the child has no
+dated Born fact of their own.
+
 **Siblings follow from parents.** Two markers with a parent in common (through *Parent of* ties, which
 the Born fact's Father and Mother roles create) are tied as *Half-sibling of*; with both parents in
 common, *Sibling of*. These ties are never entered: they are rebuilt from the Parent of ties on every

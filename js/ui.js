@@ -218,11 +218,13 @@ window.UI = (() => {
     if (rows.length) out += '<dl>' + rows.map(([k, v, depth]) => `<dt${depth ? ` style="padding-left:${depth * 12}px"` : ''}>${depth ? '↳ ' : ''}${esc(k)}</dt><dd>${v}</dd>`).join('') + '</dl>';
     if (m.tags && m.tags.length) out += '<div>' + m.tags.map(tg => `<span class="tag">${esc(tg)}</span>`).join('') + '</div>';
 
-    // facts, in date order (undated last)
-    const facts = (m.facts || []).map((f, i) => ({ f, i, d: f.date ? Dates.toDays(f.date) : null }))
-      .sort((a, b) => (a.d == null && b.d == null) ? a.i - b.i : a.d == null ? 1 : b.d == null ? -1 : a.d - b.d);
-    if (facts.length) out += `<h4>Facts (${facts.length})</h4><ul class="fact-list">` + facts.map(({ f }) => factLineHTML(m, f, badge)).join('') + '</ul>';
-    const mentions = Store.mentionsOf(m.id);
+    // facts, in date order (undated last); mirrored facts from other markers (Son: Isaac, Husband: Abraham) sort in with them
+    const own = (m.facts || []).map((f, i) => ({ f, i, d: f.date ? Dates.toDays(f.date) : null }));
+    const mirrored = (m.mirrors || []).map((mi, i) => ({ mi, i: own.length + i, d: mi.date ? Dates.toDays(mi.date) : null }));
+    const facts = [...own, ...mirrored].sort((a, b) => (a.d == null && b.d == null) ? a.i - b.i : a.d == null ? 1 : b.d == null ? -1 : a.d - b.d);
+    if (facts.length) out += `<h4>Facts (${facts.length})</h4><ul class="fact-list">` + facts.map(x => x.f ? factLineHTML(m, x.f, badge) : mirrorLineHTML(x.mi)).join('') + '</ul>';
+    const mirroredFacts = new Set((m.mirrors || []).map(mi => mi.factId));
+    const mentions = Store.mentionsOf(m.id).filter(x => !mirroredFacts.has(x.fact.id));
     if (mentions.length) {
       out += `<h4>Mentioned in (${mentions.length})</h4><ul class="fact-list">` + mentions.map(x => {
         const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : 'as the place';
@@ -291,6 +293,20 @@ window.UI = (() => {
     return `<li>${line}</li>`;
   }
 
+  // One mirrored fact: "1 Jan 1901 BC · Son: Isaac · from Isaac's Born fact".
+  function mirrorLineHTML(mi) {
+    const o = Store.marker(mi.markerId); if (!o) return '';
+    const bits = [];
+    if (mi.date) bits.push(esc(Dates.formatRange(mi.date, mi.dateMin, mi.dateMax)) + (mi.dateEnd ? ' – ' + esc(Dates.formatRange(mi.dateEnd, mi.dateEndMin, mi.dateEndMax)) : ''));
+    bits.push(`<strong>${esc(mi.word)}</strong>: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(o.name)}</a>`);
+    let line = bits.join(' · ');
+    if (mi.confidence) line += ' ' + gradeBadgeHTML(mi.confidence, mi.reason);
+    if (mi.note) line += ` <span class="muted">– ${esc(mi.note)}</span>`;
+    if (mi.sourceId) line += ' ' + citeHTML(mi.sourceId, mi.page);
+    line += ` <span class="muted mirror-from">from ${esc(o.name)}'s ${esc(mi.factTitle)} fact</span>`;
+    return `<li class="mirror" title="Shown here from ${esc(o.name)}'s marker; edit it there">${line}</li>`;
+  }
+
   // Combobox for choosing a marker. Returns an element with getValue()/setValue().
   function markerSelect({ value = null, onChange, placeholder = 'Search markers…', exclude = [] } = {}) {
     const wrap = h('div', { class: 'mselect' });
@@ -348,6 +364,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, tieHTML, markerSelect, modal, download,
+  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();
