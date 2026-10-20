@@ -5,7 +5,7 @@ const VERSION = 'chronomap-v1';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/config.js', './js/dates.js', './js/ui.js', './js/isbn.js', './js/sample.js', './js/facts.js', './js/store.js', './js/photos.js', './js/relations.js', './js/graph.js', './js/map.js', './js/overlay.js',
-  './js/editor.js', './js/ties.js', './js/network.js', './js/data.js', './js/sync.js', './js/app.js',
+  './js/editor.js', './js/ties.js', './js/network.js', './js/family.js', './js/data.js', './js/sync.js', './js/app.js',
   './assets/chronomap.png', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',

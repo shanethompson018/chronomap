@@ -70,7 +70,7 @@ The Google side lives in a Google Cloud project owned by the same account; its c
   version is published, a "Reload" notice appears.
 * On narrow screens the details panel in the Ties and Network tabs slides over the graph and has a ✕.
 
-## The four tabs
+## The five tabs
 
 ### Map
 * **Time slider** at the bottom. Drag it, press ▶ to play, step by day/week/month/year/decade, or type a
@@ -95,6 +95,14 @@ to zoom, click a node to read about it.
 Pick a centre marker and a number of degrees of separation. 1 shows its direct ties; 2 adds the ties of
 those markers; and so on. Untick tie types or categories you don't want to see. **Saved views** remember
 a whole set-up (centre, degrees, filters) under a name.
+
+### Family
+A family tree drawn from the *Parent of* and *Spouse of* ties, around one **root** person: parents and
+grandparents above (as far up as the *Up* setting), brothers and sisters beside, partners next to each
+person and their children hanging from the line between them (down to the *Down* setting). A solid
+line joins spouses; a dashed line joins two people who only share a child. Boxes show the portrait or
+icon, the name, the Begins and Ends dates and the sex. Click a person for their details; double-click
+to make them the root. The 🌳 Family button in a person's bubble opens the tree on them.
 
 ### Library
 Sync, time gaps, sources, images, categories, fact types, tie types, the full marker table, and backup.
@@ -305,6 +313,7 @@ js/editor.js      marker editor drawer
 js/graph.js       graph drawing (used by Ties and Network)
 js/ties.js        Ties tab
 js/network.js     Network tab
+js/family.js      Family tab (family tree)
 js/data.js        Library tab
 js/photos.js      photo library (images in IndexedDB), picker, lightbox
 js/sync.js        Google Drive sync (sign-in, Drive folder, per-record merge, photos)

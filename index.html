@@ -23,6 +23,7 @@
     <button class="tab active" data-tab="map">Map</button>
     <button class="tab" data-tab="ties">Ties</button>
     <button class="tab" data-tab="network">Network</button>
+    <button class="tab" data-tab="family">Family</button>
     <button class="tab" data-tab="data">Library</button>
   </nav>
   <div class="topbar-right">
@@ -138,6 +139,35 @@
     <button class="info-close" id="ties-info-close" title="Close details">✕</button>
   </section>
 
+  <!-- ================= FAMILY TAB ================= -->
+  <section id="tab-family" class="tab-panel">
+    <aside class="side">
+      <div class="side-section">
+        <div class="side-title">Root person</div>
+        <div id="fam-root"></div>
+        <p class="hint">The tree is drawn around one person: parents and grandparents above, brothers and sisters beside, partners and children below. Double-click anyone in the tree to make them the root.</p>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Generations</div>
+        <label class="field">Up (ancestors)
+          <select id="fam-up"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option></select>
+        </label>
+        <label class="field">Down (descendants)
+          <select id="fam-down"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option></select>
+        </label>
+        <label><input type="checkbox" id="fam-sibs" checked> Show brothers and sisters</label>
+        <button id="fam-fit" class="small">Fit to window</button>
+      </div>
+      <div class="side-section">
+        <div id="fam-stats" class="muted"></div>
+        <p class="hint">Solid line between partners: a Spouse of tie. Dashed: they only share a child. Children hang from the line between their parents.</p>
+      </div>
+    </aside>
+    <div class="graph-area"><div id="fam-tree" class="graph ft-graph"></div><div id="fam-empty" class="graph-empty hidden"></div></div>
+    <aside class="info-panel" id="fam-info"><div class="muted pad">Click a person to see their details.</div></aside>
+    <button class="info-close" id="fam-info-close" title="Close details">✕</button>
+  </section>
+
   <!-- ================= NETWORK TAB ================= -->
   <section id="tab-network" class="tab-panel">
     <aside class="side">
@@ -213,6 +243,7 @@
 <script src="js/editor.js"></script>
 <script src="js/ties.js"></script>
 <script src="js/network.js"></script>
+<script src="js/family.js"></script>
 <script src="js/data.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/app.js"></script>

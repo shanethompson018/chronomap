@@ -159,6 +159,20 @@ button.play.on { background: var(--accent); border-color: var(--accent); color: 
 .node-icon { font-size: 16px; pointer-events: none; }
 .node-label { font-size: 12px; fill: var(--text); pointer-events: none; paint-order: stroke; stroke: #12151b; stroke-width: 3px; }
 .node.center circle { stroke: var(--accent2); stroke-width: 4px; }
+/* Family tab */
+.graph-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); padding: 24px; text-align: center; pointer-events: none; }
+.graph-empty.hidden { display: none; }
+.ft-line { fill: none; stroke: var(--muted); stroke-width: 1.5px; }
+.ft-line.marriage { stroke: #e84393; stroke-width: 2px; }
+.ft-line.dashed { stroke-dasharray: 5 4; }
+.ft-box { fill: var(--bg2); stroke-width: 2px; }
+.ft-node.root .ft-box { stroke-width: 4px; }
+.ft-node.selected .ft-box { fill: #2a3242; }
+.ft-node:hover .ft-box { fill: #232a37; }
+.ft-ico-text { font-size: 16px; pointer-events: none; }
+.ft-name { font-size: 13px; font-weight: 600; fill: var(--text); pointer-events: none; }
+.ft-dates { font-size: 11px; fill: var(--muted); pointer-events: none; }
+.ft-sex { font-size: 11px; fill: var(--muted); pointer-events: none; }
 .link-label { font-size: 10px; fill: var(--muted); pointer-events: none; text-anchor: middle; paint-order: stroke; stroke: #12151b; stroke-width: 3px; }
 .info-panel { width: 340px; flex: none; background: var(--bg2); border-left: 1px solid var(--border); overflow-y: auto; }
 
@@ -349,6 +363,13 @@ body.eink .info-actions button { font-size: 14px; }
 body.eink .graph { background: #fff; }
 body.eink .node-label { fill: #000; stroke: #fff; font-size: 13px; }
 body.eink .link-label { fill: #000; stroke: #fff; font-size: 11px; }
+body.eink .ft-line { stroke: #000; stroke-width: 2px; }
+body.eink .ft-line.marriage { stroke: #000; }
+body.eink .ft-box { fill: #fff; stroke: #000; }
+body.eink .ft-node.selected .ft-box { fill: #e6e6e6; }
+body.eink .ft-node:hover .ft-box { fill: #fff; }
+body.eink .ft-ico { stroke: #000; stroke-width: 1.5px; }
+body.eink .ft-name, body.eink .ft-dates, body.eink .ft-sex { fill: #000; }
 body.eink .cite { background: #eee; color: #000; border: 1px solid #000; }
 body.eink .tag { border: 1px solid #000; background: #fff; }
 body.eink .info-summary { color: #000; }

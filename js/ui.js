@@ -254,7 +254,9 @@ window.UI = (() => {
         + (m.kind === 'area' && t != null ? `<button data-action="change-border" data-id="${esc(m.id)}" title="Copy the border in force at the slider's date into a new dated border and drag only the corners that moved">✥ Change border here</button>` : '')
         + `<button data-action="locate" data-id="${esc(m.id)}">🗺️ Map</button>`
         + `<button data-action="network" data-id="${esc(m.id)}">🕸️ Network</button>`
-        + `<button data-action="ties" data-id="${esc(m.id)}">🔗 Ties</button></div>`;
+        + `<button data-action="ties" data-id="${esc(m.id)}">🔗 Ties</button>`
+        + (Store.linksOf(m.id).some(l => /^(parent|spouse) of$/i.test(((Store.linkType(l.typeId) || {}).name || '').trim())) ? `<button data-action="family" data-id="${esc(m.id)}">🌳 Family</button>` : '')
+        + '</div>';
     }
     return out + '</div>';
   }

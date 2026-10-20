@@ -37,6 +37,7 @@ window.App = (() => {
     if (name === 'map') MapView.show();
     else if (name === 'ties') Ties.show();
     else if (name === 'network') Network.show();
+    else if (name === 'family') Family.show();
     else if (name === 'data') DataTab.show();
   }
   const currentTab = () => current;
@@ -53,12 +54,14 @@ window.App = (() => {
     else if (action === 'locate') { showTab('map'); MapView.locate(id); }
     else if (action === 'network') { showTab('network'); Network.setCenter(id); }
     else if (action === 'ties') { showTab('ties'); Ties.setHub(id); }
+    else if (action === 'family') { showTab('family'); Family.setRoot(id); }
     else if (action === 'view-photo') { e.preventDefault(); Photos.view(el.dataset.photo); }
     else if (action === 'change-border') { showTab('map'); Editor.changeBorderHere(id); }
     else if (action === 'goto-marker') {
       if (current === 'map') MapView.locate(id);
       else if (current === 'ties') Ties.select(id);
       else if (current === 'network') Network.select(id);
+      else if (current === 'family') Family.select(id);
       else Editor.open(id);
     }
   }
@@ -72,6 +75,7 @@ window.App = (() => {
       Editor.init();
       Ties.init();
       Network.init();
+      Family.init();
       DataTab.init();
       Photos.init().catch(err => console.warn('Photos failed to load', err));
       Sync.init();
