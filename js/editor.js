@@ -4,6 +4,9 @@ window.Editor = (() => {
   const { h, esc } = UI;
   let drawer, draft = null, id = null, isNew = false;
   let openFacts = new Set(); // fact ids whose full card is open (the rest show as one summary line)
+  let savedSnapshot = '';    // the draft as last opened or saved, to know whether closing would lose anything
+  const snapshot = () => JSON.stringify(draft);
+  const isDirty = () => !!draft && snapshot() !== savedSnapshot;
   const SECTIONS_KEY = 'chronomap.editorSections';
   function sectionState() { try { return JSON.parse(localStorage.getItem(SECTIONS_KEY)) || {}; } catch (e) { return {}; } }
   function setSectionOpen(key, open) { const st = sectionState(); st[key] = open; try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(st)); } catch (e) { /* ignore */ } }
@@ -48,6 +51,7 @@ window.Editor = (() => {
     id = markerId; isNew = false;
     draft = tidy(JSON.parse(JSON.stringify(m)));
     openFacts = new Set();
+    savedSnapshot = snapshot();
     safeRender();
     drawer.classList.remove('hidden');
     drawer.querySelector('[data-bind="name"]')?.focus();
@@ -60,6 +64,7 @@ window.Editor = (() => {
     openFacts = new Set(draft.facts.map(f => f.id));
     id = draft.id; isNew = true;
     applyCategoryFields();
+    savedSnapshot = snapshot();
     safeRender();
     drawer.classList.remove('hidden');
     const name = drawer.querySelector('[data-bind="name"]');
@@ -67,7 +72,8 @@ window.Editor = (() => {
   }
   function discardNew() { if (draft && isNew) Store.deleteMarker(id); }
   function isOpen() { return !!draft; }
-  function cancel() {
+  function cancel(force = false) {
+    if (!force && isDirty() && !confirm(isNew ? 'Close without saving this new marker?' : 'Close without saving your changes?')) return;
     discardNew();
     draft = null; id = null; isNew = false;
     drawer.classList.add('hidden'); drawer.innerHTML = '';
@@ -84,15 +90,20 @@ window.Editor = (() => {
     draft.name = draft.name.trim();
     draft.tags = (Array.isArray(draft.tags) ? draft.tags : String(draft.tags).split(',')).map(s => String(s).trim()).filter(Boolean);
     const wasNew = isNew, data = draft;
-    draft = null; id = null; isNew = false;
-    if (wasNew) Store.addMarker(data); else Store.updateMarker(data.id, data);
-    drawer.classList.add('hidden'); drawer.innerHTML = '';
+    draft = null; isNew = false; // the store event must not be taken for an outside change
+    const saved = wasNew ? Store.addMarker(data) : Store.updateMarker(data.id, data);
     UI.toast('Saved');
+    // stay open on the saved marker: derived dates, mirrored lines and time gaps refresh in place
+    const scroll = drawer.querySelector('.drawer-body')?.scrollTop || 0;
+    id = saved.id; draft = tidy(JSON.parse(JSON.stringify(saved)));
+    savedSnapshot = snapshot();
+    safeRender();
+    const body = drawer.querySelector('.drawer-body'); if (body) body.scrollTop = scroll;
   }
   function remove() {
     if (isNew) { cancel(); return; }
     if (!confirm(`Delete "${draft.name}" and all of its facts?`)) return;
-    const d = id; draft = null; id = null; isNew = false;
+    const d = id; draft = null; id = null; isNew = false; savedSnapshot = '';
     drawer.classList.add('hidden'); drawer.innerHTML = '';
     Store.deleteMarker(d);
   }
@@ -254,11 +265,11 @@ window.Editor = (() => {
     drawer.append(
       h('div', { class: 'drawer-head' }, h('h2', {}, isNew ? 'New marker' : 'Edit marker'), h('span', { class: 'spacer' }),
         h('button', { class: 'primary small', onclick: save }, 'Save'),
-        h('button', { class: 'icon-btn', title: 'Close without saving', onclick: cancel }, '✕')),
+        h('button', { class: 'icon-btn', title: 'Close', onclick: () => cancel() }, '✕')),
       body,
       h('div', { class: 'drawer-foot' },
         h('button', { class: 'primary', onclick: save }, 'Save'),
-        h('button', { onclick: cancel }, 'Cancel'),
+        h('button', { onclick: () => cancel(), title: 'Close the editor (asks first if there are unsaved changes)' }, 'Close'),
         h('span', { class: 'spacer' }),
         h('button', { class: 'danger', onclick: remove }, 'Delete')),
     );
