@@ -26,6 +26,9 @@ window.Facts = (() => {
     'Written by': { directed: true, fromLabel: 'document', toLabel: 'author', topSide: 'from', color: '#16a085' },
     'Present at': { directed: true, fromLabel: 'participant', toLabel: 'event', topSide: 'to', color: '#9b59b6' },
     'Member of': { directed: true, fromLabel: 'member', toLabel: 'organization', topSide: 'to', color: '#27ae60' },
+    // derived, never entered: two children of the same parent(s)
+    'Sibling of': { directed: false, color: '#f39c12' },
+    'Half-sibling of': { directed: false, color: '#f8c471' },
   };
   function seeds(tie) {
     const T = (id, name, extra) => Object.assign({ id, name, hasDate: true, hasEnd: false, place: 'any', roles: [], begins: false, ends: false, details: [], placeFrom: null }, extra);
@@ -76,6 +79,53 @@ window.Facts = (() => {
     for (const s of seeds(tie)) {
       if (d.factTypes.some(f => f.id === s.id) || dead.has('factTypes:' + s.id)) continue;
       d.factTypes.push(Object.assign({ updatedAt: 0 }, s));
+    }
+    tie('Sibling of'); tie('Half-sibling of');
+  }
+
+  // ---------- sex of a person (for brother/sister wording) ----------
+  // marker.sex ('male' | 'female' | '') or, failing that, a field called Sex or Gender.
+  function sexOf(m) {
+    if (m.sex === 'male' || m.sex === 'female') return m.sex;
+    for (const [k, v] of Object.entries(m.fields || {})) {
+      if (!/^(sex|gender)$/i.test(k.trim()) || typeof v !== 'string') continue;
+      const s = v.trim().toLowerCase();
+      if (/^(m|male|man|boy)$/.test(s)) return 'male';
+      if (/^(f|female|woman|girl)$/.test(s)) return 'female';
+    }
+    return '';
+  }
+  function siblingWord(sex, half) { return (half ? 'half-' : '') + (sex === 'male' ? 'brother' : sex === 'female' ? 'sister' : 'sibling'); }
+
+  // Sibling ties follow from "Parent of" ties: two markers with a parent in common are half-siblings,
+  // with both parents in common full siblings. Nothing is stored; the ties are rebuilt on every change.
+  function deriveSiblings(d, links) {
+    const parentTypes = new Set(d.linkTypes.filter(t => t.name.trim().toLowerCase() === 'parent of').map(t => t.id));
+    const full = d.linkTypes.find(t => t.name.trim().toLowerCase() === 'sibling of');
+    const half = d.linkTypes.find(t => t.name.trim().toLowerCase() === 'half-sibling of');
+    if (!parentTypes.size || !full || !half) return;
+    const parentsOf = new Map(); // child → Set(parent)
+    for (const l of links) {
+      if (!parentTypes.has(l.typeId) || l.fromId === l.toId) continue;
+      if (!parentsOf.has(l.toId)) parentsOf.set(l.toId, new Set());
+      parentsOf.get(l.toId).add(l.fromId);
+    }
+    const childrenOf = new Map();
+    for (const [c, ps] of parentsOf) for (const p of ps) { if (!childrenOf.has(p)) childrenOf.set(p, new Set()); childrenOf.get(p).add(c); }
+    const done = new Set();
+    const name = id => { const m = d.markers.find(x => x.id === id); return m ? m.name : '?'; };
+    for (const kids of childrenOf.values()) {
+      const list = [...kids].sort();
+      for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+        const a = list[i], b = list[j], key = a + '|' + b;
+        if (done.has(key)) continue; done.add(key);
+        const shared = [...parentsOf.get(a)].filter(p => parentsOf.get(b).has(p));
+        const isHalf = shared.length < 2;
+        const ma = d.markers.find(x => x.id === a), mb = d.markers.find(x => x.id === b);
+        links.push({ id: 'sib|' + key, typeId: isHalf ? half.id : full.id, fromId: a, toId: b, label: '', start: '', startMin: '', startMax: '', end: '', endMin: '', endMax: '',
+          note: (isHalf ? 'Shared parent: ' : 'Same parents: ') + shared.map(name).join(' and '), sourceId: null, page: '', factId: null, ownerId: null, roleName: '',
+          confidence: '', reason: '', derived: true, fromRole: siblingWord(sexOf(ma), isHalf), toRole: siblingWord(sexOf(mb), isHalf) });
+      }
     }
   }
 
@@ -202,6 +252,7 @@ window.Facts = (() => {
         }
       }
     }
+    deriveSiblings(d, links);
     d.links = links;
   }
 
@@ -212,5 +263,5 @@ window.Facts = (() => {
     return key ? DEFAULTS_BY_CATEGORY[key] : [];
   }
 
-  return { ensureSeeds, migrateV2, derive, when, factLabel, defaultTypeIdsFor, TIE_DEFAULTS };
+  return { ensureSeeds, migrateV2, derive, when, factLabel, defaultTypeIdsFor, sexOf, siblingWord, TIE_DEFAULTS };
 })();

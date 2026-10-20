@@ -29,7 +29,7 @@ window.Editor = (() => {
     catch (e) { console.error(e); UI.toast('Could not open the editor: ' + e.message, 'error'); throw e; }
   }
   function blankMarker() {
-    return { id: Store.uid(), name: 'New marker', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '',
+    return { id: Store.uid(), name: 'New marker', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '', sex: '',
       fields: {}, fieldSources: {}, fieldGrades: {}, facts: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [], pinned: [], undetermined: [], derived: {} };
   }
   function tidy(d) {
@@ -199,7 +199,8 @@ window.Editor = (() => {
         row(field('Colour', row(h('div', { class: 'narrow' }, colorInput), colorReset)),
             field('Icon (emoji)', txt('icon', m.icon, { placeholder: cat ? cat.icon : '📍', maxlength: 4 }))),
         h('div', { class: 'field' }, 'Portrait', renderPortrait()),
-        field('Summary (one line)', txt('summary', m.summary)),
+        row(field('Summary (one line)', txt('summary', m.summary)),
+            field('Sex (for brother/sister wording)', UI.select([['', '— not said —'], ['male', 'Male'], ['female', 'Female']], m.sex || '', { 'data-bind': 'sex', title: 'Used only to word derived sibling ties as brother or sister' }))),
       ),
       section('Facts',
         h('p', { class: 'hint' }, 'Everything that happened: when, where, with whom, and the source. Begins/Ends, locations and ties all follow from the facts.'),

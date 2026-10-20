@@ -37,7 +37,7 @@ window.Store = (() => {
   function normMove(mv) { return Object.assign({ id: uid(), date: '', lat: null, lng: null, coords: null, label: '', note: '', sourceId: null, page: '' }, mv || {}); }
   function normCitation(c) { return Object.assign({ sourceId: null, page: '', note: '' }, c || {}); }
   function normMarker(m) {
-    const out = Object.assign({ id: uid(), name: 'Untitled', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '',
+    const out = Object.assign({ id: uid(), name: 'Untitled', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '', sex: '',
       fields: {}, fieldSources: {}, fieldGrades: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [],
       pinned: [], undetermined: [], derived: {}, facts: undefined }, m || {});
     out.fieldGrades = out.fieldGrades || {};

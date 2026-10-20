@@ -159,17 +159,18 @@ window.UI = (() => {
     const isFrom = link.fromId === meId;
     const other = Store.marker(isFrom ? link.toId : link.fromId);
     if (!other) return '';
-    const tname = type ? type.name : 'Link';
+    const otherWord = isFrom ? link.toRole : link.fromRole; // derived sibling ties carry brother/sister words
+    const tname = otherWord ? otherWord.charAt(0).toUpperCase() + otherWord.slice(1) : (type ? type.name : 'Link');
     const color = type ? type.color : '#999';
     let arrow = '';
     if (type && type.directed) arrow = isFrom ? '→ ' : '← ';
-    const myRole = type ? (isFrom ? type.fromLabel : type.toLabel) : '';
-    const otherRole = type ? (isFrom ? type.toLabel : type.fromLabel) : '';
+    const myRole = otherWord ? '' : (type ? (isFrom ? type.fromLabel : type.toLabel) : '');
+    const otherRole = otherWord ? '' : (type ? (isFrom ? type.toLabel : type.fromLabel) : '');
     let dates = '';
     if (link.start || link.end) dates = ` <span class="muted">(${esc(Dates.formatInput(link.start))}${link.end ? ' – ' + esc(Dates.formatInput(link.end)) : (link.start ? ' →' : '')})</span>`;
     const label = link.label ? ` <span class="muted">· ${esc(link.label)}</span>` : '';
     const cite = link.sourceId ? ` ${citeHTML(link.sourceId, link.page)}` : '';
-    const note = (link.note ? `<div class="muted" style="font-size:11px">${textToHTML(link.note)}</div>` : '') + (cite ? `<div style="font-size:11px">${cite}</div>` : '');
+    const note = (link.note ? `<div class="muted" style="font-size:11px">${textToHTML(link.note)}${link.derived ? ' · follows from the Parent of ties' : ''}</div>` : '') + (cite ? `<div style="font-size:11px">${cite}</div>` : '');
     return `<li class="tie-row"><span class="swatch sm" style="background:${esc(color)};vertical-align:middle"></span> `
       + `<strong>${esc(tname)}</strong> ${arrow}<a class="mlink" data-action="goto-marker" data-id="${esc(other.id)}">${esc(other.name)}</a>`
       + (otherRole ? ` <span class="muted">(${esc(otherRole)})</span>` : '')

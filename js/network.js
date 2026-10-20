@@ -61,7 +61,7 @@ window.Network = (() => {
     const glinks = links.filter(l => dist.has(l.fromId) && dist.has(l.toId)).map(l => {
       const t = Store.linkType(l.typeId);
       return { id: l.id, source: l.fromId, target: l.toId, color: t ? t.color : '#999', directed: !!(t && t.directed), topSide: t ? t.topSide : 'from',
-        label: (t ? t.name : '') + (l.label ? ' · ' + l.label : ''), title: `${Store.marker(l.fromId).name} — ${t ? t.name : 'link'} — ${Store.marker(l.toId).name}${l.confidence ? '\n' + UI.CONFIDENCE_LABELS[l.confidence] + (l.reason ? ': ' + l.reason : '') : ''}${l.note ? '\n' + l.note : ''}`, confidence: l.confidence || '' };
+        label: (t ? t.name : '') + (l.label ? ' · ' + l.label : ''), title: `${Store.marker(l.fromId).name}${l.fromRole ? ' (' + l.fromRole + ')' : ''} — ${t ? t.name : 'link'} — ${Store.marker(l.toId).name}${l.toRole ? ' (' + l.toRole + ')' : ''}${l.confidence ? '\n' + UI.CONFIDENCE_LABELS[l.confidence] + (l.reason ? ': ' + l.reason : '') : ''}${l.note ? '\n' + l.note : ''}`, confidence: l.confidence || '' };
     });
     return { nodes, links: glinks };
   }

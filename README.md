@@ -140,6 +140,14 @@ path with a slash: `Born/Date, Born/Place`.
 (one-way, drawn as an arrow) or mutual. For directed types, "Top of hierarchy" says which end is drawn
 above the other in the Ties view.
 
+**Siblings follow from parents.** Two markers with a parent in common (through *Parent of* ties, which
+the Born fact's Father and Mother roles create) are tied as *Half-sibling of*; with both parents in
+common, *Sibling of*. These ties are never entered: they are rebuilt from the Parent of ties on every
+change, and disappear when a parent is removed. The bubble words them by the other person's **Sex**
+(set in the editor's Basics, or a field called Sex or Gender): *Brother*, *Sister*, *Half-brother*,
+*Half-sister*, or *Sibling* when the sex is not said. Until a child's second parent is entered, only
+one parent can be in common, so the tie reads as half; it becomes full when the second parent is added.
+
 **Source** – a book, document, website or witness, kept in a list on the Library tab. Sources attach to
 categories (default source), to markers (citations), to each fact, each field and each time gap.
 For a book, type its **ISBN** (the 10- or 13-digit number on the back cover) and press *Look up*:
