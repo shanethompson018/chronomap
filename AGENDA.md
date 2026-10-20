@@ -184,3 +184,34 @@ Going through these in order:
 
 - [x] Folded into item 4: the "where" of a fact (point, area, place marker, shape or route) lives on
       the fact itself, so a place is never entered twice and the map shows where each fact happened.
+
+## 7. Second round (20 Oct 2026)
+
+Raised after the first days of real data entry. Discussed before building; decisions recorded here as
+they are made.
+
+- [ ] **7.1 Cleaning up the bubble.**
+      - [ ] 7.1a A collapse / open button on the Facts section (and the same on Fields, Ties, Images and
+            Notes). Proposal: every section heading is a toggle with a count ("Facts (12) ▾"); the
+            bubble remembers which sections are open on this device; long sections start collapsed.
+      - [ ] 7.1b Descriptors shown on hover over the name they describe (the "(as Father)", "from
+            Isaac's Born fact", role words, reasons). Proposal: lines stay compact by default; hovering
+            a name shows the descriptor on the PC; because the Boox has no hover, a "Details" switch
+            at the top of the bubble reveals all descriptors, notes, reasons and citations at once.
+      - [ ] 7.1c Other ideas to make it more presentable (to choose from): an icon per fact type
+            (born, died, married, located…); dates in a column of their own; citations as small
+            numbers with a sources list at the foot; ties grouped by type with counts; portrait and
+            name as a proper header; a tab strip inside the bubble (Facts · Ties · Images) instead of
+            one long scroll; icon-only action buttons; a wider bubble on the PC.
+- [ ] **7.2 Save keeps the window open.** Pressing Save currently closes the editor (and the map bubble
+      is rebuilt). Wanted: stay open after Save, with the saved state shown.
+- [ ] **7.3 Library sub-tabs.** One strip of sub-tabs inside the Library: Google Drive sync, Time gaps,
+      Sources, Images, Categories, Fact types, Tie types, Markers, Backup & restore. The app remembers
+      the last one opened.
+- [ ] **7.4 Tie types: what "directed" means** (explained in chat 20 Oct 2026; see the README).
+- [ ] **7.5 Family tree: unlimited generations.** Typed number boxes for Up and Down, plus an "All"
+      choice, with the people count shown so a huge tree is a deliberate choice.
+- [ ] **7.6 Ties tab opens with nothing selected.** No tie type chosen on entry, so the whole graph is
+      never drawn by accident. Also a size guard: when a selection would draw more than a set number
+      of ties, show the count and a "Draw anyway" button instead of drawing at once. The same guard
+      for the Family tree and the Network view.
