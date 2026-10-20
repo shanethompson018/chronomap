@@ -237,7 +237,7 @@ window.DataTab = (() => {
     const used = new Map();
     Store.markers().forEach(m => m.facts.forEach(f => used.set(f.typeId, (used.get(f.typeId) || 0) + 1)));
     for (const t of Store.factTypes().slice().sort((a, b) => a.name.localeCompare(b.name))) {
-      const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}`; }).join(', ');
+      const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}` + (r.mirror === false ? ' (not shown on theirs)' : ` (theirs: ${r.mirrorWord || Facts.defaultMirrorWord(t, r)})`); }).join(', ');
       const implies = [t.begins ? 'begins' : null, t.ends ? 'ends' : null, t.placeFrom ? 'place from ' + ((t.roles.find(r => r.id === t.placeFrom) || {}).name || '?') : null].filter(Boolean).join(', ');
       tb.append(h('tr', {},
         h('td', {}, t.name),
@@ -253,7 +253,7 @@ window.DataTab = (() => {
     }
     return h('div', { class: 'data-section' },
       h('h2', {}, 'Fact types', h('span', { class: 'spacer' }), h('button', { class: 'small', onclick: () => editFactType(null) }, '+ Add fact type')),
-      h('p', { class: 'hint' }, 'What kinds of facts a marker can have, and what each kind means: whether it has a date (or a from/until span), what sort of place it can carry, which roles it names (each role makes a tie of the chosen type), and whether it begins or ends the marker.'),
+      h('p', { class: 'hint' }, 'What kinds of facts a marker can have, and what each kind means: whether it has a date (or a from/until span), what sort of place it can carry, which roles it names (each role makes a tie of the chosen type), and whether it begins or ends the marker. Each role also says how the fact reads on the other marker ("theirs: Killed" makes Cain show "Died · Killed: Abel"), and whether it is shown there at all.'),
       table);
   }
 
@@ -281,9 +281,15 @@ window.DataTab = (() => {
         });
         const dir = UI.select([['other-to-this', 'the other marker → this marker (Father: Adam → Seth)'], ['this-to-other', 'this marker → the other marker (Child: Adam → Seth)']], r.direction || 'this-to-other');
         dir.addEventListener('change', () => { r.direction = dir.value; });
+        const word = h('input', { type: 'text', value: r.mirrorWord || '', placeholder: Facts.defaultMirrorWord(Object.assign({ id: existing ? existing.id : '' }, t, { name: name.value.trim() || t.name || 'Fact' }), r),
+          title: 'The word used on the other marker, e.g. "Killed" so that Cain reads "Died · Killed: Abel". Three forms separated by slashes are chosen by the sex of the marker the fact is on: "Son/Daughter/Child".' });
+        word.addEventListener('input', () => { r.mirrorWord = word.value; });
+        const show = h('input', { type: 'checkbox', checked: r.mirror !== false });
+        show.addEventListener('change', () => { r.mirror = show.checked; });
         rolesHost.append(h('div', { class: 'card' },
           h('div', { class: 'ed-row' }, nm, tie, h('button', { class: 'small narrow', title: 'Remove role', onclick: () => { t.roles.splice(i, 1); renderRoles(); renderPlaceFrom(); } }, '✕')),
-          h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Tie direction', dir))));
+          h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Tie direction', dir)),
+          h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'On their marker as', word), h('label', { style: { alignSelf: 'end', whiteSpace: 'nowrap' } }, show, ' show on their marker'))));
       });
       rolesHost.append(h('button', { class: 'small', onclick: () => { t.roles.push({ id: Store.uid(), name: '', tieTypeId: null, direction: 'this-to-other' }); renderRoles(); renderPlaceFrom(); } }, '+ Add role'));
     }

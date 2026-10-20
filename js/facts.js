@@ -254,38 +254,57 @@ window.Facts = (() => {
       }
     }
     deriveSiblings(d, links);
-    deriveMirrors(d, links);
+    deriveMirrors(d);
     d.links = links;
   }
 
   // ---------- mirrored facts ----------
-  // A Born fact on Isaac naming Father: Abraham shows on Abraham's marker as "Son: Isaac"; a Had child fact on
-  // Adam naming Seth shows on Seth's as "Father: Adam"; a Married fact shows on the spouse as "Husband/Wife".
+  // A fact that names another marker in a role shows on that marker too: Isaac's Born fact (Father: Abraham)
+  // gives Abraham "Born · Son: Isaac"; Abel's Died fact (Killed by: Cain) gives Cain "Died · Killed: Abel".
+  // The heading is the original fact's name; the word comes from the role's "On their marker as" box
+  // (male/female/unknown forms separated by slashes, judged by the sex of the marker the fact is on).
   // Mirrors are derived from the original fact (never stored), so there is one place to type and correct.
-  function mirrorWord(tieName, ownerIsFrom, ownerSex) {
-    if (tieName === 'spouse of') return ownerSex === 'male' ? 'Husband' : ownerSex === 'female' ? 'Wife' : 'Spouse';
-    if (ownerIsFrom) return ownerSex === 'male' ? 'Father' : ownerSex === 'female' ? 'Mother' : 'Parent'; // the owner is the parent
-    return ownerSex === 'male' ? 'Son' : ownerSex === 'female' ? 'Daughter' : 'Child';                      // the owner is the child
+  const ROLE_WORDS = {
+    'ft_born:father': 'Son/Daughter/Child', 'ft_born:mother': 'Son/Daughter/Child', 'ft_had_child:child': 'Father/Mother/Parent',
+    'ft_married:spouse': 'Husband/Wife/Spouse', 'ft_founded:founder': 'Founded', 'ft_ruled_by:ruler': 'Ruled', 'ft_written:author': 'Wrote',
+    'ft_signed:document': 'Signatory', 'ft_present:event': 'Present', 'ft_member:org': 'Member',
+  };
+  function defaultMirrorWord(t, r) { return ROLE_WORDS[t.id + ':' + r.id] || t.name; }
+  function mirrorWordFor(t, r, ownerSex) {
+    const spec = (r.mirrorWord || '').trim() || defaultMirrorWord(t, r);
+    const parts = spec.split('/').map(x => x.trim()).filter(Boolean);
+    if (parts.length < 2) return spec;
+    if (ownerSex === 'male') return parts[0];
+    if (ownerSex === 'female') return parts[1];
+    return parts[2] || spec;
   }
-  function deriveMirrors(d, links) {
+  function deriveMirrors(d) {
     const tieName = new Map(d.linkTypes.map(t => [t.id, t.name.trim().toLowerCase()]));
     const byId = new Map(d.markers.map(m => [m.id, m]));
     for (const m of d.markers) m.mirrors = [];
-    for (const l of links) {
-      const tn = tieName.get(l.typeId);
-      if (!l.factId || !l.ownerId || (tn !== 'parent of' && tn !== 'spouse of')) continue;
-      const owner = byId.get(l.ownerId), other = byId.get(l.fromId === l.ownerId ? l.toId : l.fromId);
-      if (!owner || !other || owner === other) continue;
-      const f = (owner.facts || []).find(x => x.id === l.factId); if (!f) continue;
-      other.mirrors.push({ id: 'mirror|' + l.id, word: mirrorWord(tn, l.fromId === owner.id, sexOf(owner)), tie: tn, markerId: owner.id, factId: f.id, factTitle: factLabel(d, f),
-        date: l.start || '', dateMin: l.startMin || '', dateMax: l.startMax || '', dateEnd: l.end || '', dateEndMin: l.endMin || '', dateEndMax: l.endMax || '',
-        note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
+    for (const owner of d.markers) {
+      const sex = sexOf(owner);
+      for (const f of owner.facts || []) {
+        const t = typeOf(d, f); if (!t) continue;
+        const w = when(f);
+        for (const p of f.participants || []) {
+          const r = t.roles.find(x => x.id === p.roleId); if (!r || r.mirror === false) continue;
+          const other = byId.get(p.markerId); if (!other || other === owner) continue;
+          let place = f.placeLabel || '';
+          if (!place && f.where && f.where.kind === 'marker') { const o = byId.get(f.where.markerId); place = o ? o.name : ''; }
+          else if (!place && f.where && f.where.kind === 'point') place = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
+          else if (!place && f.where && f.where.coords) place = `${f.where.coords.length}-point ${f.where.kind}`;
+          other.mirrors.push({ id: `mirror|${f.id}|${r.id}|${other.id}`, word: mirrorWordFor(t, r, sex), roleId: r.id, markerId: owner.id, factId: f.id, factTitle: factLabel(d, f),
+            birth: tieName.get(r.tieTypeId) === 'parent of' && r.direction !== 'other-to-this', // the owner is the parent: this is the child's birth
+            date: w.date || '', dateMin: w.min || '', dateMax: w.max || '', dateEnd: t.hasEnd ? (w.dateEnd || '') : '', dateEndMin: t.hasEnd ? (w.endMin || '') : '', dateEndMax: t.hasEnd ? (w.endMax || '') : '',
+            place, details: Object.assign({}, f.details || {}), note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
+        }
+      }
     }
     // A parent's dated Had child fact is the child's birth when the child has no dated Begins of its own.
     for (const m of d.markers) {
       if (m.start) continue;
-      const births = m.mirrors.filter(x => x.tie === 'parent of' && (x.word === 'Father' || x.word === 'Mother' || x.word === 'Parent') && x.date && dayOf(x.date) != null)
-        .sort((a, b) => dayOf(a.date) - dayOf(b.date));
+      const births = m.mirrors.filter(x => x.birth && x.date && dayOf(x.date) != null).sort((a, b) => dayOf(a.date) - dayOf(b.date));
       if (!births.length) continue;
       const b = births[0];
       m.start = b.date; m.startMin = b.dateMin || b.date; m.startMax = b.dateMax || b.date;
@@ -300,5 +319,5 @@ window.Facts = (() => {
     return key ? DEFAULTS_BY_CATEGORY[key] : [];
   }
 
-  return { ensureSeeds, migrateV2, derive, when, factLabel, defaultTypeIdsFor, sexOf, siblingWord, TIE_DEFAULTS };
+  return { ensureSeeds, migrateV2, derive, when, factLabel, defaultTypeIdsFor, sexOf, siblingWord, defaultMirrorWord, mirrorWordFor, TIE_DEFAULTS };
 })();

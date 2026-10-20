@@ -148,14 +148,19 @@ path with a slash: `Born/Date, Born/Place`.
 (one-way, drawn as an arrow) or mutual. For directed types, "Top of hierarchy" says which end is drawn
 above the other in the Ties view.
 
-**Both sides of a family fact.** A fact typed on one marker shows on the other person's marker too,
-derived from the original rather than copied: Isaac's Born fact with Father: Abraham gives Abraham a
-*Son: Isaac* line; Adam's **Had child** fact naming Seth gives Seth a *Father: Adam* line; a Married
-fact gives the spouse a *Husband* or *Wife* line (Parent, Child or Spouse when the sex is not said).
+**Both sides of a fact.** A fact that names another marker in a role shows on that marker too,
+derived from the original rather than copied, with the same date, place, details, note, source and
+grade. The heading is the fact's own name and the relation word comes from the role: Isaac's Born fact
+with Father: Abraham gives Abraham *Born · Son: Isaac*; Adam's **Had child** fact naming Seth gives
+Seth *Born… Father: Adam*; a Married fact gives the spouse *Married · Husband: Abraham*; Abel's Died
+fact with a "Killed by: Cain" role gives Cain *Died · Killed: Abel*. The word is set per role in the
+Library's Fact types ("On their marker as"), with male/female/unknown forms separated by slashes
+("Son/Daughter/Child", judged by the sex of the marker the fact is on); a role can also be switched
+off there ("show on their marker"). A role you add yourself starts with the fact's name as the word.
 These lines sit among the marker's facts in the bubble and, greyed, at the end of the editor's Facts
 section with a button to open the marker where the fact was typed. Edit or delete the original and the
-mirrored line follows. A dated Had child fact also counts as the child's birth when the child has no
-dated Born fact of their own.
+mirrored line follows. A mirrored line never places anyone on the map. A dated Had child fact also
+counts as the child's birth when the child has no dated Born fact of their own.
 
 **Siblings follow from parents.** Two markers with a parent in common (through *Parent of* ties, which
 the Born fact's Father and Mother roles create) are tied as *Half-sibling of*; with both parents in

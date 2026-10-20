@@ -293,12 +293,16 @@ window.UI = (() => {
     return `<li>${line}</li>`;
   }
 
-  // One mirrored fact: "1 Jan 1901 BC · Son: Isaac · from Isaac's Born fact".
+  // One mirrored fact: "1 Jan 1901 BC · Born · Son: Isaac · Beersheba · from Isaac's Born fact".
   function mirrorLineHTML(mi) {
     const o = Store.marker(mi.markerId); if (!o) return '';
     const bits = [];
     if (mi.date) bits.push(esc(Dates.formatRange(mi.date, mi.dateMin, mi.dateMax)) + (mi.dateEnd ? ' – ' + esc(Dates.formatRange(mi.dateEnd, mi.dateEndMin, mi.dateEndMax)) : ''));
+    bits.push(`<strong>${esc(mi.factTitle)}</strong>`);
     bits.push(`<strong>${esc(mi.word)}</strong>: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(o.name)}</a>`);
+    if (mi.place) bits.push(esc(mi.place));
+    const details = Object.entries(mi.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
+    if (details) bits.push(`<span class="muted">${details}</span>`);
     let line = bits.join(' · ');
     if (mi.confidence) line += ' ' + gradeBadgeHTML(mi.confidence, mi.reason);
     if (mi.note) line += ` <span class="muted">– ${esc(mi.note)}</span>`;

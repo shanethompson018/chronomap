@@ -281,7 +281,7 @@ window.Editor = (() => {
         const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
         return h('div', { class: 'card fact-card mirror-card' },
           h('div', { class: 'row' },
-            h('span', {}, when, h('strong', {}, mi.word + ': '), o.name, h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact`)),
+            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact`)),
             h('button', { type: 'button', class: 'small narrow', title: `Open ${o.name} to edit that fact`, onclick: () => open(o.id) }, '✏️ ' + o.name)));
       }).filter(Boolean)];
   }
