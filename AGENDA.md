@@ -234,3 +234,12 @@ they are made.
       the start; the choice survives tab switches within a session, not a restart; the 🔗 Ties bubble
       button still opens that marker's group with all types. Size guard (300 markers) with a Draw
       button in Ties, Network and Family. Build order for section 7: 1, 2, 3 (+4), 5, 6.
+
+- [x] **7.7 Family tree: spouses on either side (raised 21 Oct 2026). Built 21 Oct 2026.** With several partners the marriage bars
+      stack under one box and the lines cross. Proposal: first partner on the person's left, second on the
+      right, each couple's children hanging from the line between them; a third partner goes beyond the
+      second, joined by a dotted line (the same person's next marriage), the fourth beyond the third, and
+      so on; their children hang from a short bar under that partner. Partner order: marriage date, else
+      first child's birth, else the order typed. Line styles: solid = Married fact, dashed = only share a
+      child, dotted = chain to a further partner. Applies to every person in the tree, not only the root.
+      Decided 21 Oct: alternate sides (third on the left beyond the first, fourth on the right beyond the second).

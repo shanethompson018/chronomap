@@ -101,8 +101,11 @@ drawing of more than 300 markers shows its size and a *Draw it* button instead o
 ### Family
 A family tree drawn from the *Parent of* and *Spouse of* ties, around one **root** person: parents and
 grandparents above (as far up as the *Up* setting), brothers and sisters beside, partners next to each
-person and their children hanging from the line between them (down to the *Down* setting). A solid
-line joins spouses; a dashed line joins two people who only share a child. Boxes show the portrait or
+person and their children hanging from the line between them (down to the *Down* setting). The first
+partner sits on the person's left and the second on the right; a third sits beyond the first, a fourth
+beyond the second, each joined to the previous partner by a dotted line, with their children hanging
+below them. Partners are ordered by marriage date, else by the first shared child's birth, else as
+typed. A solid line joins spouses; a dashed line joins two people who only share a child. Boxes show the portrait or
 icon, the name, the Begins and Ends dates and the sex. Click a person for their details; double-click
 to make them the root. The 🌳 Family button in a person's bubble opens the tree on them. *Up* and
 *Down* are typed numbers of generations, or *All* (the default) to follow the ties as far as they go;

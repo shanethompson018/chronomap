@@ -170,6 +170,7 @@ button.play.on { background: var(--accent); border-color: var(--accent); color: 
 .ft-line { fill: none; stroke: var(--muted); stroke-width: 1.5px; }
 .ft-line.marriage { stroke: #e84393; stroke-width: 2px; }
 .ft-line.dashed { stroke-dasharray: 5 4; }
+.ft-line.chain { stroke-dasharray: 1 5; stroke-linecap: round; stroke-width: 2.5px; }
 .ft-box { fill: var(--bg2); stroke-width: 2px; }
 .ft-node.root .ft-box { stroke-width: 4px; }
 .ft-node.selected .ft-box { fill: #2a3242; }

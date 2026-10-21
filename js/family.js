@@ -52,19 +52,29 @@ window.Family = (() => {
   function typeIds(name) { return new Set(Store.linkTypes().filter(t => t.name.trim().toLowerCase() === name).map(t => t.id)); }
   function rel() {
     const P = typeIds('parent of'), S = typeIds('spouse of');
-    const parents = new Map(), children = new Map(), spouses = new Map();
+    const parents = new Map(), children = new Map(), spouses = new Map(), wed = new Map();
     const push = (map, k, v) => { if (!map.has(k)) map.set(k, []); if (!map.get(k).includes(v)) map.get(k).push(v); };
+    const pair = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
     for (const l of Store.links()) {
       if (l.fromId === l.toId || !Store.marker(l.fromId) || !Store.marker(l.toId)) continue;
       if (P.has(l.typeId)) { push(parents, l.toId, l.fromId); push(children, l.fromId, l.toId); }
-      else if (S.has(l.typeId)) { push(spouses, l.fromId, l.toId); push(spouses, l.toId, l.fromId); }
+      else if (S.has(l.typeId)) {
+        push(spouses, l.fromId, l.toId); push(spouses, l.toId, l.fromId);
+        const d = l.start ? Dates.toDays(l.start) : null; const k = pair(l.fromId, l.toId);
+        if (d != null && (!wed.has(k) || d < wed.get(k))) wed.set(k, d);
+      }
     }
     const get = (map, k) => map.get(k) || [];
-    // partners: spouses first, then anyone else who shares a child
+    // partners in order: by marriage date, else by the first shared child's birth, else as typed
     const partners = id => {
       const out = get(spouses, id).slice();
       for (const c of get(children, id)) for (const p of get(parents, c)) if (p !== id && !out.includes(p)) out.push(p);
-      return out;
+      const key = p => {
+        const w = wed.get(pair(id, p)); if (w != null) return w;
+        const kids = get(children, id).filter(c => get(parents, c).includes(p));
+        const b = Math.min(...kids.map(born)); return isFinite(b) ? b : Infinity;
+      };
+      return out.map((p, i) => ({ p, i, k: key(p) })).sort((a, b) => a.k - b.k || a.i - b.i).map(x => x.p);
     };
     return { parents: id => get(parents, id), children: id => get(children, id), spouses: id => get(spouses, id), partners };
   }
@@ -78,22 +88,25 @@ window.Family = (() => {
   }
 
   // ---------- layout ----------
-  // Descendant unit: a person, their partners beside them, and each partner's children underneath.
+  // Descendant unit: a person with partners on either side (first on the left, second on the right, third beyond
+  // the first, fourth beyond the second…) and each couple's children underneath the line between them.
   function unit(R, id, depth, visited) {
-    const u = { id, persons: [id], groups: [], width: W };
+    const u = { id, persons: [id], left: [], right: [], groups: [], width: W };
     if (depth >= downLimit() || visited.has(id)) return u;
     const seen = new Set(visited).add(id);
     const kids = R.children(id);
     const parts = R.partners(id).filter(p => p !== id);
-    u.persons = [id, ...parts];
+    parts.forEach((p, i) => (i % 2 === 0 ? u.left : u.right).push(p)); // left[0] and right[0] sit beside the person
+    u.persons = [...u.left.slice().reverse(), id, ...u.right];
     const groupsBy = new Map(parts.map(p => [p, []]));
     const solo = [];
     for (const c of byBirth(kids)) {
       const other = R.parents(c).find(p => p !== id && groupsBy.has(p));
       (other ? groupsBy.get(other) : solo).push(c);
     }
-    const mk = (partner, list) => list.length ? { partner, married: partner ? R.spouses(id).includes(partner) : false, children: list.map(c => unit(R, c, depth + 1, seen)) } : null;
-    u.groups = [mk(null, solo), ...parts.map(p => mk(p, groupsBy.get(p)))].filter(Boolean);
+    const mk = (partner, list, chained) => list.length ? { partner, chained, married: partner ? R.spouses(id).includes(partner) : false, children: list.map(c => unit(R, c, depth + 1, seen)) } : null;
+    // groups left to right, in the same order as the partners sit, so the drops stay close to their couple
+    u.groups = [...u.left.map((p, j) => mk(p, groupsBy.get(p), j > 0)).reverse(), mk(null, solo, false), ...u.right.map((p, j) => mk(p, groupsBy.get(p), j > 0))].filter(Boolean);
     for (const gp of u.groups) gp.width = gp.children.reduce((s, c) => s + c.width, 0) + GX * (gp.children.length - 1);
     const personsW = u.persons.length * W + GX * (u.persons.length - 1);
     const childrenW = u.groups.reduce((s, gp) => s + gp.width, 0) + GX * Math.max(0, u.groups.length - 1);
@@ -117,9 +130,9 @@ window.Family = (() => {
     const boxes = [], lines = [];
     const place = (id, cx, y, extra = {}) => boxes.push(Object.assign({ id, x: cx - W / 2, y, cx, cy: y + H / 2 }, extra));
     // a bus: from a point (dropX, fromY) down to a bar above the children, then down into each child's box
-    const bus = (dropX, fromY, childY, childCxs, dashed) => {
+    const bus = (dropX, fromY, childY, childCxs, dashed, lift = 0) => {
       if (!childCxs.length) return;
-      const barY = childY - BUS;
+      const barY = childY - BUS - lift;
       lines.push({ d: `M${dropX},${fromY}V${barY}`, dashed });
       const lo = Math.min(dropX, ...childCxs), hi = Math.max(dropX, ...childCxs);
       if (hi > lo) lines.push({ d: `M${lo},${barY}H${hi}`, dashed });
@@ -129,26 +142,30 @@ window.Family = (() => {
       const personsW = u.persons.length * W + GX * (u.persons.length - 1);
       let px = x + (u.width - personsW) / 2 + W / 2;
       const cxOf = new Map();
-      u.persons.forEach((p, i) => { cxOf.set(p, px); place(p, px, y, i === 0 ? extra : { partner: true }); px += W + GX; });
+      u.persons.forEach(p => { cxOf.set(p, px); place(p, px, y, p === u.id ? extra : { partner: true }); px += W + GX; });
+      const me = cxOf.get(u.id), midY = y + H / 2;
+      // lines between neighbours: solid/dashed to the partner beside the person, dotted on to the next partner
+      for (const side of [u.left, u.right]) {
+        side.forEach((p, j) => {
+          const a = j === 0 ? me : cxOf.get(side[j - 1]), b = cxOf.get(p);
+          const x1 = Math.min(a, b) + W / 2, x2 = Math.max(a, b) - W / 2;
+          if (j === 0) lines.push({ d: `M${x1},${midY}H${x2}`, dashed: !(R.spouses(u.id).includes(p)), marriage: true });
+          else lines.push({ d: `M${x1},${midY}H${x2}`, chain: true });
+        });
+      }
       const childrenW = u.groups.reduce((s, gp) => s + gp.width, 0) + GX * Math.max(0, u.groups.length - 1);
       let gx = x + (u.width - childrenW) / 2;
-      let k = 0;
-      for (const gp of u.groups) {
-        const me = cxOf.get(u.id);
+      u.groups.forEach((gp, k) => {
         let dropX = me, fromY = y + H;
-        if (gp.partner) {
-          const pc = cxOf.get(gp.partner);
-          const barY = y + H + 6 + 6 * k++;
-          lines.push({ d: `M${me},${y + H}V${barY}H${pc}V${y + H}`, dashed: !gp.married, marriage: true });
-          dropX = (me + pc) / 2; fromY = barY;
-        }
+        if (gp.partner && !gp.chained) { dropX = (me + cxOf.get(gp.partner)) / 2; fromY = midY; } // from the line between the couple
+        else if (gp.partner) { dropX = cxOf.get(gp.partner); fromY = y + H; }                       // a further partner: from under their box
         const cxs = [];
         let cx = gx;
         for (const c of gp.children) { cxs.push(placeUnit(c, cx, y + ROW)); cx += c.width + GX; }
-        bus(dropX, fromY, y + ROW, cxs, !gp.partner && false);
+        bus(dropX, fromY, y + ROW, cxs, false, (k % 2) * 7);
         gx += gp.width + GX;
-      }
-      return cxOf.get(u.id);
+      });
+      return me;
     };
     // the pedigree above a person whose box is centred at cx, row y (parents go at y - ROW)
     const placePed = (n, x, y, childCx) => {
@@ -159,9 +176,8 @@ window.Family = (() => {
       for (const p of n.parents) { const c = sx + p.width / 2; cxs.push(c); place(p.id, c, py, { ancestor: true }); placePed(p, sx, py, c); sx += p.width + GX; }
       let dropX = cxs[0], fromY = py + H;
       if (cxs.length === 2) {
-        const barY = py + H + 6;
-        lines.push({ d: `M${cxs[0]},${py + H}V${barY}H${cxs[1]}V${py + H}`, dashed: !R.spouses(n.parents[0].id).includes(n.parents[1].id), marriage: true });
-        dropX = (cxs[0] + cxs[1]) / 2; fromY = barY;
+        lines.push({ d: `M${cxs[0] + W / 2},${py + H / 2}H${cxs[1] - W / 2}`, dashed: !R.spouses(n.parents[0].id).includes(n.parents[1].id), marriage: true });
+        dropX = (cxs[0] + cxs[1]) / 2; fromY = py + H / 2;
       }
       return { dropX, fromY };
     };
@@ -213,7 +229,7 @@ window.Family = (() => {
     empty.classList.add('hidden'); empty.classList.remove('ask');
     $('fam-stats').textContent = `${tree.count} people`;
     g.selectAll('path.ft-line').data(tree.lines).join('path')
-      .attr('class', d => 'ft-line' + (d.marriage ? ' marriage' : '') + (d.dashed ? ' dashed' : ''))
+      .attr('class', d => 'ft-line' + (d.marriage ? ' marriage' : '') + (d.dashed ? ' dashed' : '') + (d.chain ? ' marriage chain' : ''))
       .attr('d', d => d.d);
     const node = g.selectAll('g.ft-node').data(tree.boxes).join('g')
       .attr('class', d => 'ft-node' + (d.root ? ' root' : '') + (d.id === selectedId ? ' selected' : ''))
