@@ -180,6 +180,9 @@ button.play.on { background: var(--accent); border-color: var(--accent); color: 
 .ft-dates { font-size: 11px; fill: var(--muted); pointer-events: none; }
 .ft-sex { font-size: 11px; fill: var(--muted); pointer-events: none; }
 .link-label { font-size: 10px; fill: var(--muted); pointer-events: none; text-anchor: middle; paint-order: stroke; stroke: #12151b; stroke-width: 3px; }
+.link-label.bundle-label { font-size: 11px; font-weight: 700; fill: var(--text); }
+.link.bundle path:hover { stroke-opacity: .9; }
+.link.fanned path:hover { stroke-width: 3px; }
 .info-panel { width: 340px; flex: none; background: var(--bg2); border-left: 1px solid var(--border); overflow-y: auto; }
 
 /* ---------- info block (popup + panels) ---------- */
@@ -401,6 +404,7 @@ body.eink .info-actions button { font-size: 14px; }
 body.eink .graph { background: #fff; }
 body.eink .node-label { fill: #000; stroke: #fff; font-size: 13px; }
 body.eink .link-label { fill: #000; stroke: #fff; font-size: 11px; }
+body.eink .link.bundle path { stroke: #000; stroke-opacity: .35; }
 body.eink .ft-line { stroke: #000; stroke-width: 2px; }
 body.eink .ft-line.marriage { stroke: #000; }
 body.eink .ft-box { fill: #fff; stroke: #000; }

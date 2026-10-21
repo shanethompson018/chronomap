@@ -90,7 +90,10 @@ The Google side lives in a Google Cloud project owned by the same account; its c
 drawn by accident. Pick a tie type (e.g. *Signed by*) and optionally a centre marker
 (e.g. *Declaration of Independence*) to see just that group. Directed tie types are drawn as a
 hierarchy (family tree, org chart); undirected ones are scattered randomly. Drag nodes around, scroll
-to zoom, click a node to read about it.
+to zoom, click a node to read about it. Several ties between the same two markers fan out as curves,
+each with its own label and badge; more than five are drawn as one thick line with the count ("8
+ties") that opens into the fan when clicked and closes on another click. The Network tab draws the
+same way.
 
 ### Network
 Pick a centre marker and a number of degrees of separation. 1 shows its direct ties; 2 adds the ties of

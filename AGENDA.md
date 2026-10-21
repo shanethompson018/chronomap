@@ -243,3 +243,10 @@ they are made.
       first child's birth, else the order typed. Line styles: solid = Married fact, dashed = only share a
       child, dotted = chain to a further partner. Applies to every person in the tree, not only the root.
       Decided 21 Oct: alternate sides (third on the left beyond the first, fourth on the right beyond the second).
+
+- [x] **7.8 Ties and Network: several ties between the same two markers overlap (raised 21 Oct 2026). Built 21 Oct 2026.** Proposal:
+      ties between the same pair fan out as gentle curves (one up, one down, the next wider), each with
+      its own colour, arrowhead, label and badge on the bend; a single tie stays straight. Shared
+      drawing code, so both tabs get it. Decided 21 Oct: fan up to 5 ties; above 5 the pair is drawn as
+      one thick bundled line with the count on it ("8 ties"); clicking the bundle opens it into the fan
+      (click again to close). Expected volume unknown: the user will add many sources after the Bible.
