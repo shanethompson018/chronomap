@@ -285,6 +285,11 @@ gap** records exactly that: *Seth · Born = Adam · Born + 130 y*, with the sour
   the slider until you decide). Two year-precision dates in the same year are not a conflict.
 * Time gaps sync between devices like everything else, and every device recomputes the same results.
 
+**Approximate gaps.** Tick *approximate gap* and give the smallest and largest it could be ("at least
+500 y, at most 600 y"). The top box is the most likely gap and is what places the date; leave it
+blank and the app uses the middle of the range (550 y). Leave one limit blank for a one-sided gap
+("at least 500 y").
+
 ## Grading: Reliability and Confidence
 
 Two separate grades, judged independently, so that a weak source with one solid detail, or a strong

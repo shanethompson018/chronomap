@@ -154,7 +154,7 @@ window.Relations = (() => {
     const approxRow = h('div', { class: 'rel-approx hidden' },
       h('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px' } }, h('span', { class: 'muted', style: { flex: 'none', width: '70px' } }, 'at least'), minY, h('span', {}, 'y'), minM, h('span', {}, 'm'), minD, h('span', {}, 'd')),
       h('div', { class: 'row', style: { flexWrap: 'wrap', gap: '6px', marginTop: '4px' } }, h('span', { class: 'muted', style: { flex: 'none', width: '70px' } }, 'at most'), maxY, h('span', {}, 'y'), maxM, h('span', {}, 'm'), maxD, h('span', {}, 'd')),
-      h('p', { class: 'hint' }, 'Leave "at least" or "at most" blank for a one-sided limit; the most-likely gap above is what places the date.'));
+      h('p', { class: 'hint' }, 'The gap above is the most likely one and places the date; leave it blank to use the middle of this range. Leave "at least" or "at most" blank for a one-sided limit.'));
     approx.addEventListener('change', () => approxRow.classList.toggle('hidden', !approx.checked));
     const ownerId = thisRef.id;
     const markerSel = UI.markerSelect({ placeholder: 'Other marker…', onChange: fillSlots });
@@ -179,16 +179,25 @@ window.Relations = (() => {
       const otherKey = slotSel.value;
       if (!otherKey) { UI.toast('Pick the other date', 'error'); return; }
       const other = Store.parseRefKey(otherKey);
-      const Y = +yrs.value || 0, M = +mos.value || 0, D = +dys.value || 0;
-      if (!Y && !M && !D && !confirm('Save a time gap with no gap (the two dates are the same)?')) return;
+      let Y = +yrs.value || 0, M = +mos.value || 0, D = +dys.value || 0;
       const sign = dir.value === 'before' ? -1 : 1;
       let min = null, max = null;
       if (approx.checked) {
         const lo = [val(minY), val(minM), val(minD)], hi = [val(maxY), val(maxM), val(maxD)];
-        if (lo.some(v => v != null)) min = { years: sign * (lo[0] || 0), months: sign * (lo[1] || 0), days: sign * (lo[2] || 0) };
-        if (hi.some(v => v != null)) max = { years: sign * (hi[0] || 0), months: sign * (hi[1] || 0), days: sign * (hi[2] || 0) };
+        const hasLo = lo.some(v => v != null), hasHi = hi.some(v => v != null);
+        // the most-likely gap left blank: use the middle of the range (or the one limit given), so the
+        // reckoned date never sits outside its own range
+        if (!Y && !M && !D && (hasLo || hasHi)) {
+          const days = o => (o[0] || 0) * 365.25 + (o[1] || 0) * 30.4375 + (o[2] || 0);
+          const mid = hasLo && hasHi ? (days(lo) + days(hi)) / 2 : days(hasLo ? lo : hi);
+          Y = Math.floor(mid / 365.25); const rest = mid - Y * 365.25; M = Math.floor(rest / 30.4375); D = Math.round(rest - M * 30.4375);
+          if (D >= 30) { D = 0; M += 1; } if (M >= 12) { M = 0; Y += 1; }
+        }
+        if (hasLo) min = { years: sign * (lo[0] || 0), months: sign * (lo[1] || 0), days: sign * (lo[2] || 0) };
+        if (hasHi) max = { years: sign * (hi[0] || 0), months: sign * (hi[1] || 0), days: sign * (hi[2] || 0) };
         if (sign < 0) { const t = min; min = max; max = t; } // "before": the larger gap is the earlier date
       }
+      if (!Y && !M && !D && !confirm('Save a time gap with no gap (the two dates are the same)?')) return;
       // thisRef = other + offset  →  relation from=other, to=this
       Store.addRelation({ from: other, to: thisRef, years: sign * Y, months: sign * M, days: sign * D, min, max, sourceId: src, page: page.value, note: note.value, confidence: conf, reason: reason.value });
       m.close();
