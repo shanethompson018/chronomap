@@ -16,7 +16,19 @@ window.Relations = (() => {
   const key = ref => Store.refKey(ref);
   const push = (map, k, v) => { if (!map.has(k)) map.set(k, []); map.get(k).push(v); };
   const neg = o => ({ years: -o.years, months: -o.months, days: -o.days });
-  const likelyOf = r => ({ years: r.years, months: r.months, days: r.days });
+  // The most-likely gap. A gap saved with a range but no most-likely value (an older dialog allowed that)
+  // counts as the middle of its range, so the reckoned date never sits outside the range.
+  const toDays = o => (+o.years || 0) * 365.25 + (+o.months || 0) * 30.4375 + (+o.days || 0);
+  function fromDays(n) {
+    const sign = n < 0 ? -1 : 1; n = Math.abs(n);
+    let Y = Math.floor(n / 365.25); const rest = n - Y * 365.25; let M = Math.floor(rest / 30.4375); let D = Math.round(rest - M * 30.4375);
+    if (D >= 30) { D = 0; M += 1; } if (M >= 12) { M = 0; Y += 1; }
+    return { years: sign * Y, months: sign * M, days: sign * D };
+  }
+  const likelyOf = r => {
+    if (!r.years && !r.months && !r.days && (r.min || r.max)) return fromDays(r.min && r.max ? (toDays(r.min) + toDays(r.max)) / 2 : toDays(r.min || r.max));
+    return { years: r.years, months: r.months, days: r.days };
+  };
   const minOf = r => r.min || likelyOf(r);
   const maxOf = r => r.max || likelyOf(r);
   const dayOf = s => (s ? Dates.toDays(s) : null);
