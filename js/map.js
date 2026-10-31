@@ -163,7 +163,7 @@ window.MapView = (() => {
     if (hiddenCats.has(m.categoryId || '__none')) return false;
     if (sourceFilter && !Store.markerSourceIds(m).has(sourceFilter)) return false;
     if (search) {
-      const hay = (m.name + ' ' + (m.summary || '') + ' ' + (m.tags || []).join(' ') + ' ' + Object.values(m.fields || {}).join(' ')).toLowerCase();
+      const hay = (Store.allNames(m).join(' ') + ' ' + (m.summary || '') + ' ' + (m.tags || []).join(' ') + ' ' + Object.values(m.fields || {}).join(' ')).toLowerCase();
       if (!hay.includes(search)) return false;
     }
     return true;
@@ -280,7 +280,7 @@ window.MapView = (() => {
     return [Math.round(r * Math.cos(a)), Math.round(r * Math.sin(a))];
   }
   function pinIcon(m, color, icon, opts) {
-    const label = showLabels ? `<div class="pin-label">${UI.esc(m.name)}</div>` : '';
+    const label = showLabels ? `<div class="pin-label">${UI.esc(Store.nameAt(m, ignoreTime ? null : t))}</div>` : '';
     const photo = Photos.thumb(m.photoId);
     const inside = opts.inside ? ' pin-inside' : '';
     const dot = photo
@@ -321,7 +321,7 @@ window.MapView = (() => {
       if (geo.lat != null) ll = [+geo.lat, +geo.lng];
       else { const c = geo.coords.reduce((a, p) => [a[0] + +p[0], a[1] + +p[1]], [0, 0]); ll = [c[0] / geo.coords.length, c[1] / geo.coords.length]; }
       const opts = { opacity, inside: geo.inside || null, fan: fanOffset(fan), confidence: mv.confidence || '', reason: mv.reason || '' };
-      const sig = `${color}|${icon}|${m.name}|${showLabels}|${Photos.thumb(m.photoId) || ''}|${opacity.toFixed(2)}|${opts.inside || ''}|${opts.fan.join(',')}|${opts.confidence}|${opts.reason}`;
+      const sig = `${color}|${icon}|${Store.nameAt(m, ignoreTime ? null : t)}|${showLabels}|${Photos.thumb(m.photoId) || ''}|${opacity.toFixed(2)}|${opts.inside || ''}|${opts.fan.join(',')}|${opts.confidence}|${opts.reason}`;
       if (!rec) {
         const layer = L.marker(ll, { icon: pinIcon(m, color, icon, opts), riseOnHover: true });
         bindPopup(layer, m.id); layer.addTo(map);
@@ -436,7 +436,7 @@ window.MapView = (() => {
       else status = 'not at this time';
       const row = UI.h('div', { class: 'marker-row' + (on ? '' : ' off'), title: on ? 'Show on map' : 'Jump to when this marker first appears' },
         UI.h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m)),
-        UI.h('span', { class: 'name' }, m.name), UI.h('span', { class: 'status' }, status));
+        UI.h('span', { class: 'name' }, Store.displayName(m, ignoreTime ? null : t)), UI.h('span', { class: 'status' }, status));
       row.addEventListener('click', () => locate(m.id));
       host.append(row);
     }

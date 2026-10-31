@@ -177,6 +177,17 @@ section with a button to open the marker where the fact was typed. Edit or delet
 mirrored line follows. A mirrored line never places anyone on the map. A dated Had child fact also
 counts as the child's birth when the child has no dated Born fact of their own.
 
+**Other names.** An **Also named** fact on a person carries another name and its kind: nickname, later
+name, earlier name, other spelling or title, with the usual date, source, note and grade. The name in
+force at the slider's date is shown first and the others after it: "Abram, later Abraham" before the
+change, "Abraham, earlier Abram" after. Map labels use the name in force; the Family tree uses the
+latest. Pickers search every name and show "Abraham (also Abram)". The main name is never changed.
+
+**Telling namesakes apart.** When two markers share a name, lists, pickers and links add a tag after
+it: "Enoch (son of Cain)", from the Born fact's father (or mother), else the birth year, else the
+category. The editor's *Tell apart as* box overrides it with your own wording. Markers with a unique
+name stay plain.
+
 **Siblings follow from parents.** Two markers with a parent in common (through *Parent of* ties, which
 the Born fact's Father and Mother roles create) are tied as *Half-sibling of*; with both parents in
 common, *Sibling of*. These ties are never entered: they are rebuilt from the Parent of ties on every

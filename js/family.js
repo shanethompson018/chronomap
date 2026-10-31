@@ -251,10 +251,11 @@ window.Family = (() => {
         sel.append('text').attr('class', 'ft-ico-text').attr('x', 26).attr('y', H / 2).attr('dy', '0.35em').attr('text-anchor', 'middle').text(Store.displayIcon(m));
       }
       const sx = Facts.sexOf(m) === 'male' ? '♂' : Facts.sexOf(m) === 'female' ? '♀' : '';
-      sel.append('text').attr('class', 'ft-name').attr('x', 52).attr('y', 25).text(trim(m.name, 15));
-      sel.append('text').attr('class', 'ft-dates').attr('x', 52).attr('y', 44).text(trim([yr(m.start), yr(m.end)].filter(Boolean).join(' – '), 18));
+      sel.append('text').attr('class', 'ft-name').attr('x', 52).attr('y', 25).text(trim(Store.nameAt(m, null), 15));
+      const dates = [yr(m.start), yr(m.end)].filter(Boolean).join(' – ');
+      sel.append('text').attr('class', 'ft-dates').attr('x', 52).attr('y', 44).text(trim(dates || Store.tagOf(m), 18));
       if (sx) sel.append('text').attr('class', 'ft-sex').attr('x', W - 8).attr('y', 14).attr('text-anchor', 'end').text(sx);
-      sel.append('title').text(`${m.name}${m.summary ? '\n' + m.summary : ''}\nClick for details · double-click to make this the root`);
+      sel.append('title').text(`${Store.nameLine(m, null)}${Store.tagOf(m) ? ' (' + Store.tagOf(m) + ')' : ''}${m.summary ? '\n' + m.summary : ''}\nClick for details · double-click to make this the root`);
     });
     if (refit) fit();
     renderInfo();

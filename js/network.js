@@ -57,7 +57,7 @@ window.Network = (() => {
       if (d >= degrees) continue;
       for (const y of adj.get(x) || []) if (!dist.has(y)) { dist.set(y, d + 1); q.push(y); }
     }
-    const nodes = [...dist.keys()].map(id => { const m = Store.marker(id); return { id, label: m.name, color: Store.displayColor(m), icon: Store.displayIcon(m), image: Photos.thumb(m.photoId), center: id === centerId, degree: dist.get(id) }; });
+    const nodes = [...dist.keys()].map(id => { const m = Store.marker(id); return { id, label: m.name, title: Store.displayName(m), color: Store.displayColor(m), icon: Store.displayIcon(m), image: Photos.thumb(m.photoId), center: id === centerId, degree: dist.get(id) }; });
     const glinks = links.filter(l => dist.has(l.fromId) && dist.has(l.toId)).map(l => {
       const t = Store.linkType(l.typeId);
       return { id: l.id, source: l.fromId, target: l.toId, color: t ? t.color : '#999', directed: !!(t && t.directed), topSide: t ? t.topSide : 'from',

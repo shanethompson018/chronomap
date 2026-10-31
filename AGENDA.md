@@ -250,3 +250,18 @@ they are made.
       drawing code, so both tabs get it. Decided 21 Oct: fan up to 5 ties; above 5 the pair is drawn as
       one thick bundled line with the count on it ("8 ties"); clicking the bundle opens it into the fan
       (click again to close). Expected volume unknown: the user will add many sources after the Bible.
+
+- [x] **7.9 Telling apart people with the same name (raised 31 Oct 2026). Built 31 Oct 2026.** Proposal: when names collide, a
+      display-only tag after the name — "Enoch (son of Cain)" from the Born fact's father (else mother,
+      else birth year, else category) — with an optional "Tell apart as" box in Basics to override it.
+      Shown in pickers, the Map tab's marker list, the Library's Markers table, participant lines in the
+      editor and bubble, bubble links, and the Family tree box's second line when it has no dates; in
+      the Ties and Network hover text. Nothing is renamed. Decided 31 Oct: duplicates only for now.
+- [x] **7.10 Other names: nicknames, name changes, spellings, titles (raised 31 Oct 2026). Built 31 Oct 2026.** Proposal: a
+      seeded fact type "Also named" (details Name and Kind: nickname / later name / earlier name / other
+      spelling / title) with the usual date, source, page, note and grade; bubble header lists them
+      ("Abraham, earlier Abram"); pickers search every name and show "Abraham (also Abram)"; the 7.9
+      tag applies to other names too; the main name is untouched. Decided 31 Oct: names follow the
+      slider. The name in force at the slider's date is shown first and the others after it: before
+      2067 BC "Abram, later Abraham"; after it "Abraham, earlier Abram". Map labels and pins use the
+      name in force; the Family tree, which has no slider, uses the latest name.

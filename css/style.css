@@ -481,3 +481,4 @@ body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px soli
 .fact-grade { margin-top: 4px; }
 body.eink .grade-badge { background: #000; color: #fff; border-color: #fff; }
 body.eink .rel-grade { color: #000; }
+.info-tag { font-size: 12px; font-weight: 400; color: var(--muted); }

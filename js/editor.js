@@ -36,7 +36,7 @@ window.Editor = (() => {
     catch (e) { console.error(e); UI.toast('Could not open the editor: ' + e.message, 'error'); throw e; }
   }
   function blankMarker() {
-    return { id: Store.uid(), name: 'New marker', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '', sex: '',
+    return { id: Store.uid(), name: 'New marker', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '', sex: '', tellApart: '',
       fields: {}, fieldSources: {}, fieldGrades: {}, facts: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [], pinned: [], undetermined: [], derived: {} };
   }
   function tidy(d) {
@@ -240,6 +240,7 @@ window.Editor = (() => {
             field('Icon (emoji)', txt('icon', m.icon, { placeholder: cat ? cat.icon : '📍', maxlength: 4 }))),
         row(field('Summary (one line)', txt('summary', m.summary)),
             field('Sex (for brother/sister wording)', UI.select([['', '— not said —'], ['male', 'Male'], ['female', 'Female']], m.sex || '', { 'data-bind': 'sex', title: 'Used only to word derived sibling ties as brother or sister' }))),
+        field('Tell apart as (used only when another marker shares the name)', txt('tellApart', m.tellApart, { placeholder: (!isNew && Store.marker(m.id) && Store.tagOf(Object.assign({}, Store.marker(m.id), { tellApart: '' }))) || 'e.g. son of Cain — filled in from the father, birth year or category when blank' })),
       ),
       section('Facts', { key: 'facts', count: m.facts.length + mirrorCount, hint: 'Everything that happened: when, where, with whom, and the source. Begins/Ends, locations and ties all follow from the facts. Click a line to open or close its card.' },
         h('div', { id: 'ed-facts' }, renderFacts()),
@@ -324,7 +325,7 @@ window.Editor = (() => {
     const w = Facts.when(f);
     if (w.date) bits.push(Dates.formatRange(w.date, w.min, w.max) + (t && t.hasEnd && w.dateEnd ? ' – ' + Dates.formatRange(w.dateEnd, w.endMin, w.endMax) : ''));
     else if (f.dateMin || f.dateMax) bits.push(f.dateMin ? 'after ' + Dates.formatInput(f.dateMin) : 'before ' + Dates.formatInput(f.dateMax));
-    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${r ? r.name : 'with'}: ${o.name}` : ''; }).filter(Boolean).join(', ');
+    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${r ? r.name : 'with'}: ${Store.displayName(o)}` : ''; }).filter(Boolean).join(', ');
     let place = f.placeLabel || '';
     if (!place && f.where && f.where.kind === 'marker') place = (Store.marker(f.where.markerId) || {}).name || '';
     else if (!place && f.where && f.where.kind === 'point') place = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
@@ -378,7 +379,9 @@ window.Editor = (() => {
     if (detailKeys.length || true) {
       const rows = detailKeys.map(k => h('div', { class: 'kv-row' },
         h('input', { type: 'text', class: 'k', value: k, disabled: true }),
-        (() => { const e = h('input', { type: 'text', class: 'v', value: f.details[k] || '', placeholder: k }); e.addEventListener('input', () => { draft.facts[i].details[k] = e.value; }); return e; })(),
+        (() => {
+          if (t.id === 'ft_named' && k === 'Kind') { const e = UI.select(Store.NAME_KINDS.map(x => [x, x]), f.details[k] || 'nickname', { class: 'v' }); e.addEventListener('change', () => { draft.facts[i].details[k] = e.value; }); return e; }
+          const e = h('input', { type: 'text', class: 'v', value: f.details[k] || '', placeholder: t.id === 'ft_named' && k === 'Name' ? 'the other name, e.g. Abraham' : k }); e.addEventListener('input', () => { draft.facts[i].details[k] = e.value; }); return e; })(),
         h('button', { type: 'button', class: 'small', title: 'Remove detail', onclick: () => { delete draft.facts[i].details[k]; render(); } }, '✕')));
       card.append(h('div', { class: 'fact-details' }, ...rows,
         h('button', { type: 'button', class: 'small', onclick: () => { const k = prompt('Detail name (e.g. Cause, Outcome, Age):'); if (k && k.trim()) { draft.facts[i].details[k.trim()] = draft.facts[i].details[k.trim()] || ''; render(); } } }, '+ Detail')));
@@ -522,6 +525,7 @@ window.Editor = (() => {
     const f = { id: Store.uid(), typeId, label: '', date: '', dateEnd: '', where: null, placeLabel: '', participants: [], details: {}, note: '', sourceId: null, page: '' };
     const tt = MapView.time();
     if (t.hasDate !== false && tt != null && t.id !== 'ft_born' && t.id !== 'ft_died') f.date = '';
+    if (typeId === 'ft_named') f.details = { Name: '', Kind: 'nickname' };
     draft.facts.push(f);
     draft.facts.slice(-1).forEach(f => openFacts.add(f.id)); render();
     const cards = drawer.querySelectorAll('.fact-card');

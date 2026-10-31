@@ -47,7 +47,7 @@ window.Ties = (() => {
     } else {
       ids = new Set(); links.forEach(l => { ids.add(l.fromId); ids.add(l.toId); });
     }
-    const nodes = [...ids].map(id => { const m = Store.marker(id); return { id, label: m.name, color: Store.displayColor(m), icon: Store.displayIcon(m), image: Photos.thumb(m.photoId), center: id === hubId }; });
+    const nodes = [...ids].map(id => { const m = Store.marker(id); return { id, label: m.name, title: Store.displayName(m), color: Store.displayColor(m), icon: Store.displayIcon(m), image: Photos.thumb(m.photoId), center: id === hubId }; });
     const glinks = links.map(l => { const t = Store.linkType(l.typeId); return { id: l.id, source: l.fromId, target: l.toId, color: t ? t.color : '#999', directed: !!(t && t.directed), topSide: t ? t.topSide : 'from', label: l.label || (!all ? '' : (t ? t.name : '')), title: `${Store.marker(l.fromId).name}${l.fromRole ? ' (' + l.fromRole + ')' : ''} — ${t ? t.name : 'link'} — ${Store.marker(l.toId).name}${l.toRole ? ' (' + l.toRole + ')' : ''}${l.confidence ? '\n' + UI.CONFIDENCE_LABELS[l.confidence] + (l.reason ? ': ' + l.reason : '') : ''}${l.note ? '\n' + l.note : ''}`, confidence: l.confidence || '' }; });
     let lay = layout;
     if (lay === 'auto') lay = glinks.some(l => l.directed) ? 'tree' : 'random';

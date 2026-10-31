@@ -94,7 +94,7 @@ window.Graph = (() => {
       .attr('preserveAspectRatio', 'xMidYMid slice').attr('clip-path', d => `url(#${clipId(d)})`).style('pointer-events', 'none');
     nodeSel.filter(d => !d.image).append('text').attr('class', 'node-icon').attr('text-anchor', 'middle').attr('dy', '0.35em').text(d => d.icon || '');
     nodeSel.append('text').attr('class', 'node-label').attr('text-anchor', 'middle').attr('dy', R + 15).text(d => d.label);
-    nodeSel.append('title').text(d => d.label);
+    nodeSel.append('title').text(d => d.title || d.label);
     nodeSel.on('click', (e, d) => { e.stopPropagation(); onNodeClick && onNodeClick(d.id); });
 
     const S = d => (typeof d.source === 'object' ? d.source : byId.get(d.source));

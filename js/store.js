@@ -37,7 +37,7 @@ window.Store = (() => {
   function normMove(mv) { return Object.assign({ id: uid(), date: '', lat: null, lng: null, coords: null, label: '', note: '', sourceId: null, page: '' }, mv || {}); }
   function normCitation(c) { return Object.assign({ sourceId: null, page: '', note: '' }, c || {}); }
   function normMarker(m) {
-    const out = Object.assign({ id: uid(), name: 'Untitled', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '', sex: '',
+    const out = Object.assign({ id: uid(), name: 'Untitled', kind: 'pin', categoryId: null, color: '', icon: '', summary: '', description: '', sex: '', tellApart: '',
       fields: {}, fieldSources: {}, fieldGrades: {}, start: '', startLabel: '', end: '', endLabel: '', moves: [], sources: '', citations: [], tags: [], photoId: null, photoIds: [],
       pinned: [], undetermined: [], derived: {}, facts: undefined }, m || {});
     out.fieldGrades = out.fieldGrades || {};
@@ -188,6 +188,7 @@ window.Store = (() => {
   }
   function commit(evt) {
     Facts.derive(S); // Begins/Ends, locations and ties follow from facts
+    nameIndex = null;
     save();
     subs.forEach(fn => { try { fn(evt || { type: 'all' }); } catch (e) { console.error(e); } });
   }
@@ -289,6 +290,66 @@ window.Store = (() => {
   const photo = id => S.photos.find(p => p.id === id) || null;
   const settings = () => S.settings;
   const marker = id => S.markers.find(m => m.id === id) || null;
+
+  // ---------- names ----------
+  // Other names come from "Also named" facts (details Name and Kind). The name in force at a moment is shown
+  // first, the rest after it: "Abram, later Abraham" before the change, "Abraham, earlier Abram" after.
+  const NAME_KINDS = ['nickname', 'later name', 'earlier name', 'other spelling', 'title'];
+  function otherNames(m) {
+    return (m.facts || []).filter(f => f.typeId === 'ft_named' && f.details && String(f.details.Name || '').trim())
+      .map(f => ({ name: String(f.details.Name).trim(), kind: String(f.details.Kind || 'nickname').trim().toLowerCase(), date: f.date || '', day: f.date ? Dates.toDays(f.date) : null }));
+  }
+  const allNames = m => [m.name, ...otherNames(m).map(n => n.name)];
+  // The name in force at day t (null = the latest name).
+  function nameAt(m, t) {
+    const tt = t == null ? Infinity : t;
+    const names = otherNames(m);
+    const later = names.filter(n => n.kind === 'later name' && n.day != null && n.day <= tt).sort((a, b) => b.day - a.day);
+    if (later.length) return later[0].name;
+    const earlier = names.filter(n => n.kind === 'earlier name' && n.day != null && n.day > tt).sort((a, b) => a.day - b.day);
+    if (earlier.length) return earlier[0].name;
+    return m.name;
+  }
+  // "Abraham, earlier Abram, nicknamed X": the name in force, then the others with a word each.
+  function nameLine(m, t) {
+    const tt = t == null ? Infinity : t;
+    const cur = nameAt(m, t);
+    const parts = [];
+    const word = n => {
+      if (n.kind === 'later name') return n.day != null && n.day <= tt ? 'earlier' : 'later';
+      if (n.kind === 'earlier name') return n.day != null && n.day > tt ? 'later' : 'earlier';
+      if (n.kind === 'nickname') return 'nicknamed'; if (n.kind === 'other spelling') return 'also spelt'; if (n.kind === 'title') return 'titled';
+      return 'also';
+    };
+    if (cur !== m.name) {
+      // the main name is not the one in force: say which way round it is
+      const by = otherNames(m).find(n => n.name === cur);
+      parts.push((by && by.kind === 'earlier name' ? 'later ' : 'earlier ') + m.name);
+    }
+    for (const n of otherNames(m)) if (n.name !== cur && !parts.some(p => p.endsWith(' ' + n.name))) parts.push(word(n) + ' ' + n.name);
+    return cur + (parts.length ? ', ' + parts.join(', ') : '');
+  }
+  // Same-name tag: only when another marker shares one of this marker's names.
+  let nameIndex = null;
+  function buildNameIndex() {
+    nameIndex = new Map();
+    for (const m of S.markers) for (const n of new Set(allNames(m).map(x => x.toLowerCase()))) nameIndex.set(n, (nameIndex.get(n) || 0) + 1);
+  }
+  function hasNamesake(m) { if (!nameIndex) buildNameIndex(); return allNames(m).some(n => (nameIndex.get(n.toLowerCase()) || 0) > 1); }
+  function tagOf(m) {
+    if (!m || !hasNamesake(m)) return '';
+    if (m.tellApart && m.tellApart.trim()) return m.tellApart.trim();
+    const pt = S.linkTypes.filter(t => t.name.trim().toLowerCase() === 'parent of').map(t => t.id);
+    const parents = S.links.filter(l => pt.includes(l.typeId) && l.toId === m.id).map(l => marker(l.fromId)).filter(Boolean);
+    const father = parents.find(p => Facts.sexOf(p) === 'male') || parents[0];
+    if (father) { const sx = Facts.sexOf(m); return (sx === 'male' ? 'son of ' : sx === 'female' ? 'daughter of ' : 'child of ') + father.name; }
+    if (m.start) return 'b. ' + Dates.formatInput(m.start);
+    const c = category(m.categoryId); return c ? c.name : '';
+  }
+  // Name for lists and links: the name in force, plus the tag when there is a namesake.
+  function displayName(m, t) { if (!m) return ''; const tag = tagOf(m); return nameAt(m, t) + (tag ? ` (${tag})` : ''); }
+  const matchesName = (m, q) => allNames(m).some(n => n.toLowerCase().includes(q));
+  const otherNamesShown = m => { const cur = nameAt(m, null); return [...new Set(allNames(m))].filter(n => n !== cur); };
   const category = id => S.categories.find(c => c.id === id) || null;
   const linkType = id => S.linkTypes.find(t => t.id === id) || null;
   const link = id => S.links.find(l => l.id === id) || null;
@@ -617,7 +678,7 @@ window.Store = (() => {
   const syncCollections = () => SYNC_COLLS.slice();
 
   return {
-    load, subscribe, notify, uid,
+    load, subscribe, notify, uid, otherNames, allNames, nameAt, nameLine, tagOf, displayName, matchesName, otherNamesShown, NAME_KINDS,
     markers, categories, linkTypes, factTypes, links, sources, photos, relations, settings, marker, category, linkType, factType, link, source, photo, relation, linksOf, displayColor, displayIcon,
     sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
     refKey, parseRefKey, sameRef, factRef, slotOwner, refExists, slotValue, slotRange, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,

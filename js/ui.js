@@ -172,7 +172,7 @@ window.UI = (() => {
     const cite = link.sourceId ? ` ${citeHTML(link.sourceId, link.page)}` : '';
     const note = (link.note ? `<div class="muted" style="font-size:11px">${textToHTML(link.note)}${link.derived ? ' · follows from the Parent of ties' : ''}</div>` : '') + (cite ? `<div style="font-size:11px">${cite}</div>` : '');
     return `<li class="tie-row"><span class="swatch sm" style="background:${esc(color)};vertical-align:middle"></span> `
-      + `<strong>${esc(tname)}</strong> ${arrow}<a class="mlink" data-action="goto-marker" data-id="${esc(other.id)}">${esc(other.name)}</a>`
+      + `<strong>${esc(tname)}</strong> ${arrow}<a class="mlink" data-action="goto-marker" data-id="${esc(other.id)}">${esc(Store.displayName(other))}</a>`
       + (otherRole ? ` <span class="muted">(${esc(otherRole)})</span>` : '')
       + (myRole && !otherRole ? ` <span class="muted">(you: ${esc(myRole)})</span>` : '')
       + dates + label + note + '</li>';
@@ -188,7 +188,7 @@ window.UI = (() => {
     const profile = m.photoId && Store.photo(m.photoId) && Photos.url(m.photoId)
       ? `<img class="info-photo" src="${esc(Photos.thumb(m.photoId))}" alt="${esc(Store.photo(m.photoId).title)}" title="${esc(Store.photo(m.photoId).title)}" data-action="view-photo" data-photo="${esc(m.photoId)}">` : '';
     let out = `<div class="info">${profile}<div class="info-head"><span class="swatch" style="background:${esc(color)}">${esc(icon)}</span>`
-      + `<div><div class="info-name">${esc(m.name)}</div><div class="info-cat">${esc(cat ? cat.name : 'Uncategorised')} · ${kindName}</div></div></div>`;
+      + `<div><div class="info-name">${esc(Store.nameLine(m, t))}${Store.tagOf(m) ? ` <span class="info-tag">(${esc(Store.tagOf(m))})</span>` : ''}</div><div class="info-cat">${esc(cat ? cat.name : 'Uncategorised')} · ${kindName}</div></div></div>`;
     if (m.summary) out += `<div class="info-summary">${esc(m.summary)}</div>`;
 
     const rows = []; // [label, html, depth]
@@ -274,11 +274,11 @@ window.UI = (() => {
     const b = badge ? badge('fact:' + f.id) + (t && t.hasEnd && f.dateEnd ? badge('fact:' + f.id + ':end') : '') : '';
     const title = `<strong>${esc(f.label || (t ? t.name : 'Fact'))}</strong>`;
     let where = '';
-    if (f.where && f.where.kind === 'marker') { const o = Store.marker(f.where.markerId); if (o) where = `at <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(o.name)}</a>`; }
+    if (f.where && f.where.kind === 'marker') { const o = Store.marker(f.where.markerId); if (o) where = `at <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`; }
     else if (f.placeLabel) where = esc(f.placeLabel);
     else if (f.where && f.where.kind === 'point') where = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
     else if (f.where && f.where.coords) where = `${f.where.coords.length}-point ${f.where.kind}`;
-    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${esc(r ? r.name : 'with')}: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(o.name)}</a>` : ''; }).filter(Boolean).join(', ');
+    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${esc(r ? r.name : 'with')}: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>` : ''; }).filter(Boolean).join(', ');
     const details = Object.entries(f.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
     if (when) bits.push(when + b); else if (b) bits.push(b);
     bits.push(title);
@@ -299,7 +299,7 @@ window.UI = (() => {
     const bits = [];
     if (mi.date) bits.push(esc(Dates.formatRange(mi.date, mi.dateMin, mi.dateMax)) + (mi.dateEnd ? ' – ' + esc(Dates.formatRange(mi.dateEnd, mi.dateEndMin, mi.dateEndMax)) : ''));
     bits.push(`<strong>${esc(mi.factTitle)}</strong>`);
-    bits.push(`<strong>${esc(mi.word)}</strong>: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(o.name)}</a>`);
+    bits.push(`<strong>${esc(mi.word)}</strong>: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`);
     if (mi.place) bits.push(esc(mi.place));
     const details = Object.entries(mi.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
     if (details) bits.push(`<span class="muted">${details}</span>`);
@@ -319,18 +319,19 @@ window.UI = (() => {
     const list = h('div', { class: 'mselect-list hidden' });
     wrap.append(input, clear, list);
     let selected = value;
-    const setLabel = () => { const m = selected && Store.marker(selected); input.value = m ? m.name : ''; };
+    const setLabel = () => { const m = selected && Store.marker(selected); input.value = m ? Store.displayName(m) : ''; };
     setLabel();
     function render() {
       const q = input.value.trim().toLowerCase();
-      const items = Store.markers().filter(m => !exclude.includes(m.id) && (!q || m.name.toLowerCase().includes(q)))
+      const items = Store.markers().filter(m => !exclude.includes(m.id) && (!q || Store.matchesName(m, q)))
         .sort((a, b) => a.name.localeCompare(b.name)).slice(0, 60);
       list.innerHTML = '';
       for (const m of items) {
         list.append(h('div', {
           class: 'mselect-item',
           onmousedown: e => { e.preventDefault(); selected = m.id; setLabel(); list.classList.add('hidden'); input.blur(); onChange && onChange(m.id); }
-        }, h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m)), m.name,
+        }, h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m)), Store.displayName(m),
+          Store.otherNamesShown(m).length ? h('span', { class: 'muted' }, ' also ' + Store.otherNamesShown(m).join(', ')) : null,
           h('span', { class: 'muted' }, Store.category(m.categoryId)?.name || '')));
       }
       if (!items.length) list.append(h('div', { class: 'mselect-empty' }, 'No matches'));

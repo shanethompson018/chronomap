@@ -341,7 +341,7 @@ window.DataTab = (() => {
 
   function markersSection() {
     const q = search.toLowerCase();
-    const all = Store.markers().filter(m => !q || m.name.toLowerCase().includes(q) || (Store.category(m.categoryId)?.name || '').toLowerCase().includes(q))
+    const all = Store.markers().filter(m => !q || Store.matchesName(m, q) || (Store.category(m.categoryId)?.name || '').toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name));
     const shown = all.slice(0, 500);
     const searchBox = h('input', { type: 'search', placeholder: 'Filter…', value: search, style: { width: '220px' } });
@@ -352,7 +352,8 @@ window.DataTab = (() => {
     for (const m of shown) {
       tb.append(h('tr', {},
         h('td', { class: 'narrow' }, h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m))),
-        h('td', {}, h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => Editor.open(m.id) }, m.name)),
+        h('td', {}, h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => Editor.open(m.id) }, Store.displayName(m)),
+          Store.otherNamesShown(m).length ? h('div', { class: 'muted', style: { fontSize: '11px' } }, 'also ' + Store.otherNamesShown(m).join(', ')) : null),
         h('td', {}, Store.category(m.categoryId)?.name || h('span', { class: 'muted' }, '—')),
         h('td', {}, { pin: 'Point', area: 'Area', path: 'Route' }[m.kind] || m.kind),
         h('td', {}, m.start ? `${Dates.formatInput(m.start)}${m.startLabel ? ' (' + m.startLabel + ')' : ''}` : ''),

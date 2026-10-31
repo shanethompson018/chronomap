@@ -34,6 +34,7 @@ window.Facts = (() => {
     const T = (id, name, extra) => Object.assign({ id, name, hasDate: true, hasEnd: false, place: 'any', roles: [], begins: false, ends: false, details: [], placeFrom: null }, extra);
     return [
       T('ft_born', 'Born', { roles: [{ id: 'father', name: 'Father', tieTypeId: tie('Parent of'), direction: 'other-to-this' }, { id: 'mother', name: 'Mother', tieTypeId: tie('Parent of'), direction: 'other-to-this' }], begins: true }),
+      T('ft_named', 'Also named', { place: 'none', details: ['Name', 'Kind'] }),
       T('ft_had_child', 'Had child', { roles: [{ id: 'child', name: 'Child', tieTypeId: tie('Parent of'), direction: 'this-to-other' }] }),
       T('ft_died', 'Died', { ends: true, details: ['Cause'] }),
       T('ft_located', 'Located at', { hasEnd: true }),
@@ -55,7 +56,7 @@ window.Facts = (() => {
   }
   // Which seeded types a category offers first, by the category's name (a fallback when it lists none).
   const DEFAULTS_BY_CATEGORY = {
-    person: ['ft_born', 'ft_had_child', 'ft_died', 'ft_located', 'ft_married', 'ft_present', 'ft_member', 'ft_signed', 'ft_note'],
+    person: ['ft_born', 'ft_named', 'ft_had_child', 'ft_died', 'ft_located', 'ft_married', 'ft_present', 'ft_member', 'ft_signed', 'ft_note'],
     event: ['ft_took_place', 'ft_located', 'ft_note'],
     document: ['ft_written', 'ft_adopted', 'ft_located', 'ft_note'],
     organization: ['ft_founded', 'ft_destroyed', 'ft_located', 'ft_ruled_by', 'ft_note'],
