@@ -1,10 +1,11 @@
 /* Service worker: keeps the app files (and the two libraries) cached so Chrono Map opens offline and
  * installs to the home screen. Map tiles and Google APIs always go straight to the network.
- * Bump VERSION when you want every device to drop its old cache on the next visit. */
-const VERSION = 'chronomap-v1';
+ * VERSION is stamped by tools/stamp_release.py before every commit, so each release installs as a new worker: the
+ * app then reloads itself (or offers Reload while something is being edited) and every file is fresh. */
+const VERSION = 'chronomap-202611011931';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
-  './js/config.js', './js/dates.js', './js/ui.js', './js/isbn.js', './js/sample.js', './js/facts.js', './js/store.js', './js/photos.js', './js/relations.js', './js/graph.js', './js/map.js', './js/overlay.js',
+  './js/config.js', './js/version.js', './js/dates.js', './js/ui.js', './js/isbn.js', './js/sample.js', './js/facts.js', './js/store.js', './js/photos.js', './js/relations.js', './js/graph.js', './js/map.js', './js/overlay.js',
   './js/editor.js', './js/ties.js', './js/network.js', './js/family.js', './js/data.js', './js/sync.js', './js/app.js',
   './assets/chronomap.png', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
@@ -13,7 +14,8 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(SHELL.map(u => c.add(u)))).then(() => self.skipWaiting()));
+  // cache: 'reload' bypasses the browser's HTTP cache, so a new worker never precaches a stale file
+  e.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(SHELL.map(u => c.add(new Request(u, { cache: 'reload' }))))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -35,7 +37,7 @@ self.addEventListener('fetch', e => {
   }
   // Everything else: serve from cache at once, refresh the cache in the background.
   e.respondWith(caches.match(req).then(cached => {
-    const net = fetch(req).then(r => { if (r && r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return r; }).catch(() => cached);
+    const net = fetch(new Request(req, { cache: 'no-cache' })).then(r => { if (r && r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return r; }).catch(() => cached);
     return cached || net;
   }));
 });

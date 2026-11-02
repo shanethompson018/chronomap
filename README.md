@@ -364,6 +364,7 @@ js/data.js        Library tab
 js/photos.js      photo library (images in IndexedDB), picker, lightbox
 js/sync.js        Google Drive sync (sign-in, Drive folder, per-record merge, photos)
 js/config.js      deployment settings (Google client ID)
+js/version.js     release stamp (written by tools/stamp_release.py before each commit; shown in Library → Backup)
 js/app.js         tabs, e-ink mode, start-up, service worker registration
 manifest.webmanifest  installable-app description (name, icons)
 sw.js             service worker: offline cache of the app files

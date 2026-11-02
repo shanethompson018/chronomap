@@ -116,14 +116,24 @@ window.App = (() => {
   // Browsers only allow this over https or localhost, so it is skipped when opened as a file.
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    // A new release installs as a new worker. If nothing is being edited the page reloads itself so every file
+    // is from the same release; otherwise a toast offers Reload.
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      const busy = (window.Editor && Editor.isOpen()) || (window.MapView && MapView.isPicking());
+      if (!busy) { reloading = true; location.reload(); }
+      else { const t = UI.h('div', { class: 'toast' }, 'A new version of Chrono Map is ready. ', UI.h('button', { class: 'small', onclick: () => location.reload() }, 'Reload')); document.getElementById('toast-host').append(t); }
+    });
     navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.update().catch(() => {}); // check for a new release on every open
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
         if (!nw) return;
         nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            const t = UI.h('div', { class: 'toast' }, 'A new version of Chrono Map is ready. ', UI.h('button', { class: 'small', onclick: () => location.reload() }, 'Reload'));
-            document.getElementById('toast-host').append(t);
+          if (nw.state === 'installed' && navigator.serviceWorker.controller && !reloading) {
+            const busy = (window.Editor && Editor.isOpen()) || (window.MapView && MapView.isPicking());
+            if (busy) { const t = UI.h('div', { class: 'toast' }, 'A new version of Chrono Map is ready. ', UI.h('button', { class: 'small', onclick: () => location.reload() }, 'Reload')); document.getElementById('toast-host').append(t); }
           }
         });
       });

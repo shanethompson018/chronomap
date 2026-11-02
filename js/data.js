@@ -372,6 +372,7 @@ window.DataTab = (() => {
   }
 
   function backupSection() {
+    const version = h('p', { class: 'muted', style: { fontSize: '12px' } }, `Chrono Map version ${window.ChronoVersion || 'unknown'} · every device should show the same version after a reload`);
     const mode = UI.select([['merge', 'Merge into current data (update matching ids)'], ['replace', 'Replace everything']], 'merge');
     const file = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } });
     file.addEventListener('change', () => {
@@ -402,6 +403,7 @@ window.DataTab = (() => {
     const size = (localStorage.getItem('chronomap.v1') || '').length;
     return h('div', { class: 'data-section' },
       h('h2', {}, 'Backup & restore'),
+      version,
       h('p', { class: 'hint' }, `Everything is saved automatically in this browser (${(size / 1024).toFixed(0)} KB of data plus ${(Photos.totalBytes() / (1024 * 1024)).toFixed(1)} MB of photos). Export a JSON file regularly to keep a copy, move between computers, or share a dataset.`),
       h('div', { class: 'backup-row' },
         exportBtn, h('label', { style: { display: 'flex', gap: '4px', alignItems: 'center' } }, withPhotos, ' include photos'),
