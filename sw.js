@@ -2,7 +2,7 @@
  * installs to the home screen. Map tiles and Google APIs always go straight to the network.
  * VERSION is stamped by tools/stamp_release.py before every commit, so each release installs as a new worker: the
  * app then reloads itself (or offers Reload while something is being edited) and every file is fresh. */
-const VERSION = 'chronomap-202611011940';
+const VERSION = 'chronomap-202611011949';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/config.js', './js/version.js', './js/dates.js', './js/ui.js', './js/isbn.js', './js/sample.js', './js/facts.js', './js/store.js', './js/photos.js', './js/relations.js', './js/graph.js', './js/map.js', './js/overlay.js',

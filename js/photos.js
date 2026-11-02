@@ -157,7 +157,7 @@ window.Photos = (() => {
       const grid = h('div', { class: 'photo-grid' });
       const fileInput = h('input', { type: 'file', accept: 'image/*', multiple: true, style: { display: 'none' } });
       const status = h('span', { class: 'muted' });
-      const done = ids => { m.close(); resolve(ids); };
+      const done = ids => { resolve(ids); m.close(); }; // resolve first: closing the dialog also fires onClose, which resolves [] (cancel)
       const okBtn = h('button', { class: 'primary', disabled: true, onclick: () => done([...chosen]) }, multi ? 'Add selected' : 'Use this photo');
       function refresh() {
         grid.innerHTML = '';
