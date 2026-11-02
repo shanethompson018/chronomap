@@ -53,10 +53,14 @@ window.Overlay = (() => {
     return worst;
   }
   // With no control points the picture is simply shown in the middle of the view, 60% of its width.
+  // First placement: centred in the part of the map the panel does not cover, so the picture is in plain view.
   function defaultAffine() {
     const m = map(), size = m.getSize(), z = m.getZoom();
-    const w = size.x * 0.6, s = w / img.width;
-    const p0 = m.project(m.containerPointToLatLng([(size.x - w) / 2, (size.y - img.height * s) / 2]), 0);
+    const box = panel && panel.box && panel.box.isConnected ? panel.box.getBoundingClientRect() : null;
+    const cont = m.getContainer().getBoundingClientRect();
+    const freeW = box ? Math.max(size.x * 0.4, box.left - cont.left - 12) : size.x;
+    const w = Math.min(freeW * 0.85, size.x * 0.6), s = Math.min(w / img.width, (size.y * 0.8) / img.height);
+    const p0 = m.project(m.containerPointToLatLng([(freeW - img.width * s) / 2, (size.y - img.height * s) / 2]), 0);
     const k = s / m.getZoomScale(z, 0);
     return [k, 0, 0, k, p0.x, p0.y];
   }
@@ -316,6 +320,9 @@ window.Overlay = (() => {
     const body = h('div', { class: 'overlay-panel' });
     panel = UI.modal({ title: 'Picture overlay', body, width: '380px', side: true, onClose: () => { panel = null; } });
     panel.body = body;
+    // the title folds the panel down to its bar, so the map underneath can be seen on a small screen
+    const head = panel.box.querySelector('.modal-head h2'); head.title = 'Fold the panel away / open it again';
+    head.addEventListener('click', () => panel.box.classList.toggle('collapsed'));
     renderPanel();
   }
   function renderPanel() {

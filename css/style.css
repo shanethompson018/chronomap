@@ -462,8 +462,12 @@ body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px soli
 /* ---------- rough borders: numbered corners while editing ---------- */
 .vertex-num { background: none; border: none; }
 .vertex-num span { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #ffb84f; color: #1a1200; font-size: 11px; font-weight: 700; border: 1px solid #1a1200; }
-.modal-overlay.side-modal { justify-content: flex-start; align-items: flex-start; background: none; pointer-events: none; }
-.modal-overlay.side-modal .modal { pointer-events: auto; margin: 60px 0 0 300px; max-height: calc(100% - 80px); }
+.modal-overlay.side-modal { justify-content: flex-end; align-items: flex-start; background: none; pointer-events: none; }
+.modal-overlay.side-modal .modal { pointer-events: auto; margin: 60px 12px 0 0; max-height: calc(100% - 80px); width: min(380px, calc(100vw - var(--side-w, 280px) - 180px)); }
+.modal-overlay.side-modal .modal-head h2 { cursor: pointer; }
+.modal-overlay.side-modal .modal-head h2::before { content: '▾ '; color: var(--muted); font-size: 12px; }
+.modal-overlay.side-modal .modal.collapsed .modal-head h2::before { content: '▸ '; }
+.modal-overlay.side-modal .modal.collapsed .modal-body { display: none; }
 
 /* ---------- grading: Confidence badges and Reliability tags ---------- */
 .grade-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 50%; font-size: 9px; font-weight: 700; color: #fff; border: 1.5px solid #fff; vertical-align: middle; cursor: help; line-height: 1; }

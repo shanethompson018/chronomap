@@ -258,7 +258,8 @@ An old map, a scanned atlas page or a photograph of a wall map can be laid over 
 Press **Picture overlay…** in the Map sidebar.
 
 1. **Choose the picture** from the image library (or upload it on the spot). It appears see-through in
-   the middle of the view.
+   the part of the map the panel does not cover. The panel sits at the right edge; click its title to
+   fold it down to a bar when it is in the way, and again to open it.
 2. **Line it up** with control points: press *Add control point*, click a spot you can recognise on
    the picture (a city, a cape, a river mouth), then click the same spot on the real map underneath.
    Two points fit the picture's scale, rotation and position; a third also corrects stretch and skew,
