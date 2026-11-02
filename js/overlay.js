@@ -105,11 +105,17 @@ window.Overlay = (() => {
   }
 
   // ---------- choosing and loading the picture ----------
+  let status = ''; // what the last load did, shown in the panel until the next one
+  function setStatus(msg) { status = msg; renderPanel(); }
+  const decodeWithImage = blob => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('the browser could not decode this picture')); i.src = URL.createObjectURL(blob); });
   async function load(id) {
     const p = Store.photo(id); if (!p) return;
+    status = '';
     const blob = await Photos.getBlob(id);
-    if (!blob) { UI.toast('That image has not been downloaded to this device yet (sync first)', 'error'); return; }
-    img = await (window.createImageBitmap ? createImageBitmap(blob) : new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(blob); }));
+    if (!blob) { setStatus(`"${p.title || 'This picture'}" has a record here but its file has not reached this device yet. Press Sync, wait for "Synced", then choose it again.`); UI.toast('That image has not been downloaded to this device yet (sync first)', 'error'); return; }
+    try { img = window.createImageBitmap ? await createImageBitmap(blob) : await decodeWithImage(blob); }
+    catch (e) { img = await decodeWithImage(blob); } // some browsers refuse createImageBitmap for a type they can still draw
+    if (!img || !img.width) throw new Error('the picture decoded to nothing (' + (blob.type || 'unknown type') + ', ' + Math.round(blob.size / 1024) + ' KB)');
     pixels = null; photoId = id; hidden = false;
     points = Array.isArray(p.georef) ? p.georef.map(c => ({ u: +c.u, v: +c.v, lat: +c.lat, lng: +c.lng })) : [];
     affine = null;
@@ -329,14 +335,15 @@ window.Overlay = (() => {
     if (!panel || !panel.body) return;
     const body = panel.body; body.innerHTML = '';
     const p = uiPhoto();
-    const choose = async () => { const [pid] = await Photos.pick(); if (pid) { try { await load(pid); } catch (e) { UI.toast('Could not load that image: ' + e.message, 'error'); } } };
+    const choose = async () => { const [pid] = await Photos.pick(); if (pid) { try { await load(pid); } catch (e) { console.error(e); setStatus('Could not load that picture: ' + e.message); UI.toast('Could not load that image: ' + e.message, 'error'); } } };
     body.append(h('p', { class: 'hint' }, 'Lay a picture of a map over the real map, line it up with two or three known spots, then draft borders straight from the picture. Nothing is guessed: outlines come from the pixels you click, and you correct them by hand.'));
     body.append(h('div', { class: 'row', style: { alignItems: 'center', gap: '8px' } },
       p ? Photos.thumbEl(p, 48) : null,
       h('span', { style: { flex: '1' } }, p ? (p.title || 'Untitled image') : h('span', { class: 'muted' }, 'No picture chosen')),
       h('button', { class: 'small', onclick: choose }, p ? 'Change…' : 'Choose picture…'),
       p ? h('button', { class: 'small', title: 'Take the picture off the map', onclick: remove }, '✕') : null));
-    if (!p) { body.append(h('p', { class: 'muted', style: { fontSize: '12px' } }, 'Upload the source\'s map into the image library first (Library tab → Images), or choose it here and upload on the spot.')); return; }
+    if (status) body.append(h('p', { class: 'overlay-status', style: { fontSize: '12px', color: 'var(--danger)', margin: '4px 0 8px' } }, status));
+    if (!p) { body.append(h('p', { class: 'muted', style: { fontSize: '12px' } }, 'Upload the source\'s map into the image library first (Library tab → Images), or choose it here and upload on the spot. Clicking a picture in the chooser picks it at once.')); return; }
     const op = h('input', { type: 'range', min: 10, max: 100, value: Math.round(opacity * 100), style: { flex: '1' } });
     op.addEventListener('input', () => { opacity = +op.value / 100; if (layer) layer._draw(); });
     const hideBtn = h('button', { class: 'small', onclick: () => { hidden = !hidden; if (layer) layer._draw(); drawMarks(); renderPanel(); } }, hidden ? 'Show' : 'Hide');
