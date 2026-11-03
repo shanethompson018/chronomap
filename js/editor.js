@@ -119,6 +119,10 @@ window.Editor = (() => {
     let obj = draft;
     for (let i = 0; i < parts.length - 1; i++) obj = obj[parts[i]];
     const key = parts[parts.length - 1];
+    if ((key === 'lat' || key === 'lng') && val !== '' && isNaN(+val)) {
+      const p = UI.parseLatLng(val); // a whole position pasted into one box ("31.7683, 35.2137" or degrees) fills both
+      if (p) { obj.lat = p.lat; obj.lng = p.lng; if (e.type === 'change') render(); return; }
+    }
     if (key === 'lat' || key === 'lng') val = val === '' ? null : (isNaN(+val) ? obj[key] : +val);
     obj[key] = val;
     if (path === 'categoryId' && e.type === 'change') { applyCategoryFields(); render(); }
@@ -407,7 +411,7 @@ window.Editor = (() => {
     });
     const parts = [h('div', { class: 'narrow', style: { minWidth: '150px' } }, kindSel)];
     if (w && w.kind === 'point') {
-      parts.push(h('input', { type: 'text', 'data-bind': `facts.${i}.where.lat`, value: w.lat ?? '', placeholder: 'lat' }), h('input', { type: 'text', 'data-bind': `facts.${i}.where.lng`, value: w.lng ?? '', placeholder: 'lng' }),
+      parts.push(h('input', { type: 'text', 'data-bind': `facts.${i}.where.lat`, value: w.lat ?? '', placeholder: 'lat', title: 'Latitude in decimal degrees (south is negative). A whole position pasted here, such as 31.7683, 35.2137 or 31\u00b046\u2032N 35\u00b013\u2032E, fills both boxes.' }), h('input', { type: 'text', 'data-bind': `facts.${i}.where.lng`, value: w.lng ?? '', placeholder: 'lng', title: 'Longitude in decimal degrees (west is negative). A whole position pasted here fills both boxes.' }),
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', onclick: () => { App.showTab('map'); MapView.pickPoint(ll => { if (!draft) return; draft.facts[i].where = { kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) }; render(); }, `Click on the map to place "${Store.factTitle(f)}"`); } }, '📍 Place on map')),
         w.lat != null && w.lat !== '' ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Drag the pin to a new place; nothing changes until you press Done', onclick: () => { App.showTab('map'); MapView.movePoint({ lat: w.lat, lng: w.lng }, ll => { if (!draft) return; draft.facts[i].where = { kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) }; render(); UI.toast('Pin moved in the editor. Press Save to keep it.'); }, `Drag "${Store.factTitle(f)}" to its new place (or click the map), then press Done`); } }, '✥ Move pin')) : null,
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: w.lat == null, title: 'Move the map to this place', onclick: () => { App.showTab('map'); MapView.showPosition({ lat: w.lat, lng: w.lng }, 'pin'); } }, '🎯')));

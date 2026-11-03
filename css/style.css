@@ -111,6 +111,9 @@ main { flex: 1; min-height: 0; position: relative; }
 }
 .map-banner > span { flex: 1 1 100%; }
 .map-banner button { background: rgba(0,0,0,.15); border-color: rgba(0,0,0,.25); color: #1a1200; }
+.map-banner .coord-wrap { flex: 1 1 100%; display: flex; gap: 6px; justify-content: center; }
+.map-banner .coord-box { flex: 0 1 400px; min-width: 160px; font-size: 13px; padding: 4px 8px; background: rgba(255,255,255,.85); color: #1a1200; border: 1px solid rgba(0,0,0,.25); border-radius: 6px; }
+.map-banner .coord-box::placeholder { color: #6a5a30; }
 #map.picking { cursor: crosshair; }
 /* edit modes: draggable corners, + handles on edges, the moving pin */
 .edit-vert { background: none; border: none; }

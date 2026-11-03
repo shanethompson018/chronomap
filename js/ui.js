@@ -1,5 +1,29 @@
 /* Small DOM helpers shared by every tab. */
 window.UI = (() => {
+  // Read a position typed or pasted in any usual form: "31.7683, 35.2137" · "31.7683 N 35.2137 E" ·
+  // "N 31.7683 E 35.2137" · 31°46'06"N 35°12'49"E · "31 46 06 N, 35 12 49 E". Returns {lat, lng} or null.
+  function parseLatLng(text) {
+    const s = String(text || '').trim().replace(/[\u2032\u2019]/g, "'").replace(/[\u2033\u201d]/g, '"').replace(/[°º]/g, ' ').toUpperCase();
+    if (!s) return null;
+    // degrees with a decimal point stand alone ("31.7683 35.2137" is two parts); whole degrees may be followed by
+    // minutes and seconds ("31 46 06 N")
+    const part = /(?:([NSEW])\s*)?(?:(-?\d+\.\d+)|(-?\d+)(?:\s+(\d+(?:\.\d+)?)['\s]*)?(?:\s*(\d+(?:\.\d+)?)"?)?)\s*([NSEW])?/g;
+    const found = [];
+    let m;
+    while (found.length < 2 && (m = part.exec(s))) {
+      if (!m[0].trim()) { part.lastIndex++; continue; }
+      const letter = m[1] || m[6] || '', deg = m[2] != null ? m[2] : m[3];
+      let v = Math.abs(+deg) + (m[4] ? +m[4] / 60 : 0) + (m[5] ? +m[5] / 3600 : 0);
+      if (/^-/.test(deg) || letter === 'S' || letter === 'W') v = -v;
+      found.push({ v, letter });
+    }
+    if (found.length !== 2) return null;
+    let [a, b] = found;
+    if (a.letter === 'E' || a.letter === 'W' || b.letter === 'N' || b.letter === 'S') [a, b] = [b, a]; // written east first
+    const lat = a.v, lng = b.v;
+    if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { lat: +lat.toFixed(5), lng: +lng.toFixed(5) };
+  }
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -378,6 +402,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

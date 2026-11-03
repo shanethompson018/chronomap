@@ -240,6 +240,11 @@ clearly marked mode, and reaches the marker only when you press **Done** and the
 
 * **Move pin** (beside a point fact's coordinates): the pin becomes a draggable handle; drag it or click
   the map, then Done.
+* **Typing a position.** Whenever the map asks you to click a spot (placing a new point, *Place on map*,
+  *Move pin*), the yellow bar also has a box to type the coordinates instead: latitude then longitude,
+  as decimals (`31.7683, 35.2137`), with hemisphere letters (`31.7683 N 35.2137 E`) or in degrees,
+  minutes and seconds (`31°46'06"N 35°12'49"E`). Enter or *Go* uses it. The same forms can be pasted
+  whole into the editor's lat box and fill both boxes.
 * **Edit border / Edit route / Edit extent** (beside an outline): every corner becomes a handle you can
   drag; a small **＋** on each edge adds a corner there; click a corner to select it and press
   *Delete corner* (or right-click it). **Simplify** drops corners that barely bend the outline at the

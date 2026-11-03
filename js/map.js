@@ -89,7 +89,11 @@ window.MapView = (() => {
 
   // Move the view: animated normally, instant in e-ink mode.
   function goTo(latlng, zoom) {
-    if (App.isEink()) map.setView(latlng, zoom, { animate: false }); else map.flyTo(latlng, zoom, { duration: 0.6 });
+    // flyTo cannot animate to the very spot the map is already centred on (Leaflet divides by the distance), so
+    // that case, e-ink, and anything flyTo refuses fall back to a plain setView
+    const same = map.getCenter().distanceTo(L.latLng(latlng)) < 1;
+    if (App.isEink() || same) { map.setView(latlng, zoom, { animate: false }); return; }
+    try { map.flyTo(latlng, zoom, { duration: 0.6 }); } catch (e) { map.setView(latlng, zoom, { animate: false }); }
   }
   function goToBounds(bounds) {
     if (App.isEink()) map.fitBounds(bounds, { padding: [40, 40], animate: false }); else map.flyToBounds(bounds, { padding: [40, 40], duration: 0.6 });
@@ -492,12 +496,22 @@ window.MapView = (() => {
     for (const { label, fn } of buttons) b.append(UI.h('button', { onclick: fn }, label));
   }
   function hideBanner() { $('map-banner').classList.add('hidden'); }
+  // A coordinates box in the banner: typing a position (decimal or degrees, with or without N/S/E/W) is the same
+  // as clicking that spot on the map. Enter or the Go button applies it.
+  function coordBox(onPos) {
+    const inp = UI.h('input', { type: 'text', class: 'coord-box', placeholder: 'or type lat, lng (e.g. 31.7683, 35.2137 or 31\u00b046\u2032N 35\u00b013\u2032E)', title: 'Latitude then longitude: decimal degrees, or degrees minutes seconds with N/S/E/W' });
+    const go = () => { const p = UI.parseLatLng(inp.value); if (!p) { UI.toast('Could not read that position. Latitude first, then longitude, e.g. 31.7683, 35.2137', 'error'); inp.focus(); return; } onPos(L.latLng(p.lat, p.lng)); };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    $('map-banner').append(UI.h('span', { class: 'coord-wrap' }, inp, UI.h('button', { onclick: go, title: 'Use the typed position' }, 'Go')));
+    return inp;
+  }
 
   function pickPoint(cb, text, onCancel) {
     cancelPick();
     pick = { type: 'point', cb, onCancel };
     $('map').classList.add('picking');
     banner(text || 'Click on the map to place the point', [{ label: 'Cancel', fn: cancelPick }]);
+    coordBox(ll => { if (!pick || pick.type !== 'point') return; const done = pick.cb; pick.onCancel = null; cancelPick(); done(ll); });
   }
   function drawShape(kind, initial, cb) {
     cancelPick();
@@ -541,7 +555,7 @@ window.MapView = (() => {
     if (!pick) return;
     if (pick.type === 'point') { const cb = pick.cb; pick.onCancel = null; cancelPick(); cb(e.latlng); }
     else if (pick.type === 'shape') { pick.points.push([e.latlng.lat, e.latlng.lng]); redrawTemp(); }
-    else if (pick.type === 'move') pick.layer.setLatLng(e.latlng);
+    else if (pick.type === 'move') { pick.layer.setLatLng(e.latlng); const b = $('map-banner').querySelector('.coord-box'); if (b) b.value = `${+e.latlng.lat.toFixed(5)}, ${+e.latlng.lng.toFixed(5)}`; }
   }
   // ---------- edit modes ----------
   // Nothing on the map moves by accident: corners and pins only become draggable inside one of these modes,
@@ -650,6 +664,10 @@ window.MapView = (() => {
     $('map').classList.add('editing');
     banner(text || 'Drag the pin to its new place (or click the map), then press Done', [
       { label: 'Done', fn: () => { const p = pick.layer.getLatLng(), done = pick.cb; cancelPick(); done(p); } }, { label: 'Cancel', fn: cancelPick }]);
+    const fmt = p => `${+p.lat.toFixed(5)}, ${+p.lng.toFixed(5)}`;
+    const box = coordBox(p => { if (!pick || pick.type !== 'move') return; pick.layer.setLatLng(p); goTo(p, Math.max(map.getZoom(), 7)); box.value = fmt(p); });
+    box.value = fmt(ll);
+    pick.layer.on('dragend', () => { box.value = fmt(pick.layer.getLatLng()); });
   }
 
 
