@@ -91,6 +91,7 @@ window.Photos = (() => {
     return Store.addPhoto(Object.assign({ id, title: (file.name || 'Photo').replace(/\.[^.]+$/, ''), w, h: hgt, bytes: blob.size, type: blob.type }, meta));
   }
   async function remove(id) {
+    if (window.Overlay && Overlay.photoId() === id) Overlay.remove(); // it may be lying on the map right now
     Store.deletePhoto(id);
     forget(id);
     if (db) await tx('readwrite', s => s.delete(id));
@@ -168,7 +169,13 @@ window.Photos = (() => {
             if (!multi) { done([p.id]); return; }
             if (chosen.has(p.id)) chosen.delete(p.id); else chosen.add(p.id);
             okBtn.disabled = !chosen.size; refresh();
-          } }, thumbEl(p, 96), h('div', { class: 'photo-title' }, p.title || 'Untitled'));
+          } }, thumbEl(p, 96), h('div', { class: 'photo-title' }, p.title || 'Untitled'),
+            h('button', { class: 'photo-del', title: 'Delete this picture from the library', onclick: async e => {
+              e.stopPropagation();
+              const users = Store.photoUsers(p.id);
+              if (!confirm(`Delete "${p.title || 'this picture'}" from the image library?${users.length ? ` It is used by ${users.length} marker(s).` : ''}`)) return;
+              await remove(p.id); chosen.delete(p.id); okBtn.disabled = !chosen.size; refresh();
+            } }, '🗑'));
           grid.append(tile);
         }
       }

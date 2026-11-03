@@ -130,6 +130,14 @@ window.Overlay = (() => {
     img = null; pixels = null; photoId = null; affine = null; points = [];
     renderPanel();
   }
+  // Deleting removes the picture from the library (and from any marker that used it) and takes it off the map.
+  async function deletePicture(p) {
+    const users = Store.photoUsers(p.id);
+    if (!confirm(`Delete "${p.title || 'this picture'}" from the image library?${users.length ? ` It is also used by ${users.length} marker(s).` : ''} Its control points go with it.`)) return;
+    remove();
+    await Photos.remove(p.id);
+    UI.toast('Picture deleted');
+  }
   function savePoints() { if (photoId) Store.updatePhoto(photoId, { georef: points.map(c => ({ u: +c.u.toFixed(1), v: +c.v.toFixed(1), lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5) })) }); }
 
   // A control point is one spot clicked twice: first on the picture, then where it really is on the map.
@@ -340,8 +348,11 @@ window.Overlay = (() => {
     body.append(h('div', { class: 'row', style: { alignItems: 'center', gap: '8px' } },
       p ? Photos.thumbEl(p, 48) : null,
       h('span', { style: { flex: '1' } }, p ? (p.title || 'Untitled image') : h('span', { class: 'muted' }, 'No picture chosen')),
-      h('button', { class: 'small', onclick: choose }, p ? 'Change…' : 'Choose picture…'),
-      p ? h('button', { class: 'small', title: 'Take the picture off the map', onclick: remove }, '✕') : null));
+      p ? null : h('button', { class: 'small', onclick: choose }, 'Choose picture…')));
+    if (p) body.append(h('div', { class: 'row', style: { gap: '6px', marginTop: '6px', flexWrap: 'wrap' } },
+      h('button', { class: 'small', onclick: choose }, 'Change…'),
+      h('button', { class: 'small', title: 'Take the picture off the map (it stays in the image library)', onclick: remove }, '✕ Off map'),
+      h('button', { class: 'small danger', title: 'Delete this picture from the image library on every device, with its control points', onclick: () => deletePicture(p) }, '🗑 Delete…')));
     if (status) body.append(h('p', { class: 'overlay-status', style: { fontSize: '12px', color: 'var(--danger)', margin: '4px 0 8px' } }, status));
     if (!p) { body.append(h('p', { class: 'muted', style: { fontSize: '12px' } }, 'Upload the source\'s map into the image library first (Library tab → Images), or choose it here and upload on the spot. Clicking a picture in the chooser picks it at once.')); return; }
     const op = h('input', { type: 'range', min: 10, max: 100, value: Math.round(opacity * 100), style: { flex: '1' } });

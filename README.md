@@ -275,6 +275,10 @@ Press **Picture overlay…** in the Map sidebar.
    are followed.
    The same two buttons appear beside an existing fact's "where" in the editor while an overlay is on,
    so a picture can supply the border of a marker you already have.
+4. **Put it away.** *Off map* takes the picture off the map and keeps it in the library with its
+   control points. *Delete…* removes it from the image library on every device (and from any marker
+   that used it). The 🗑 on each tile of the picture chooser deletes a picture too, which is the quick
+   way to clear a duplicate upload.
 
 ## Time gaps (dates that depend on other dates)
 

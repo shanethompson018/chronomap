@@ -180,6 +180,9 @@ button.play.on { background: var(--accent); border-color: var(--accent); color: 
 .ft-dates { font-size: 11px; fill: var(--muted); pointer-events: none; }
 .ft-sex { font-size: 11px; fill: var(--muted); pointer-events: none; }
 .link-label { font-size: 10px; fill: var(--muted); pointer-events: none; text-anchor: middle; paint-order: stroke; stroke: #12151b; stroke-width: 3px; }
+.photo-tile { position: relative; } /* holds the 🗑 button */
+.photo-tile .photo-del { position: absolute; top: 4px; right: 4px; padding: 1px 5px; font-size: 12px; line-height: 1.4; opacity: .75; }
+.photo-tile .photo-del:hover { opacity: 1; }
 .link-label.bundle-label { font-size: 11px; font-weight: 700; fill: var(--text); }
 .link.bundle path:hover { stroke-opacity: .9; }
 .link.fanned path:hover { stroke-width: 3px; }
