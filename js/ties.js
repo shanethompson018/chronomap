@@ -63,7 +63,7 @@ window.Ties = (() => {
       nodes, links, layout: lay, selectedId, fresh, cacheKey: 'ties:' + key,
       showLinkLabels: $('ties-labels').checked,
       guard: tooBig ? UI.sizeGuard({ count: nodes.length, noun: 'markers', onDraw: () => { guardOk = key; fresh = true; draw(); } }) : null,
-      emptyText: hubId ? 'That marker has no ties of this type.' : (Store.links().length ? 'Pick a tie type, or a centre marker, to draw the ties.' : 'No ties yet. Ties come from facts that name other markers (Father, Spouse, Member of…).'),
+      emptyText: hubId ? 'That marker has no ties of this type.' : (Store.links().length ? 'Pick a tie type, or a centre marker, in the left panel to draw the ties (☰ brings the panel back if it is folded away).' : 'No ties yet. Ties come from facts that name other markers (Father, Spouse, Member of…).'),
       onNodeClick: id => { selectedId = id; draw(); },
     });
     fresh = false;

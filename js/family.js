@@ -224,7 +224,7 @@ window.Family = (() => {
       empty.classList.remove('hidden'); empty.classList.remove('ask'); $('fam-stats').textContent = ''; renderInfo(); return;
     }
     if (!tree) {
-      empty.textContent = Store.markers().length ? 'Pick a person on the left, or press 🌳 Family in a person\'s bubble.' : 'No markers yet.';
+      empty.textContent = Store.markers().length ? 'Pick a person in the left panel (☰ brings the panel back if it is folded away), or press 🌳 Family in a person\'s bubble.' : 'No markers yet.';
       empty.classList.remove('hidden'); empty.classList.remove('ask'); $('fam-stats').textContent = ''; renderInfo(); return;
     }
     const key = [rootId, upLimit(), downLimit(), pref.showSibs].join('|');

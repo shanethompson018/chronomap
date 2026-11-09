@@ -54,7 +54,20 @@ window.App = (() => {
   function stepSize(d) { const i = Math.max(0, Math.min(SIZES.length - 1, SIZES.indexOf(size) + d)); if (SIZES[i] !== size) applySize(SIZES[i], true); }
   const getSize = () => size;
 
+  // The left panel of the Map, Ties, Network and Family tabs folds away to give the map or drawing the whole
+  // width; the choice is remembered on this device.
+  const SIDE_KEY = 'chronomap.side';
+  function applySide(closed, save) {
+    document.body.classList.toggle('side-closed', closed);
+    const b = document.getElementById('btn-side');
+    if (b) { b.classList.toggle('primary', closed); b.title = closed ? 'The left panel is folded away. Tap to bring it back.' : 'Fold the left panel away to give the map or drawing the whole width'; }
+    if (save) { try { localStorage.setItem(SIDE_KEY, closed ? '0' : '1'); } catch (e) { /* ignore */ } }
+    if (window.MapView && MapView.leaflet()) MapView.leaflet().invalidateSize();
+  }
+  const sideClosed = () => document.body.classList.contains('side-closed');
+
   function showTab(name) {
+    document.body.dataset.tab = name;
     if (current === name) { if (name === 'map') MapView.show(); return; }
     current = name;
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
@@ -139,6 +152,10 @@ window.App = (() => {
     document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
     document.getElementById('btn-new-marker').addEventListener('click', newMarker);
     document.getElementById('btn-eink').addEventListener('click', toggleEink);
+    document.getElementById('btn-side').addEventListener('click', () => applySide(!sideClosed(), true));
+    document.body.dataset.tab = current;
+    let side = null; try { side = localStorage.getItem(SIDE_KEY); } catch (e) { /* ignore */ }
+    applySide(side === '0', false);
     document.getElementById('btn-size-down').addEventListener('click', () => stepSize(-1));
     document.getElementById('btn-size-up').addEventListener('click', () => stepSize(1));
     window.addEventListener('resize', fitLayout);

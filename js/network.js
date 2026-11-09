@@ -75,7 +75,7 @@ window.Network = (() => {
       nodes, links, layout, selectedId, fresh, cacheKey: 'net:' + (centerId || ''),
       guard: tooBig ? UI.sizeGuard({ count: nodes.length, noun: 'markers', onDraw: () => { guardOk = key; fresh = true; draw(); } }) : null,
       showLinkLabels: $('net-labels').checked,
-      emptyText: centerId ? 'No ties match the current filters.' : 'Pick a marker on the left to see its network.',
+      emptyText: centerId ? 'No ties match the current filters.' : 'Pick a marker in the left panel to see its network (☰ brings the panel back if it is folded away).',
       onNodeClick: id => { selectedId = id; draw(); },
     });
     fresh = false;
