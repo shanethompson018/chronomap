@@ -1,4 +1,7 @@
-/* Marker editor: a right-hand drawer. Edits a draft copy of the marker (name, shape, facts, fields, images,
+/* Marker editor: its own full-screen view (the element is still called the drawer). While the map is needed
+ * (placing a point, drawing, looking at a position) the view is parked: hidden with the work kept, and it comes
+ * back by itself when the map step ends, or from the "Back to editing" button.
+ * Marker editor, as it was first described: a right-hand drawer. Edits a draft copy of the marker (name, shape, facts, fields, images,
  * citations) and saves it in one go. Time gaps are saved immediately because they join two markers. */
 window.Editor = (() => {
   const { h, esc } = UI;
@@ -11,8 +14,38 @@ window.Editor = (() => {
   function sectionState() { try { return JSON.parse(localStorage.getItem(SECTIONS_KEY)) || {}; } catch (e) { return {}; } }
   function setSectionOpen(key, open) { const st = sectionState(); st[key] = open; try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(st)); } catch (e) { /* ignore */ } }
 
+  // ---------- the view: shown, parked, or closed ----------
+  let parked = false, unparkTimer = null, pill = null;
+  const touch = () => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } };
+  function syncView() {
+    const open = !!draft && !drawer.classList.contains('hidden');
+    if (!open) parked = false;
+    drawer.classList.toggle('parked', open && parked);
+    document.body.classList.toggle('editing', open && !parked);
+    const showPill = open && parked && !MapView.isPicking(); // while picking, the yellow bar is the way back
+    pill.classList.toggle('hidden', !showPill);
+    if (showPill) pill.textContent = `✏️ Back to editing ${draft.name || 'the marker'}`;
+  }
+  // Hide the editor with the work kept, to use or look at the map or another tab.
+  function park() { if (!draft) return; clearTimeout(unparkTimer); parked = true; syncView(); }
+  // Bring it back; "soon" waits a moment so that one map step handing over to the next does not flash the editor.
+  function unpark(soon) {
+    if (!draft || !parked) return;
+    clearTimeout(unparkTimer);
+    const go = () => { if (MapView.isPicking()) return; parked = false; syncView(); };
+    if (soon) unparkTimer = setTimeout(go, 80); else go();
+  }
+  function peekMap() { App.showTab('map'); park(); }
+
   function init() {
     drawer = document.getElementById('drawer');
+    pill = document.getElementById('editor-pill');
+    pill.addEventListener('click', () => { if (MapView.isPicking()) MapView.cancelPick(); unpark(); });
+    new MutationObserver(syncView).observe(drawer, { attributes: true, attributeFilter: ['class'] });
+    // on a touch screen the box being typed in stays in view above the on-screen keyboard
+    const keepInView = el => { if (el && drawer.contains(el) && el.matches('input, textarea, select') && touch()) el.scrollIntoView({ block: 'center' }); };
+    drawer.addEventListener('focusin', e => { const el = e.target; setTimeout(() => { if (document.activeElement === el) keepInView(el); }, 350); });
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', () => keepInView(document.activeElement));
     drawer.addEventListener('input', onInput);
     drawer.addEventListener('change', onInput);
     Store.subscribe(evt => {
@@ -45,8 +78,16 @@ window.Editor = (() => {
     d.facts.forEach(f => { f.participants = f.participants || []; f.details = f.details || {}; });
     return d;
   }
+  // Opening a marker while another has unsaved changes asks first (the editor may be parked out of sight).
+  function mayReplace() {
+    if (!draft || !isDirty()) return true;
+    return confirm(`"${draft.name || 'The marker being edited'}" has unsaved changes. Discard them?`);
+  }
   function open(markerId) {
     const m = Store.marker(markerId); if (!m) return;
+    if (draft && !isNew && id === markerId) { unpark(); return; } // already being edited: just show it
+    if (!mayReplace()) { unpark(); return; }
+    clearTimeout(unparkTimer); parked = false;
     discardNew();
     id = markerId; isNew = false;
     draft = tidy(JSON.parse(JSON.stringify(m)));
@@ -54,10 +95,13 @@ window.Editor = (() => {
     savedSnapshot = snapshot();
     safeRender();
     drawer.classList.remove('hidden');
-    drawer.querySelector('[data-bind="name"]')?.focus();
+    syncView();
+    if (!touch()) drawer.querySelector('[data-bind="name"]')?.focus(); // on a tablet this would pop the keyboard up at once
   }
   // A new marker lives only in the draft until it is saved (so cancelling leaves nothing behind).
   function openNew(data = {}) {
+    if (!mayReplace()) { unpark(); return; }
+    clearTimeout(unparkTimer); parked = false;
     discardNew();
     draft = tidy(Object.assign(blankMarker(), JSON.parse(JSON.stringify(data))));
     draft.facts.forEach(f => { f.id = f.id || Store.uid(); });
@@ -67,6 +111,7 @@ window.Editor = (() => {
     savedSnapshot = snapshot();
     safeRender();
     drawer.classList.remove('hidden');
+    syncView();
     const name = drawer.querySelector('[data-bind="name"]');
     if (name) { name.focus(); name.select(); }
   }
@@ -269,6 +314,7 @@ window.Editor = (() => {
     );
     drawer.append(
       h('div', { class: 'drawer-head' }, h('h2', {}, isNew ? 'New marker' : 'Edit marker'), h('span', { class: 'spacer' }),
+        h('button', { class: 'small', title: 'Hide the editor to look at the map or another tab. Your work is kept, and a button brings you back.', onclick: () => park() }, '▁ Minimise'),
         h('button', { class: 'primary small', onclick: save }, 'Save'),
         h('button', { class: 'icon-btn', title: 'Close', onclick: () => cancel() }, '✕')),
       body,
@@ -414,7 +460,7 @@ window.Editor = (() => {
       parts.push(h('input', { type: 'text', 'data-bind': `facts.${i}.where.lat`, value: w.lat ?? '', placeholder: 'lat', title: 'Latitude in decimal degrees (south is negative). A whole position pasted here, such as 31.7683, 35.2137 or 31\u00b046\u2032N 35\u00b013\u2032E, fills both boxes.' }), h('input', { type: 'text', 'data-bind': `facts.${i}.where.lng`, value: w.lng ?? '', placeholder: 'lng', title: 'Longitude in decimal degrees (west is negative). A whole position pasted here fills both boxes.' }),
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', onclick: () => { App.showTab('map'); MapView.pickPoint(ll => { if (!draft) return; draft.facts[i].where = { kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) }; render(); }, `Click on the map to place "${Store.factTitle(f)}"`); } }, '📍 Place on map')),
         w.lat != null && w.lat !== '' ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Drag the pin to a new place; nothing changes until you press Done', onclick: () => { App.showTab('map'); MapView.movePoint({ lat: w.lat, lng: w.lng }, ll => { if (!draft) return; draft.facts[i].where = { kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) }; render(); UI.toast('Pin moved in the editor. Press Save to keep it.'); }, `Drag "${Store.factTitle(f)}" to its new place (or click the map), then press Done`); } }, '✥ Move pin')) : null,
-        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: w.lat == null, title: 'Move the map to this place', onclick: () => { App.showTab('map'); MapView.showPosition({ lat: w.lat, lng: w.lng }, 'pin'); } }, '🎯')));
+        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: w.lat == null, title: 'Move the map to this place', onclick: () => { peekMap(); MapView.showPosition({ lat: w.lat, lng: w.lng }, 'pin'); } }, '🎯')));
     } else if (w && (w.kind === 'area' || w.kind === 'route')) {
       const has = !!(w.coords && w.coords.length);
       const fromPicture = (coords, rough) => { if (!draft) return; draft.facts[i].where = Object.assign({}, draft.facts[i].where, { kind: w.kind, coords, rough: w.kind === 'area' ? rough : [] }); render(); UI.toast('Outline drafted from the picture. Press Save to keep it.'); };
@@ -423,7 +469,7 @@ window.Editor = (() => {
         h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: has ? 'Throw the outline away and click a new one' : 'Click the corners on the map', onclick: () => { App.showTab('map'); MapView.drawShape(w.kind === 'area' ? 'area' : 'path', [], coords => { if (!draft) return; const cur = draft.facts[i].where || {}; draft.facts[i].where = Object.assign({}, cur, { kind: w.kind, coords: coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]), rough: [] }); render(); }); } }, has ? '↺ Redraw' : '✏️ Draw on map')),
         window.Overlay && Overlay.isActive() ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Click inside a tinted region of the overlaid picture; its outline becomes this shape', onclick: () => Overlay.fill(fromPicture) }, '⬚ Fill from picture')) : null,
         window.Overlay && Overlay.isActive() ? h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', title: 'Click a drawn line on the overlaid picture; the app follows it', onclick: () => Overlay.trace(fromPicture) }, '〰 Trace from picture')) : null,
-        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: !(w.coords && w.coords.length), title: 'Move the map to this shape', onclick: () => { App.showTab('map'); MapView.showPosition({ coords: w.coords }, w.kind === 'area' ? 'area' : 'path'); } }, '🎯')));
+        h('div', { class: 'narrow' }, h('button', { type: 'button', class: 'small', disabled: !(w.coords && w.coords.length), title: 'Move the map to this shape', onclick: () => { peekMap(); MapView.showPosition({ coords: w.coords }, w.kind === 'area' ? 'area' : 'path'); } }, '🎯')));
     } else if (w && w.kind === 'marker') {
       parts.push(UI.markerSelect({ value: w.markerId, exclude: [id], placeholder: 'which marker (an area, a town, an event)…', onChange: v => { draft.facts[i].where = { kind: 'marker', markerId: v }; } }));
     }
@@ -489,7 +535,7 @@ window.Editor = (() => {
     const coords = which === 'extent' ? w.extent : w.coords;
     const key = which === 'extent' ? 'extentRough' : 'rough';
     const set = new Set(w[key] || []);
-    App.showTab('map');
+    peekMap();
     MapView.showVertexNumbers(coords);
     MapView.showPosition({ coords }, 'area');
     const boxes = coords.map((c, k) => {
@@ -506,7 +552,7 @@ window.Editor = (() => {
         h('span', { class: 'spacer' }),
         h('button', { class: 'primary', onclick: () => { if (!draft) return; draft.facts[i].where[key] = [...set].sort((a, b) => a - b); m.close(); render(); } }, 'Done'),
         h('button', { onclick: () => m.close() }, 'Cancel')));
-    const m = UI.modal({ title: which === 'extent' ? 'Edges of the extent outline' : 'Edges of the border', body, width: '420px', side: true, onClose: () => MapView.hideVertexNumbers() });
+    const m = UI.modal({ title: which === 'extent' ? 'Edges of the extent outline' : 'Edges of the border', body, width: '420px', side: true, onClose: () => { MapView.hideVertexNumbers(); unpark(); } });
   }
   function renderRole(i, role) {
     const f = draft.facts[i];
@@ -633,5 +679,5 @@ window.Editor = (() => {
     return out;
   }
 
-  return { init, open, openNew, cancel, isOpen, changeBorderHere };
+  return { init, open, openNew, cancel, isOpen, changeBorderHere, park, unpark };
 })();

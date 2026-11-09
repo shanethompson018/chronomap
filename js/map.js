@@ -503,8 +503,9 @@ window.MapView = (() => {
     const b = $('map-banner'); b.innerHTML = ''; b.classList.remove('hidden');
     b.append(UI.h('span', {}, text));
     for (const { label, fn } of buttons) b.append(UI.h('button', { onclick: fn }, label));
+    if (window.Editor) Editor.park(); // the editor is a full-screen view: it steps aside while the map is in use…
   }
-  function hideBanner() { $('map-banner').classList.add('hidden'); }
+  function hideBanner() { $('map-banner').classList.add('hidden'); if (window.Editor) Editor.unpark(true); } // …and returns when the step ends
   // A coordinates box in the banner: typing a position (decimal or degrees, with or without N/S/E/W) is the same
   // as clicking that spot on the map. Enter or the Go button applies it.
   function coordBox(onPos) {

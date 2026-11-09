@@ -235,14 +235,24 @@ button.play.on { background: var(--accent); border-color: var(--accent); color: 
 .mselect-empty { padding: 6px 8px; color: var(--muted); }
 
 /* ---------- editor drawer ---------- */
+/* The marker editor is its own full-screen view: it covers the tabs, with its fields in a centred column.
+   Parked = hidden with the work kept, while the map is used or looked at. */
 .drawer {
-  position: fixed; top: var(--top-h); right: 0; bottom: 0; width: var(--drawer-w); max-width: 100vw; z-index: 1500;
-  background: var(--bg2); border-left: 1px solid var(--border); box-shadow: -8px 0 30px rgba(0,0,0,.5);
+  --ed-pad: max(14px, calc((100% - calc(1000px * var(--fs))) / 2));
+  position: fixed; inset: 0; z-index: 1500; background: var(--bg2);
   display: flex; flex-direction: column;
 }
-.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
-.drawer-body { flex: 1; overflow-y: auto; padding: 6px 14px 20px; }
-.drawer-foot { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
+.drawer.parked { display: none; }
+.drawer-head { display: flex; align-items: center; gap: 8px; padding: 10px var(--ed-pad); border-bottom: 1px solid var(--border); flex: none; flex-wrap: wrap; }
+.drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px var(--ed-pad) 28px; overscroll-behavior: contain; }
+.drawer-foot { display: flex; gap: 8px; padding: 10px var(--ed-pad); border-top: 1px solid var(--border); flex: none; }
+@media (max-height: 560px) { .drawer-foot { display: none; } } /* keyboard up: Save is in the header, the room goes to the form */
+body.editing .modal-overlay.side-modal { display: none; } /* map panels wait behind the editor */
+.editor-pill { position: fixed; top: calc(var(--top-h) + 10px); left: 50%; transform: translateX(-50%); z-index: 1400; max-width: calc(100vw - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+/* on a narrow screen the boxes of a row stack instead of squeezing */
+body.compact .ed-row { flex-wrap: wrap; }
+body.compact .ed-row > * { flex: 1 1 calc(240px * var(--fs)); }
+body.compact .ed-row > .narrow { flex: 0 0 auto; }
 .drawer-foot .spacer { flex: 1; }
 .ed-section { margin: 14px 0; }
 .ed-section > h3 { font-size: calc(14px * var(--fs)); font-weight: 600; letter-spacing: .02em; color: var(--text); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
@@ -439,7 +449,9 @@ body.eink .tag { border: 1px solid #000; background: #fff; }
 body.eink .info-summary { color: #000; }
 body.eink .swatch { border-color: #000; }
 body.eink .toast { background: #fff; color: #000; border: 2px solid #000; }
-body.eink .modal, body.eink .drawer { border: 2px solid #000; }
+body.eink .modal { border: 2px solid #000; }
+body.eink .drawer { background: #fff; }
+body.eink .editor-pill { border: 2px solid #000; }
 body.eink .modal-overlay { background: rgba(255,255,255,.7); }
 body.eink .card { background: #f4f4f4; border-color: #000; }
 body.eink .map-banner { background: #fff; color: #000; border: 2px solid #000; }
