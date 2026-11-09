@@ -281,20 +281,34 @@ not fit the page or zoom in and out. Measured on 9 Nov with E-ink mode on, at a 
 * Upright, the editor drawer is a fixed 460 px and the sidebar 240 px, leaving 230 px of map.
 * Library tables squeeze every column into the screen (Categories: nine columns, several under 70 px).
 
-Proposals, each its own commit:
+Answers from the user, 9 Nov 2026: holds the Boox upright (narrow sides top and bottom); taps with a
+finger and types on the on-screen keyboard; uses the installed app; nothing may zoom in and out except
+the map; the Family tree does not fit and looks small; every screen is hard for input; a new marker or
+an edited marker should be its own view, not a panel at the side of another tab; a tied marker's name in
+the information panel should lead to that marker's information panel.
 
-- [ ] **8.1 One size setting for the whole app.** A Size control beside the E-ink button (Normal, Large,
-      Larger, Largest), remembered per device, that scales every letter, box and button together,
-      including the text that is fixed today. Minimum finger-sized height for anything tappable in
-      E-ink mode.
-- [ ] **8.2 Every tab fits the screen.** Fix the Ties and Network overflow; the page itself never slides
-      or zooms, only the map and the drawings do. (Waiting on what "can zoom in and out" means.)
-- [ ] **8.3 Editor on a tablet.** On a narrow screen the editor takes the full width with a Show map
-      button, fields stack in one column, and the box being typed in stays above the keyboard.
-- [ ] **8.4 Library on a tablet.** Rows become cards with labelled, full-width boxes instead of a
-      nine-column table; or tap a row to edit it in a dialog.
-- [ ] **8.5 More room for the map and drawings.** A button to fold the left sidebar away.
-- [ ] **8.6 Zoom buttons on Ties, Network and Family** (+, −, Fit) for when pinching is jerky on e-ink.
+What exists today for that last point: tied names are already links in every information panel, but in
+E-ink mode they are plain black text with no underline and a small tap area, and on the Map tab a tied
+marker with no place opens the editor instead of showing its information.
 
-Open questions for the user: upright or across; finger, pen or both, and keyboard or handwriting; what
-"can zoom in and out" means; which tabs do not fit; browser or installed app; which screen is worst.
+Revised proposals in build order, each its own commit (awaiting the go-ahead):
+
+- [ ] **8.1 The page stays put.** The app itself never zooms or slides: pinch and double-tap zoom are
+      off everywhere except the map; the Ties and Network overflow is fixed so every tab is exactly
+      the width of the screen.
+- [ ] **8.2 One size setting for the whole app.** A Size control beside the E-ink button (Normal, Large,
+      Larger, Largest), remembered per device, scaling every letter, box and button together,
+      including the text that is fixed today; anything tappable is at least finger-sized in E-ink mode.
+- [ ] **8.3 The marker editor is its own view.** New marker and Edit open a full-screen page with its
+      own Save and Close, fields in one column on an upright tablet, and the box being typed in kept
+      above the keyboard. Place on map / Move pin / Draw switch to the map and come straight back.
+      Proposed for both the Boox and the PC, so there is one behaviour to learn.
+- [ ] **8.4 Drawings open at reading size.** Family, Ties and Network open with boxes at a readable size
+      centred on the chosen person, instead of shrinking everything to fit. Drag with a finger to move
+      around; +, − and Fit buttons replace pinching.
+- [ ] **8.5 Tied names lead to that marker.** Tied names are underlined and finger-sized; tapping one
+      shows that marker's information panel in every tab, including markers with no place on the Map
+      tab, with a Back button to the marker you came from.
+- [ ] **8.6 Library on an upright tablet.** Rows become cards with labelled full-width boxes instead of a
+      nine-column table.
+- [ ] **8.7 More room.** On an upright tablet the left sidebar folds away behind a button.
