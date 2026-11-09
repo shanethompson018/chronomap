@@ -18,7 +18,10 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
-body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden; }
+/* The page stays put: no pinch or double-tap zoom, no rubber-band scrolling, nothing wider than the screen.
+   The map handles its own gestures, so it still zooms. */
+html { overflow: hidden; touch-action: pan-x pan-y; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden; overscroll-behavior: none; width: 100%; }
 
 button, input, select, textarea {
   font: inherit; color: inherit;
@@ -69,8 +72,8 @@ h2, h3, h4 { margin: 0; }
 .tab.active { background: var(--bg3); color: var(--text); border-color: var(--border); }
 .topbar-right { margin-left: auto; }
 
-main { flex: 1; min-height: 0; position: relative; }
-.tab-panel { display: none; position: absolute; inset: 0; }
+main { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.tab-panel { display: none; position: absolute; inset: 0; overflow: hidden; } /* clips the details panel while it waits off-screen */
 .tab-panel.active { display: flex; }
 
 /* ---------- side panels ---------- */
