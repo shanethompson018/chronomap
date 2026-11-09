@@ -265,3 +265,36 @@ they are made.
       slider. The name in force at the slider's date is shown first and the others after it: before
       2067 BC "Abram, later Abraham"; after it "Abraham, earlier Abram". Map labels and pins use the
       name in force; the Family tree, which has no slider, uses the latest name.
+
+## 8. Boox tablet usability (raised 9 Nov 2026, under discussion, nothing built)
+
+Raised by the user: input on the Boox is difficult because letters and boxes are small; some tabs do
+not fit the page or zoom in and out. Measured on 9 Nov with E-ink mode on, at a tablet-sized screen
+(1240 x 930 across, 930 x 1240 upright):
+
+* E-ink mode sets a 16 px base, but 55 to 90 % of the text on most screens is fixed at 9 to 13 px and
+  ignores it (Library tables 75 to 90 %, editor 55 %, Family 71 %, Map 40 %).
+* Most boxes and buttons in the Library and editor are under 40 px tall (Markers 89 of 107, Tie types
+  85 of 102, editor 25 of 58). A finger needs about 44 to 48.
+* Upright, the Ties and Network pages are 1308 px wide on a 930 px screen: the hidden details panel
+  sticks out to the right, so the whole page can be dragged sideways. Across, nothing sticks out.
+* Upright, the editor drawer is a fixed 460 px and the sidebar 240 px, leaving 230 px of map.
+* Library tables squeeze every column into the screen (Categories: nine columns, several under 70 px).
+
+Proposals, each its own commit:
+
+- [ ] **8.1 One size setting for the whole app.** A Size control beside the E-ink button (Normal, Large,
+      Larger, Largest), remembered per device, that scales every letter, box and button together,
+      including the text that is fixed today. Minimum finger-sized height for anything tappable in
+      E-ink mode.
+- [ ] **8.2 Every tab fits the screen.** Fix the Ties and Network overflow; the page itself never slides
+      or zooms, only the map and the drawings do. (Waiting on what "can zoom in and out" means.)
+- [ ] **8.3 Editor on a tablet.** On a narrow screen the editor takes the full width with a Show map
+      button, fields stack in one column, and the box being typed in stays above the keyboard.
+- [ ] **8.4 Library on a tablet.** Rows become cards with labelled, full-width boxes instead of a
+      nine-column table; or tap a row to edit it in a dialog.
+- [ ] **8.5 More room for the map and drawings.** A button to fold the left sidebar away.
+- [ ] **8.6 Zoom buttons on Ties, Network and Family** (+, −, Fit) for when pinching is jerky on e-ink.
+
+Open questions for the user: upright or across; finger, pen or both, and keyboard or handwriting; what
+"can zoom in and out" means; which tabs do not fit; browser or installed app; which screen is worst.
