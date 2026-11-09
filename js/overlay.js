@@ -353,22 +353,22 @@ window.Overlay = (() => {
       h('button', { class: 'small', onclick: choose }, 'Change…'),
       h('button', { class: 'small', title: 'Take the picture off the map (it stays in the image library)', onclick: remove }, '✕ Off map'),
       h('button', { class: 'small danger', title: 'Delete this picture from the image library on every device, with its control points', onclick: () => deletePicture(p) }, '🗑 Delete…')));
-    if (status) body.append(h('p', { class: 'overlay-status', style: { fontSize: '12px', color: 'var(--danger)', margin: '4px 0 8px' } }, status));
-    if (!p) { body.append(h('p', { class: 'muted', style: { fontSize: '12px' } }, 'Upload the source\'s map into the image library first (Library tab → Images), or choose it here and upload on the spot. Clicking a picture in the chooser picks it at once.')); return; }
+    if (status) body.append(h('p', { class: 'overlay-status', style: { fontSize: 'calc(12px * var(--fs))', color: 'var(--danger)', margin: '4px 0 8px' } }, status));
+    if (!p) { body.append(h('p', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'Upload the source\'s map into the image library first (Library tab → Images), or choose it here and upload on the spot. Clicking a picture in the chooser picks it at once.')); return; }
     const op = h('input', { type: 'range', min: 10, max: 100, value: Math.round(opacity * 100), style: { flex: '1' } });
     op.addEventListener('input', () => { opacity = +op.value / 100; if (layer) layer._draw(); });
     const hideBtn = h('button', { class: 'small', onclick: () => { hidden = !hidden; if (layer) layer._draw(); drawMarks(); renderPanel(); } }, hidden ? 'Show' : 'Hide');
-    body.append(h('div', { class: 'row', style: { alignItems: 'center', gap: '8px', marginTop: '8px' } }, h('span', { class: 'muted', style: { fontSize: '12px' } }, 'See-through'), op, hideBtn));
+    body.append(h('div', { class: 'row', style: { alignItems: 'center', gap: '8px', marginTop: '8px' } }, h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'See-through'), op, hideBtn));
     // control points
     body.append(h('h4', { style: { margin: '12px 0 4px' } }, `Control points (${points.length})`));
     const res = residualPx();
-    body.append(h('p', { class: 'muted', style: { fontSize: '12px' } },
+    body.append(h('p', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } },
       points.length === 0 ? 'The picture is only placed in view. Add two control points to fit it (scale, rotation, position); a third also fits stretch and skew.'
       : points.length === 1 ? 'One more control point and the picture snaps into place.'
       : points.length === 2 ? 'Fitted by scale, rotation and position. A third point also corrects stretch and skew.'
       : `Affine fit from ${points.length} points; worst mismatch ${res == null ? '?' : res.toFixed(0)} px at this zoom. Dashed lines on the map join each picture spot to its map spot.`));
     const list = h('div');
-    points.forEach((c, i) => list.append(h('div', { class: 'row', style: { fontSize: '12px', alignItems: 'center' } },
+    points.forEach((c, i) => list.append(h('div', { class: 'row', style: { fontSize: 'calc(12px * var(--fs))', alignItems: 'center' } },
       h('span', { class: 'vertex-num', style: { position: 'static' } }, h('span', {}, String(i + 1))),
       h('span', { class: 'muted', style: { flex: '1' } }, `picture ${c.u.toFixed(0)}, ${c.v.toFixed(0)} → map ${(+c.lat).toFixed(3)}, ${(+c.lng).toFixed(3)}`),
       h('button', { class: 'small', title: 'Remove this control point', onclick: () => { points.splice(i, 1); refit(); savePoints(); renderPanel(); } }, '✕'))));
@@ -379,13 +379,13 @@ window.Overlay = (() => {
     // tools
     body.append(h('h4', { style: { margin: '14px 0 4px' } }, 'Draft outlines from the picture'));
     const tol = h('input', { type: 'range', min: 5, max: 90, value: tolerance, style: { flex: '1' } });
-    const tolLbl = h('span', { class: 'muted', style: { fontSize: '12px', minWidth: '28px' } }, String(tolerance));
+    const tolLbl = h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))', minWidth: '28px' } }, String(tolerance));
     tol.addEventListener('input', () => { tolerance = +tol.value; tolLbl.textContent = String(tolerance); });
-    body.append(h('div', { class: 'row', style: { alignItems: 'center', gap: '8px' } }, h('span', { class: 'muted', style: { fontSize: '12px' } }, 'Colour tolerance'), tol, tolLbl));
+    body.append(h('div', { class: 'row', style: { alignItems: 'center', gap: '8px' } }, h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'Colour tolerance'), tol, tolLbl));
     body.append(h('div', { class: 'row', style: { marginTop: '6px', flexWrap: 'wrap' } },
       h('button', { class: 'small', title: 'Click inside a tinted region of the picture; its outline becomes a new area marker', onclick: () => fill((coords, rough) => newMarkerFrom(coords, rough, 'area')) }, '⬚ Fill region → new area'),
       h('button', { class: 'small', title: 'Click a drawn line on the picture; the app follows it as far as its colour continues', onclick: () => trace((coords, rough, kind) => newMarkerFrom(coords, rough, kind)) }, '〰 Trace line → new route / area')));
-    body.append(h('p', { class: 'muted', style: { fontSize: '12px', marginTop: '6px' } }, 'To fill or trace into an existing marker, open it and use the same buttons beside its fact\'s "where". Low tolerance keeps to one tint; raise it if the fill stops short, lower it if it floods the whole page.'));
+    body.append(h('p', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))', marginTop: '6px' } }, 'To fill or trace into an existing marker, open it and use the same buttons beside its fact\'s "where". Low tolerance keeps to one tint; raise it if the fill stops short, lower it if it floods the whole page.'));
   }
 
   return { open, isActive, fill, trace, load, remove, toLatLng, toImage, photoId: () => photoId };

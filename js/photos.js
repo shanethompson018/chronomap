@@ -223,8 +223,8 @@ window.Photos = (() => {
     const big = url(id) ? h('img', { class: 'photo-preview', src: url(id), alt: p.title, onclick: () => view(id) }) : thumbEl(p, 160);
     const body = h('div', { class: 'photo-edit' },
       h('div', { class: 'photo-edit-left' }, big,
-        h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '6px' } }, `${p.w} × ${p.h} · ${Math.round((p.bytes || 0) / 1024)} KB`),
-        users.length ? h('div', { style: { marginTop: '8px', fontSize: '12px' } }, 'Used by: ', users.map((u, i) => [i ? ', ' : '', h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => { m.close(); Editor.open(u.id); } }, u.name)])) : h('div', { class: 'muted', style: { marginTop: '8px', fontSize: '12px' } }, 'Not used by any marker yet.'),
+        h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))', marginTop: '6px' } }, `${p.w} × ${p.h} · ${Math.round((p.bytes || 0) / 1024)} KB`),
+        users.length ? h('div', { style: { marginTop: '8px', fontSize: 'calc(12px * var(--fs))' } }, 'Used by: ', users.map((u, i) => [i ? ', ' : '', h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => { m.close(); Editor.open(u.id); } }, u.name)])) : h('div', { class: 'muted', style: { marginTop: '8px', fontSize: 'calc(12px * var(--fs))' } }, 'Not used by any marker yet.'),
         h('button', { class: 'danger small', style: { marginTop: '12px' }, onclick: async () => { if (!confirm(`Delete "${p.title}" from the library?${users.length ? ` It is used by ${users.length} marker(s).` : ''}`)) return; await remove(id); m.close(); } }, 'Delete photo')),
       h('div', { class: 'photo-edit-right' },
         field('Title', inp('title')),
@@ -245,7 +245,7 @@ window.Photos = (() => {
         p.caption ? h('div', { html: UI.textToHTML(p.caption) }) : null,
         (p.credit || p.date) ? h('div', { class: 'muted' }, [p.credit, p.date].filter(Boolean).join(' · ')) : null,
         h('div', { html: photoCitesHTML(p) }),
-        p.notes ? h('div', { class: 'muted', style: { fontSize: '12px' }, html: UI.textToHTML(p.notes) }) : null,
+        p.notes ? h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' }, html: UI.textToHTML(p.notes) }) : null,
         h('div', { style: { marginTop: '10px' } }, h('button', { class: 'small', onclick: () => { m.close(); edit(id); } }, '✏️ Edit details'))));
     const m = UI.modal({ title: 'Photo', body, width: '900px' });
   }

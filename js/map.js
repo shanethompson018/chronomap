@@ -29,6 +29,14 @@ window.MapView = (() => {
     };
     tieLayer = L.layerGroup().addTo(map);
     map.on('click', onMapClick);
+    // a bubble opened after the Size setting changed takes the new size, within the map
+    map.on('popupopen', e => {
+      const fs = App.size(), room = Math.max(220, map.getSize().x - 40), o = e.popup.options;
+      const want = { maxWidth: Math.min(room, Math.round(360 * fs)), minWidth: Math.min(room, Math.round(260 * fs)), maxHeight: Math.max(200, Math.min(map.getSize().y - 80, Math.round(340 * fs))) };
+      if (o.className === 'cm-popup' && (o.maxWidth !== want.maxWidth || o.minWidth !== want.minWidth || o.maxHeight !== want.maxHeight)) { Object.assign(o, want); e.popup.update(); }
+    });
+    document.addEventListener('chrono-size', () => { map.closePopup(); map.invalidateSize(); });
+    window.addEventListener('resize', () => map.invalidateSize());
     map.on('dblclick', () => { if (pick && pick.type === 'shape') finishShape(); });
 
     const s = Store.settings();
@@ -301,7 +309,8 @@ window.MapView = (() => {
     return m ? UI.markerInfoHTML(m, time()) : '';
   }
   function bindPopup(layer, id) {
-    layer.bindPopup(() => popupContent(id), { maxWidth: 360, minWidth: 260, maxHeight: 340, className: 'cm-popup' });
+    const fs = App.size(), room = Math.max(220, map.getSize().x - 40); // the bubble grows with the Size setting, within the map
+    layer.bindPopup(() => popupContent(id), { maxWidth: Math.min(room, Math.round(360 * fs)), minWidth: Math.min(room, Math.round(260 * fs)), maxHeight: Math.max(200, Math.min(map.getSize().y - 80, Math.round(340 * fs))), className: 'cm-popup' });
   }
 
   // Hover highlight for a pin that sits "somewhere inside" an area: the area lights up in the pin's colour.

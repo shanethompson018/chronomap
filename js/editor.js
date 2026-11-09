@@ -168,9 +168,9 @@ window.Editor = (() => {
     if (approx && !undet) {
       approxTick = h('input', { type: 'checkbox', checked: open, title: 'Approximate: give the earliest and latest it could be', disabled: reckoned, onchange: e => { if (e.target.checked) approxOpen.add(slot); else { approxOpen.delete(slot); const f = draft.facts[approx.i]; if (approx.end) { f.dateEndMin = ''; f.dateEndMax = ''; } else { f.dateMin = ''; f.dateMax = ''; } } render(); } });
       if (open) approxRow = h('div', { class: 'row approx-row', style: { gap: '4px' } },
-        h('span', { class: 'muted', style: { flex: 'none', fontSize: '11px' } }, 'earliest'),
+        h('span', { class: 'muted', style: { flex: 'none', fontSize: 'calc(11px * var(--fs))' } }, 'earliest'),
         h('input', { type: 'text', 'data-bind': approx.minBind, value: approx.min || '', placeholder: 'YYYY', readonly: reckoned, class: reckoned ? 'derived-input' : '' }),
-        h('span', { class: 'muted', style: { flex: 'none', fontSize: '11px' } }, 'latest'),
+        h('span', { class: 'muted', style: { flex: 'none', fontSize: 'calc(11px * var(--fs))' } }, 'latest'),
         h('input', { type: 'text', 'data-bind': approx.maxBind, value: approx.max || '', placeholder: 'YYYY', readonly: reckoned, class: reckoned ? 'derived-input' : '' }));
     }
     const chain = h('button', { type: 'button', class: 'small icon', disabled: !inStore, title: !inStore ? 'Save the marker first, then you can add a time gap to this date' : 'Time gap: relate this date to another date (e.g. "130 years after Adam was born")',
@@ -395,7 +395,7 @@ window.Editor = (() => {
     card.append(row(UI.sourceSelect({ value: f.sourceId, onChange: v => { draft.facts[i].sourceId = v; render(); }, noneLabel: '— source —' }),
       h('input', { type: 'text', 'data-bind': `facts.${i}.page`, value: f.page, placeholder: 'page / verse', style: { flex: '0 0 40%' } })));
     card.append(row(h('div', { class: 'narrow', style: { minWidth: '190px' } }, UI.confidenceSelect(f.confidence, v => { draft.facts[i].confidence = v; render(); })),
-      f.confidence ? h('input', { type: 'text', 'data-bind': `facts.${i}.reason`, value: f.reason, placeholder: 'why this grade: ambiguity, cross-references, circumstantial evidence…' }) : h('span', { class: 'muted', style: { fontSize: '11px', alignSelf: 'center' } }, 'confidence: your own grade, never taken from the source')));
+      f.confidence ? h('input', { type: 'text', 'data-bind': `facts.${i}.reason`, value: f.reason, placeholder: 'why this grade: ambiguity, cross-references, circumstantial evidence…' }) : h('span', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))', alignSelf: 'center' } }, 'confidence: your own grade, never taken from the source')));
     return card;
   }
   function renderWhere(i, t) {
@@ -440,7 +440,7 @@ window.Editor = (() => {
     if (rough.length) sum.push(`${rough.length} rough edge${rough.length > 1 ? 's' : ''}`);
     if (hasExt) sum.push(`extent: ${w.extent.length} points${w.extentRough && w.extentRough.length ? ` (${w.extentRough.length} rough)` : ''}`);
     return h('div', { class: 'row', style: { gap: '6px', marginTop: '4px', flexWrap: 'wrap' } },
-      h('span', { class: 'muted', style: { fontSize: '12px', flex: 'none' } }, sum.length ? sum.join(' · ') : 'all edges firm, no extent'),
+      h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))', flex: 'none' } }, sum.length ? sum.join(' · ') : 'all edges firm, no extent'),
       h('button', { type: 'button', class: 'small', title: 'Mark which edges of the outline are only guessed', onclick: () => roughEdgesDialog(i, 'coords') }, 'Firm / rough edges…'),
       hasExt ? h('button', { type: 'button', class: 'small', title: 'Drag, add or delete the extent\'s corners; nothing changes until you press Done', onclick: () => startEdit(i, 'extent') }, '✥ Edit extent') : null,
       h('button', { type: 'button', class: 'small', title: hasExt ? 'Throw the extent away and click a new one' : 'Draw a second outline: the furthest the territory might reach', onclick: () => {
@@ -516,7 +516,7 @@ window.Editor = (() => {
       h('button', { type: 'button', class: 'small narrow', title: 'Remove', onclick: () => { draft.facts[i].participants.splice(idx, 1); render(); } }, '✕')));
     const adder = UI.markerSelect({ exclude: [id, ...mine.map(x => x.p.markerId)], placeholder: mine.length ? `+ another ${role.name.toLowerCase()}…` : `${role.name}…`, onChange: v => { if (v) { draft.facts[i].participants.push({ roleId: role.id, markerId: v }); render(); } } });
     const tie = Store.linkType(role.tieTypeId);
-    return h('div', { class: 'fact-role' }, h('div', { class: 'muted', style: { fontSize: '12px' } }, role.name, tie ? h('span', { class: 'muted' }, ` · tie: ${tie.name}`) : h('span', { class: 'muted' }, ' · no tie type set')), ...items, row(adder));
+    return h('div', { class: 'fact-role' }, h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, role.name, tie ? h('span', { class: 'muted' }, ` · tie: ${tie.name}`) : h('span', { class: 'muted' }, ' · no tie type set')), ...items, row(adder));
   }
   function renderAddFact() {
     const sel = typeSelect(null, v => { addFact(v); });
@@ -546,7 +546,7 @@ window.Editor = (() => {
       h('div', {}, h('div', { class: 'row', style: { gap: '6px' } }, pickBtn,
         p ? h('button', { type: 'button', class: 'small', onclick: () => Photos.edit(p.id) }, 'Details') : null,
         p ? h('button', { type: 'button', class: 'small', onclick: () => { draft.photoId = null; render(); } }, 'Remove') : null),
-        h('div', { class: 'muted', style: { fontSize: '11px', marginTop: '4px' } }, p ? p.title : 'Shown on the map pin, in the graphs and in the bubble.')));
+        h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))', marginTop: '4px' } }, p ? p.title : 'Shown on the map pin, in the graphs and in the bubble.')));
   }
   function renderGallery() {
     const items = draft.photoIds.map(pid => Store.photo(pid)).filter(Boolean).map(p => h('div', { class: 'g-item' },

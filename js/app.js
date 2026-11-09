@@ -29,6 +29,31 @@ window.App = (() => {
   }
   const isEink = () => eink;
 
+  // Size setting: one factor for every letter, box and button, remembered on this device (not synced, since a
+  // tablet and a PC want different sizes). body.compact marks a screen that is narrow for the chosen size.
+  const SIZES = [0.9, 1, 1.15, 1.3, 1.5, 1.75, 2], SIZE_KEY = 'chronomap.size';
+  let size = 1;
+  function readSize() { try { const v = +localStorage.getItem(SIZE_KEY); return SIZES.includes(v) ? v : 1; } catch (e) { return 1; } }
+  function fitLayout() {
+    document.body.classList.toggle('compact', window.innerWidth / size < 1000);
+    const top = document.querySelector('.topbar');
+    if (top) document.documentElement.style.setProperty('--top-h', top.offsetHeight + 'px');
+  }
+  function applySize(v, announce) {
+    size = v;
+    document.documentElement.style.setProperty('--fs', String(v));
+    const down = document.getElementById('btn-size-down'), up = document.getElementById('btn-size-up');
+    if (down) { down.disabled = v <= SIZES[0]; up.disabled = v >= SIZES[SIZES.length - 1]; down.title = up.title = `Size of letters, boxes and buttons: ${Math.round(v * 100)}% (kept on this device)`; }
+    fitLayout();
+    if (announce) {
+      try { localStorage.setItem(SIZE_KEY, String(v)); } catch (e) { /* ignore */ }
+      UI.toast(`Size ${Math.round(v * 100)}%`);
+      document.dispatchEvent(new CustomEvent('chrono-size'));
+    }
+  }
+  function stepSize(d) { const i = Math.max(0, Math.min(SIZES.length - 1, SIZES.indexOf(size) + d)); if (SIZES[i] !== size) applySize(SIZES[i], true); }
+  const getSize = () => size;
+
   function showTab(name) {
     if (current === name) { if (name === 'map') MapView.show(); return; }
     current = name;
@@ -70,6 +95,7 @@ window.App = (() => {
     try {
       Store.load();
       applyEink(detectEink());
+      applySize(readSize(), false);
       Relations.init();
       MapView.init();
       Editor.init();
@@ -87,6 +113,10 @@ window.App = (() => {
     document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
     document.getElementById('btn-new-marker').addEventListener('click', newMarker);
     document.getElementById('btn-eink').addEventListener('click', toggleEink);
+    document.getElementById('btn-size-down').addEventListener('click', () => stepSize(-1));
+    document.getElementById('btn-size-up').addEventListener('click', () => stepSize(1));
+    window.addEventListener('resize', fitLayout);
+    fitLayout();
     // Conflict badge: visible only while some related dates disagree
     const cBtn = document.getElementById('btn-conflicts');
     const paintConflicts = () => { const n = Relations.conflicts().length; cBtn.textContent = `⚠ ${n} conflict${n === 1 ? '' : 's'}`; cBtn.classList.toggle('hidden', n === 0); };
@@ -140,7 +170,7 @@ window.App = (() => {
     }).catch(e => console.warn('Service worker not registered', e));
   }
 
-  return { init, showTab, currentTab, newMarker, isEink };
+  return { init, showTab, currentTab, newMarker, isEink, size: getSize, isCompact: () => document.body.classList.contains('compact') };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);

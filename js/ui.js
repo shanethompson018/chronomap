@@ -117,7 +117,7 @@ window.UI = (() => {
     const author = inp('Author (optional)');
     const year = inp('Year (optional)', { style: { maxWidth: '110px' } });
     const where = inp('Publisher, URL, library or archive (optional)');
-    const status = h('span', { class: 'muted', style: { fontSize: '12px' } });
+    const status = h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } });
     const lookupBtn = h('button', { class: 'small', type: 'button', title: 'Fill the details from the ISBN (needs an internet connection)' }, '🔍 Look up');
     const rowOf = (label, el) => h('label', { class: 'field-row' }, h('span', { class: 'field-label' }, label), el);
     async function lookup() {
@@ -194,7 +194,7 @@ window.UI = (() => {
     if (link.start || link.end) dates = ` <span class="muted">(${esc(Dates.formatInput(link.start))}${link.end ? ' – ' + esc(Dates.formatInput(link.end)) : (link.start ? ' →' : '')})</span>`;
     const label = link.label ? ` <span class="muted">· ${esc(link.label)}</span>` : '';
     const cite = link.sourceId ? ` ${citeHTML(link.sourceId, link.page)}` : '';
-    const note = (link.note ? `<div class="muted" style="font-size:11px">${textToHTML(link.note)}${link.derived ? ' · follows from the Parent of ties' : ''}</div>` : '') + (cite ? `<div style="font-size:11px">${cite}</div>` : '');
+    const note = (link.note ? `<div class="muted" style="font-size:calc(11px * var(--fs))">${textToHTML(link.note)}${link.derived ? ' · follows from the Parent of ties' : ''}</div>` : '') + (cite ? `<div style="font-size:calc(11px * var(--fs))">${cite}</div>` : '');
     return `<li class="tie-row"><span class="swatch sm" style="background:${esc(color)};vertical-align:middle"></span> `
       + `<strong>${esc(tname)}</strong> ${arrow}<a class="mlink" data-action="goto-marker" data-id="${esc(other.id)}">${esc(Store.displayName(other))}</a>`
       + (otherRole ? ` <span class="muted">(${esc(otherRole)})</span>` : '')
@@ -376,7 +376,7 @@ window.UI = (() => {
     const overlay = h('div', { class: 'modal-overlay' + (side ? ' side-modal' : '') }); // side: no backdrop, the map stays usable
     const close = () => { if (!overlay.isConnected) return; overlay.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
     const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
-    const box = h('div', { class: 'modal', style: width ? { width } : null },
+    const box = h('div', { class: 'modal', style: width ? { width: /px$/.test(width) ? `calc(${width} * var(--fs))` : width } : null }, // dialogs grow with the Size setting
       h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', title: 'Close', onclick: close }, '✕')),
       h('div', { class: 'modal-body' }, body));
     overlay.append(box);
@@ -390,7 +390,7 @@ window.UI = (() => {
   const GRAPH_LIMIT = 300;
   function sizeGuard({ count, noun = 'markers', onDraw }) {
     return h('div', { class: 'graph-empty ask' },
-      h('div', {}, h('div', { style: { fontSize: '15px', marginBottom: '10px' } }, `This would draw ${count.toLocaleString()} ${noun}.`),
+      h('div', {}, h('div', { style: { fontSize: 'calc(15px * var(--fs))', marginBottom: '10px' } }, `This would draw ${count.toLocaleString()} ${noun}.`),
         h('div', { class: 'muted', style: { marginBottom: '14px' } }, 'A graph this size can be slow on a tablet. Narrow the choice, or draw it anyway.'),
         h('button', { class: 'primary', onclick: onDraw }, 'Draw it')));
   }

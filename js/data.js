@@ -50,14 +50,14 @@ window.DataTab = (() => {
       const cur = Sync.status();
       statusLine.innerHTML = '';
       statusLine.append(h('strong', {}, { off: 'Not signed in', signin: 'Signed out (sign in to sync)', syncing: cur.text, ok: 'Signed in · ' + cur.text, error: 'Sync failed', offline: 'Offline' }[cur.state] || cur.text));
-      if (cur.state === 'error' && Sync.lastError()) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, Sync.lastError().message));
+      if (cur.state === 'error' && Sync.lastError()) statusLine.append(h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, Sync.lastError().message));
       const ss = Store.settings();
-      if (ss.driveUser) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, 'Google account: ', h('strong', {}, ss.driveUser), ' (every device must show the same account)'));
-      if (ss.driveLastSync) statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } }, 'Last successful sync: ' + new Date(ss.driveLastSync).toLocaleString()));
+      if (ss.driveUser) statusLine.append(h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'Google account: ', h('strong', {}, ss.driveUser), ' (every device must show the same account)'));
+      if (ss.driveLastSync) statusLine.append(h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'Last successful sync: ' + new Date(ss.driveLastSync).toLocaleString()));
       const rp = ss.driveLastReport;
       if (rp && rp.after) {
         const c = x => `${x.markers} marker${x.markers === 1 ? '' : 's'}, ${x.sources} source${x.sources === 1 ? '' : 's'}, ${x.photos} image${x.photos === 1 ? '' : 's'}`;
-        statusLine.append(h('div', { class: 'muted', style: { fontSize: '12px' } },
+        statusLine.append(h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } },
           `Drive file had ${c(rp.remote)}` + (rp.remoteModified ? ` (last written ${new Date(rp.remoteModified).toLocaleString()})` : '') + `; this device had ${c(rp.before)}; now both have ${c(rp.after)}`
           + (rp.uploaded ? ' · this device wrote the file' : ' · nothing to write') + (rp.copies > 1 ? ` · merged ${rp.copies} copies of the file` : '') + (rp.extraFolders ? ` · ${rp.extraFolders} extra "Chrono Map" folder(s) in Drive are ignored` : '')));
       }
@@ -79,7 +79,7 @@ window.DataTab = (() => {
         Sync.enabled() ? h('button', { onclick: () => { if (confirm('Stop syncing on this device? Your data stays here and in Drive; nothing is deleted.')) { Sync.signOut(); render(); } } }, 'Sign out') : null,
         folder ? h('a', { href: folder, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)' } }, 'Open the Drive folder ↗') : null,
         h('span', { class: 'spacer' }),
-        s.sampleUntouched ? h('span', { class: 'muted', style: { fontSize: '12px' } }, 'This device still shows the untouched sample; the first sync will replace it with what is in Drive.') : null));
+        s.sampleUntouched ? h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'This device still shows the untouched sample; the first sync will replace it with what is in Drive.') : null));
   }
 
   function relationsSection() {
@@ -105,8 +105,8 @@ window.DataTab = (() => {
     if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 6, class: 'muted' }, 'No time gaps yet. Open a marker and press ⛓ beside one of its dates.')));
     return h('div', { class: 'data-section' },
       h('h2', {}, `Time gaps (${rels.length})`, h('span', { class: 'spacer' }),
-        conflicts.length ? h('button', { class: 'small conflict-btn', onclick: () => Relations.showConflicts() }, `⚠ ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`) : h('span', { class: 'muted', style: { fontSize: '12px' } }, 'no conflicts'),
-        undetCount ? h('span', { class: 'muted', style: { fontSize: '12px', marginLeft: '10px' } }, `${undetCount} date${undetCount > 1 ? 's' : ''} not yet anchored`) : null),
+        conflicts.length ? h('button', { class: 'small conflict-btn', onclick: () => Relations.showConflicts() }, `⚠ ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`) : h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'no conflicts'),
+        undetCount ? h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))', marginLeft: '10px' } }, `${undetCount} date${undetCount > 1 ? 's' : ''} not yet anchored`) : null),
       h('p', { class: 'hint' }, 'Fixed gaps between dates ("Seth\'s birth = Adam\'s birth + 130 y"). Pinned dates are the anchors; everything else is computed and moves with them. A relation that is overruled stays on record but is left out of the maths.'),
       table);
   }
@@ -175,10 +175,10 @@ window.DataTab = (() => {
       const users = Store.photoUsers(p.id).length;
       grid.append(h('div', { class: 'photo-tile', title: `${p.title}${users ? ` · used by ${users} marker(s)` : ''}`, onclick: () => Photos.edit(p.id) },
         Photos.thumbEl(p, 96), h('div', { class: 'photo-title' }, p.title || 'Untitled'),
-        h('div', { class: 'muted', style: { fontSize: '10px' } }, `${(p.citations || []).filter(c => c.sourceId).length} source(s)${users ? ` · ${users} marker(s)` : ''}`)));
+        h('div', { class: 'muted', style: { fontSize: 'calc(10px * var(--fs))' } }, `${(p.citations || []).filter(c => c.sourceId).length} source(s)${users ? ` · ${users} marker(s)` : ''}`)));
     }
     return h('div', { class: 'data-section' },
-      h('h2', {}, `Images (${list.length})`, h('span', { class: 'muted', style: { fontWeight: 400, fontSize: '12px' } }, `${(Photos.totalBytes() / (1024 * 1024)).toFixed(1)} MB`), status, h('span', { class: 'spacer' }),
+      h('h2', {}, `Images (${list.length})`, h('span', { class: 'muted', style: { fontWeight: 400, fontSize: 'calc(12px * var(--fs))' } }, `${(Photos.totalBytes() / (1024 * 1024)).toFixed(1)} MB`), status, h('span', { class: 'spacer' }),
         h('button', { class: 'small', onclick: () => fileInput.click() }, '⬆ Add images'), fileInput),
       h('p', { class: 'hint' }, Photos.isReady()
         ? 'Click a photo to edit its title, caption, credit and sources, or to delete it. Large images are shrunk to 1600 px on the long side. Photos are stored in this browser; use "Export JSON" with photos included to back them up.'
@@ -353,7 +353,7 @@ window.DataTab = (() => {
       tb.append(h('tr', {},
         h('td', { class: 'narrow' }, h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m))),
         h('td', {}, h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => Editor.open(m.id) }, Store.displayName(m)),
-          Store.otherNamesShown(m).length ? h('div', { class: 'muted', style: { fontSize: '11px' } }, 'also ' + Store.otherNamesShown(m).join(', ')) : null),
+          Store.otherNamesShown(m).length ? h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))' } }, 'also ' + Store.otherNamesShown(m).join(', ')) : null),
         h('td', {}, Store.category(m.categoryId)?.name || h('span', { class: 'muted' }, '—')),
         h('td', {}, { pin: 'Point', area: 'Area', path: 'Route' }[m.kind] || m.kind),
         h('td', {}, m.start ? `${Dates.formatInput(m.start)}${m.startLabel ? ' (' + m.startLabel + ')' : ''}` : ''),
@@ -372,7 +372,9 @@ window.DataTab = (() => {
   }
 
   function backupSection() {
-    const version = h('p', { class: 'muted', style: { fontSize: '12px' } }, `Chrono Map version ${window.ChronoVersion || 'unknown'} · every device should show the same version after a reload`);
+    const version = h('p', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, `Chrono Map version ${window.ChronoVersion || 'unknown'} · every device should show the same version after a reload`);
+    // what this screen reports, so a size problem on one device can be described exactly
+    const screenLine = h('p', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, `This screen: ${window.innerWidth} × ${window.innerHeight}, pixel ratio ${(+window.devicePixelRatio || 1).toFixed(2)}, size ${Math.round(App.size() * 100)}%, E-ink mode ${App.isEink() ? 'on' : 'off'}`);
     const mode = UI.select([['merge', 'Merge into current data (update matching ids)'], ['replace', 'Replace everything']], 'merge');
     const file = h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' } });
     file.addEventListener('change', () => {
@@ -403,7 +405,7 @@ window.DataTab = (() => {
     const size = (localStorage.getItem('chronomap.v1') || '').length;
     return h('div', { class: 'data-section' },
       h('h2', {}, 'Backup & restore'),
-      version,
+      version, screenLine,
       h('p', { class: 'hint' }, `Everything is saved automatically in this browser (${(size / 1024).toFixed(0)} KB of data plus ${(Photos.totalBytes() / (1024 * 1024)).toFixed(1)} MB of photos). Export a JSON file regularly to keep a copy, move between computers, or share a dataset.`),
       h('div', { class: 'backup-row' },
         exportBtn, h('label', { style: { display: 'flex', gap: '4px', alignItems: 'center' } }, withPhotos, ' include photos'),

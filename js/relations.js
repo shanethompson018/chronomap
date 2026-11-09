@@ -247,7 +247,7 @@ window.Relations = (() => {
         const card = h('div', { class: 'card' }, h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, Store.slotLabel(c.ref), ' ', h('span', { class: 'muted' }, `(currently ${Dates.formatInput(c.chosen)})`)));
         for (const cand of c.candidates) {
           card.append(h('div', { class: 'rel-cand' },
-            h('div', { class: 'grow' }, h('strong', {}, Dates.formatRange(cand.value, cand.min, cand.max)), ' ', h('span', { class: 'muted', style: { fontSize: '12px' } }, pathText(cand))),
+            h('div', { class: 'grow' }, h('strong', {}, Dates.formatRange(cand.value, cand.min, cand.max)), ' ', h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, pathText(cand))),
             h('button', { class: 'small', onclick: () => { useValue(c, cand); render(); } }, 'Use this')));
         }
         card.append(h('div', { style: { marginTop: '6px' } }, h('button', { class: 'small', onclick: () => { Store.setUndetermined(c.ref, true); render(); } }, 'Mark undeterminable'),
