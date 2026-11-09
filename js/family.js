@@ -212,8 +212,9 @@ window.Family = (() => {
     if (!svg) {
       svg = d3.select(host).append('svg');
       g = svg.append('g');
-      zoom = d3.zoom().scaleExtent([0.15, 3]).on('zoom', e => g.attr('transform', e.transform));
+      zoom = d3.zoom().scaleExtent([0.05, 6]).filter(UI.zoomFilter).on('zoom', e => g.attr('transform', e.transform));
       svg.call(zoom).on('dblclick.zoom', null);
+      host.append(UI.zoomTools({ zoomBy: f => { if (App.isEink()) svg.call(zoom.scaleBy, f); else svg.transition().duration(150).call(zoom.scaleBy, f); }, home, fit }));
       svg.on('click', () => { if (selectedId) { selectedId = null; draw(); } });
     }
     g.selectAll('*').remove();
@@ -263,18 +264,31 @@ window.Family = (() => {
       if (sx) sel.append('text').attr('class', 'ft-sex').attr('x', W - 8).attr('y', 14).attr('text-anchor', 'end').text(sx);
       sel.append('title').text(`${Store.nameLine(m, null)}${Store.tagOf(m) ? ' (' + Store.tagOf(m) + ')' : ''}${m.summary ? '\n' + m.summary : ''}\nClick for details · double-click to make this the root`);
     });
-    if (refit) fit();
+    rootBox = tree.boxes.find(b => b.root) || null;
+    if (refit) home();
     renderInfo();
   }
   const trim = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || '');
-  function fit() {
-    if (!svg || !g.node() || !g.node().getBBox) return;
+  let rootBox = null;
+  function measure() {
+    if (!svg || !g.node() || !g.node().getBBox) return null;
     const b = g.node().getBBox(), host = $('fam-tree');
     const w = host.clientWidth, h = host.clientHeight;
-    if (!b.width || !b.height || !w || !h) return;
-    const k = Math.min(2, 0.92 * Math.min(w / b.width, h / b.height));
-    const t = d3.zoomIdentity.translate(w / 2 - k * (b.x + b.width / 2), h / 2 - k * (b.y + b.height / 2)).scale(k);
+    if (!b.width || !b.height || !w || !h) return null;
+    return { b, w, h, fit: 0.92 * Math.min(w / b.width, h / b.height) };
+  }
+  function setView(m, x, y, k) {
+    const t = d3.zoomIdentity.translate(m.w / 2 - k * x, m.h / 2 - k * y).scale(k);
     if (App.isEink()) svg.call(zoom.transform, t); else svg.transition().duration(250).call(zoom.transform, t);
+  }
+  // the whole tree in the window, however small that makes the boxes
+  function fit() { const m = measure(); if (m) setView(m, m.b.x + m.b.width / 2, m.b.y + m.b.height / 2, Math.min(2 * App.size(), m.fit)); }
+  // reading size: the whole tree if it fits at the size of the app's own text, else that size centred on the root person
+  function home() {
+    const m = measure(); if (!m) return;
+    const rs = App.size();
+    if (m.fit >= rs || !rootBox) { setView(m, m.b.x + m.b.width / 2, m.b.y + m.b.height / 2, Math.min(2 * rs, Math.max(m.fit, rootBox ? 0 : 0.05))); return; }
+    setView(m, rootBox.cx, rootBox.cy, rs);
   }
   function renderInfo() {
     const info = $('fam-info');

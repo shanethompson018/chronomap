@@ -5,6 +5,7 @@
  */
 window.Graph = (() => {
   const posCache = new Map(); // cacheKey -> Map(nodeId -> {x,y})
+  const viewCache = new Map(); // cacheKey -> zoom transform: where the view was left, kept across redraws
   let sim = null;
   const R = 20;
   const FAN_MAX = 5;                 // up to this many ties between a pair fan out as curves…
@@ -41,7 +42,7 @@ window.Graph = (() => {
     if (!nodes.length) { container.append(UI.h('div', { class: 'graph-empty' }, emptyText || 'Nothing to show')); return; }
     if (guard) { container.append(guard); return; } // too big to draw unasked: the guard carries the count and a Draw button
 
-    if (fresh) posCache.delete(cacheKey);
+    if (fresh) { posCache.delete(cacheKey); viewCache.delete(cacheKey); }
     const cache = posCache.get(cacheKey) || new Map();
     posCache.set(cacheKey, cache);
 
@@ -62,8 +63,12 @@ window.Graph = (() => {
         .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', c);
     });
     const g = svg.append('g');
-    const zoom = d3.zoom().scaleExtent([0.05, 6]).extent([[0, 0], [w, hgt]]).on('zoom', e => g.attr('transform', e.transform));
+    const savedView = viewCache.get(cacheKey);
+    let userMoved = false;
+    const zoom = d3.zoom().scaleExtent([0.05, 6]).extent([[0, 0], [w, hgt]]).filter(UI.zoomFilter)
+      .on('zoom', e => { g.attr('transform', e.transform); viewCache.set(cacheKey, e.transform); if (e.sourceEvent) userMoved = true; });
     svg.call(zoom).on('dblclick.zoom', null);
+    if (savedView) svg.call(zoom.transform, savedView); // a redraw (a click, a filter) leaves the view where it was
 
     const linkSel = g.append('g').selectAll('g').data(Ls).join('g').attr('class', d => 'link' + (d.bundle ? ' bundle' : '') + (d.opened ? ' fanned' : ''));
     linkSel.append('path').attr('fill', 'none').attr('stroke', d => d.color).attr('stroke-width', d => d.bundle ? 7 : 2).attr('stroke-opacity', d => d.bundle ? 0.55 : 0.85)
@@ -121,16 +126,27 @@ window.Graph = (() => {
       N.forEach(n => cache.set(n.id, { x: n.x, y: n.y }));
     }
 
-    function fit() {
-      if (!svg.node().isConnected) return;
+    function bounds() {
+      if (!svg.node().isConnected) return null;
       const xs = N.map(n => n.x), ys = N.map(n => n.y);
-      if (xs.some(v => !isFinite(v)) || ys.some(v => !isFinite(v))) return;
+      if (xs.some(v => !isFinite(v)) || ys.some(v => !isFinite(v))) return null;
       const minX = Math.min(...xs) - 60, maxX = Math.max(...xs) + 60, minY = Math.min(...ys) - 60, maxY = Math.max(...ys) + 60;
-      const scale = Math.min(2, 0.95 / Math.max((maxX - minX) / w, (maxY - minY) / hgt));
-      const tx = w / 2 - scale * (minX + maxX) / 2, ty = hgt / 2 - scale * (minY + maxY) / 2;
-      const t = d3.zoomIdentity.translate(tx, ty).scale(scale);
-      if (eink) svg.call(zoom.transform, t); else svg.transition().duration(300).call(zoom.transform, t);
+      return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, fit: 0.95 / Math.max((maxX - minX) / w, (maxY - minY) / hgt) };
     }
+    const setView = (x, y, k) => { const t = d3.zoomIdentity.translate(w / 2 - k * x, hgt / 2 - k * y).scale(k); if (eink) svg.call(zoom.transform, t); else svg.transition().duration(300).call(zoom.transform, t); };
+    // the whole drawing in the window, however small that makes it
+    function fit() { const b = bounds(); if (b) setView(b.cx, b.cy, Math.min(2 * App.size(), b.fit)); }
+    // reading size: everything if it fits at the size of the app's own text, else that size centred on the chosen marker
+    function home() {
+      const b = bounds(); if (!b) return;
+      const rs = App.size();
+      if (b.fit >= rs) { setView(b.cx, b.cy, Math.min(2 * rs, b.fit)); return; }
+      const focus = N.find(n => n.id === selectedId) || N.find(n => n.center)
+        || N.reduce((best, n) => (Math.hypot(n.x - b.cx, n.y - b.cy) < Math.hypot(best.x - b.cx, best.y - b.cy) ? n : best), N[0]);
+      setView(focus.x, focus.y, rs);
+    }
+    const first = () => { if (!savedView && !userMoved) home(); }; // only a new drawing is placed; a redraw keeps its view
+    container.append(UI.zoomTools({ zoomBy: f => { if (eink) svg.call(zoom.scaleBy, f); else svg.transition().duration(150).call(zoom.scaleBy, f); }, home, fit }));
 
     if (layout === 'force') {
       const warm = N.every(n => n.x != null && cache.has(n.id));
@@ -143,19 +159,19 @@ window.Graph = (() => {
         // e-ink: settle the layout silently, then draw once
         const s = makeSim().stop();
         for (let i = 0; i < (warm ? 80 : 300); i++) s.tick();
-        tick(); fit();
+        tick(); first();
       } else {
-        sim = makeSim().on('tick', tick).on('end', fit);
+        sim = makeSim().on('tick', tick).on('end', first);
         if (warm) sim.alpha(0.25);
       }
-    } else { tick(); fit(); }
+    } else { tick(); first(); }
 
     nodeSel.call(d3.drag()
       .on('start', (e, d) => { if (sim) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
       .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; if (!sim) { d.x = e.x; d.y = e.y; tick(); } })
       .on('end', (e, d) => { if (sim) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
 
-    return { fit };
+    return { fit, home };
   }
 
   // Simple layered ("hierarchy") layout: parents above children, barycentre ordering.

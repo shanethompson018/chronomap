@@ -386,6 +386,19 @@ window.UI = (() => {
     return { close, box };
   }
 
+  // The +, −, ⌂ and Fit buttons of a drawing (Ties, Network, Family). Pinching is off in the drawings, so these
+  // and a one-finger drag are how the view moves.
+  function zoomTools({ zoomBy, home, fit }) {
+    const stop = fn => e => { e.stopPropagation(); fn(); };
+    return h('div', { class: 'zoom-tools' },
+      h('button', { title: 'Larger', onclick: stop(() => zoomBy(1.3)) }, '+'),
+      h('button', { title: 'Smaller', onclick: stop(() => zoomBy(1 / 1.3)) }, '−'),
+      h('button', { title: 'Reading size, centred on the chosen marker', onclick: stop(home) }, '⌂'),
+      h('button', { class: 'fit', title: 'Fit the whole drawing in the window', onclick: stop(fit) }, 'Fit'));
+  }
+  // One finger (or the mouse) drags a drawing and the mouse wheel zooms it; two-finger pinching is ignored.
+  const zoomFilter = e => (!e.ctrlKey || e.type === 'wheel') && !e.button && !(e.touches && e.touches.length > 1);
+
   // Size guard for the graph views: instead of drawing a huge graph at once, say how big it is and offer a button.
   const GRAPH_LIMIT = 300;
   function sizeGuard({ count, noun = 'markers', onDraw }) {
@@ -402,6 +415,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, parseLatLng, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, zoomTools, zoomFilter, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

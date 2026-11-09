@@ -166,7 +166,12 @@ button.play.on { background: var(--accent); border-color: var(--accent); color: 
 /* ---------- graph tabs ---------- */
 .graph-area { flex: 1; min-width: 0; position: relative; }
 .graph { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1b202a 0%, #12151b 100%); }
-.graph svg { display: block; width: 100%; height: 100%; }
+.graph svg { display: block; width: 100%; height: 100%; touch-action: none; }
+/* +, −, ⌂ and Fit on a drawing: pinching is off there, so these and a one-finger drag move the view */
+.zoom-tools { position: absolute; top: 10px; left: 10px; z-index: 5; display: flex; flex-direction: column; gap: 4px; }
+.zoom-tools button { min-width: calc(34px * var(--fs)); padding: 4px 6px; font-weight: 600; background: var(--bg2); }
+.zoom-tools button.fit { font-weight: 400; font-size: calc(12px * var(--fs)); }
+body.eink .zoom-tools button { min-width: 46px; min-height: 46px; padding: 4px; background: #fff; }
 .graph-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); text-align: center; padding: 20px; }
 .node-icon { font-size: 16px; pointer-events: none; }
 .node-label { font-size: 12px; fill: var(--text); pointer-events: none; paint-order: stroke; stroke: #12151b; stroke-width: 3px; }
