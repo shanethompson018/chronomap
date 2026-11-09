@@ -71,10 +71,39 @@ window.App = (() => {
     Editor.openNew({ name: 'New marker', kind: 'pin', categoryId: Store.categories()[0]?.id || null, facts: [] });
   }
 
+  // ---------- from one marker's information to a tied marker's, and back ----------
+  let trail = []; // steps taken through tied names: [{ from, to }]
+  function showMarker(id) {
+    if (current === 'map') MapView.locate(id);      // its bubble; a marker with nothing on the map gets a dialog
+    else if (current === 'ties') Ties.select(id);
+    else if (current === 'network') Network.select(id);
+    else if (current === 'family') Family.select(id);
+    else UI.markerCard(id);
+  }
+  function gotoMarker(id, fromId) {
+    if (!Store.marker(id)) return;
+    if (fromId && fromId !== id) {
+      if (trail.length && trail[trail.length - 1].to !== fromId) trail = []; // a fresh walk starts here
+      trail.push({ from: fromId, to: id });
+      if (trail.length > 50) trail.shift();
+    }
+    UI.closeMarkerCard();
+    showMarker(id);
+  }
+  // the Back button shown at the top of a marker's information when it was reached through a tied name
+  function backHTML(id) {
+    const top = trail[trail.length - 1];
+    const m = top && top.to === id ? Store.marker(top.from) : null;
+    return m ? `<button class="small back-btn" data-action="back-marker" title="Back to the marker you came from">← Back to ${UI.esc(Store.displayName(m))}</button>` : '';
+  }
+  function goBack() { const top = trail.pop(); if (!top) return; UI.closeMarkerCard(); showMarker(top.from); }
+
   function onGlobalClick(e) {
     const el = e.target.closest('[data-action]');
     if (!el) return;
     const id = el.dataset.id, action = el.dataset.action;
+    if (action !== 'goto-marker' && action !== 'back-marker' && action !== 'view-photo') UI.closeMarkerCard(); // the dialog steps aside for Edit, Map, Network…
+    if (action === 'back-marker') { goBack(); return; }
     if (action === 'edit') Editor.open(id);
     else if (action === 'locate') { showTab('map'); MapView.locate(id); }
     else if (action === 'network') { showTab('network'); Network.setCenter(id); }
@@ -83,11 +112,8 @@ window.App = (() => {
     else if (action === 'view-photo') { e.preventDefault(); Photos.view(el.dataset.photo); }
     else if (action === 'change-border') { showTab('map'); Editor.changeBorderHere(id); }
     else if (action === 'goto-marker') {
-      if (current === 'map') MapView.locate(id);
-      else if (current === 'ties') Ties.select(id);
-      else if (current === 'network') Network.select(id);
-      else if (current === 'family') Family.select(id);
-      else Editor.open(id);
+      const from = el.closest('.info[data-mid]');
+      gotoMarker(id, from ? from.dataset.mid : null);
     }
   }
 
@@ -170,7 +196,7 @@ window.App = (() => {
     }).catch(e => console.warn('Service worker not registered', e));
   }
 
-  return { init, showTab, currentTab, newMarker, isEink, size: getSize, isCompact: () => document.body.classList.contains('compact') };
+  return { init, showTab, currentTab, newMarker, isEink, backHTML, gotoMarker, size: getSize, isCompact: () => document.body.classList.contains('compact') };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);

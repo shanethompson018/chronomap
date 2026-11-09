@@ -211,7 +211,8 @@ window.UI = (() => {
     const badge = slot => (window.Relations ? Relations.badgesHTML({ kind: 'marker', id: m.id, slot }) : '');
     const profile = m.photoId && Store.photo(m.photoId) && Photos.url(m.photoId)
       ? `<img class="info-photo" src="${esc(Photos.thumb(m.photoId))}" alt="${esc(Store.photo(m.photoId).title)}" title="${esc(Store.photo(m.photoId).title)}" data-action="view-photo" data-photo="${esc(m.photoId)}">` : '';
-    let out = `<div class="info">${profile}<div class="info-head"><span class="swatch" style="background:${esc(color)}">${esc(icon)}</span>`
+    // data-mid lets a tapped name know which marker's panel it was in (for the Back button)
+    let out = `<div class="info" data-mid="${esc(m.id)}">${window.App && App.backHTML ? App.backHTML(m.id) : ''}${profile}<div class="info-head"><span class="swatch" style="background:${esc(color)}">${esc(icon)}</span>`
       + `<div><div class="info-name">${esc(Store.nameLine(m, t))}${Store.tagOf(m) ? ` <span class="info-tag">(${esc(Store.tagOf(m))})</span>` : ''}</div><div class="info-cat">${esc(cat ? cat.name : 'Uncategorised')} · ${kindName}</div></div></div>`;
     if (m.summary) out += `<div class="info-summary">${esc(m.summary)}</div>`;
 
@@ -399,6 +400,17 @@ window.UI = (() => {
   // One finger (or the mouse) drags a drawing and the mouse wheel zooms it; two-finger pinching is ignored.
   const zoomFilter = e => (!e.ctrlKey || e.type === 'wheel') && !e.button && !(e.touches && e.touches.length > 1);
 
+  // A marker's information in a dialog, for markers the Map tab has no bubble for (nothing placed on the map).
+  let card = null;
+  function closeMarkerCard() { if (card) card.close(); }
+  function markerCard(id) {
+    const m = Store.marker(id); if (!m) return;
+    closeMarkerCard();
+    const t = window.App && App.currentTab() === 'map' && window.MapView ? MapView.time() : null;
+    const body = h('div', { html: markerInfoHTML(m, t) });
+    card = modal({ title: 'Marker information', body, width: '460px', onClose: () => { card = null; } });
+  }
+
   // Size guard for the graph views: instead of drawing a huge graph at once, say how big it is and offer a button.
   const GRAPH_LIMIT = 300;
   function sizeGuard({ count, noun = 'markers', onDraw }) {
@@ -415,6 +427,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, parseLatLng, zoomTools, zoomFilter, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

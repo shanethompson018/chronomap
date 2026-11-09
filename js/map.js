@@ -470,7 +470,7 @@ window.MapView = (() => {
         setTime(fd);
       } else refresh();
       rec = primary.get(id);
-      if (!rec) { UI.toast(`"${m.name}" has no location to show.`); Editor.open(id); return; }
+      if (!rec) { map.closePopup(); UI.markerCard(id); return; } // nothing placed on the map: its information in a dialog
     }
     const c = centerOf(rec);
     if (rec.kind === 'pin') goTo(c, Math.max(map.getZoom(), 6));

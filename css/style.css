@@ -221,6 +221,11 @@ body.eink .zoom-tools button { min-width: 46px; min-height: 46px; padding: 4px; 
 .info .tie-row { margin: 2px 0; }
 .info a.mlink { color: var(--accent); cursor: pointer; text-decoration: none; }
 .info a.mlink:hover { text-decoration: underline; }
+/* a tied name is a way to that marker: on a touch screen and in e-ink mode it looks and feels like one */
+@media (pointer: coarse) { .info a.mlink { text-decoration: underline; text-underline-offset: 3px; } }
+.back-btn { display: block; margin: 0 0 8px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.eink .info a.mlink { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; font-weight: 600; display: inline-block; padding: 9px 2px; }
+body.eink .info .tie-row, body.eink .info .fact-list li { margin: 2px 0 6px; }
 .info-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .info-actions button { font-size: calc(12px * var(--fs)); padding: 4px 8px; }
 .tag { display: inline-block; background: var(--bg3); border-radius: 10px; padding: 0 8px; font-size: calc(11px * var(--fs)); margin: 2px 2px 0 0; }
