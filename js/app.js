@@ -162,6 +162,15 @@ window.App = (() => {
     paintSync();
     syncBtn.addEventListener('click', () => { if (!Sync.configured()) { UI.toast('Sync is not configured in js/config.js', 'error'); return; } if (Sync.enabled() && Sync.hasToken()) Sync.run({ interactive: true, reason: 'button' }); else Sync.signIn().catch(e => UI.toast('Sign-in: ' + e.message, 'error')); });
     document.addEventListener('click', onGlobalClick);
+    // Library tables turn into cards on a narrow screen (css: body.compact table.grid); for that every cell
+    // carries the heading of its column, filled in whenever a table is drawn.
+    const labelTables = () => document.querySelectorAll('table.grid').forEach(tb => {
+      const heads = [...tb.querySelectorAll('thead th')].map(th => th.textContent.trim());
+      tb.querySelectorAll('tr').forEach(tr => { if (tr.closest('thead')) return; [...tr.children].forEach((td, i) => { if (td.dataset.label == null) td.dataset.label = heads[i] || ''; }); });
+    });
+    let labelTimer = null;
+    new MutationObserver(() => { clearTimeout(labelTimer); labelTimer = setTimeout(labelTables, 0); }).observe(document.body, { childList: true, subtree: true });
+    labelTables();
     registerServiceWorker();
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { if (MapView.isPicking()) MapView.cancelPick(); }

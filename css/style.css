@@ -325,6 +325,18 @@ table.grid input[type=text] { padding: 3px 6px; }
 table.grid select { width: auto; min-width: 110px; padding: 3px 6px; }
 table.grid td.narrow { width: 1%; white-space: nowrap; }
 table.grid tr:hover td { background: rgba(255,255,255,.02); }
+/* On a narrow screen each row of a Library table is a card: one labelled, full-width box per line, instead of
+   every column squeezed side by side. The labels come from the column headings (data-label, set by app.js). */
+body.compact table.grid, body.compact table.grid tbody, body.compact table.grid tr, body.compact table.grid td { display: block; width: auto; }
+body.compact table.grid thead { display: none; }
+body.compact table.grid tr { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 0 0 12px; background: var(--bg2); }
+body.compact table.grid td, body.compact table.grid td.narrow { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; border: none; padding: 4px 0; width: auto; white-space: normal; }
+body.compact table.grid td::before { content: attr(data-label); flex: 0 0 calc(120px * var(--fs)); max-width: 40%; color: var(--muted); font-size: calc(12px * var(--fs)); }
+body.compact table.grid td[data-label=""]::before { display: none; }
+body.compact table.grid td:empty { display: none; }
+body.compact table.grid td > input[type=text], body.compact table.grid td > select, body.compact table.grid td > .mselect { flex: 1 1 calc(160px * var(--fs)); width: auto !important; min-width: 0; margin: 0; }
+body.compact table.grid tr:hover td { background: none; }
+body.eink.compact table.grid tr { border: 2px solid #000; background: #fff; }
 .backup-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .backup-row select { width: auto; }
 
@@ -534,3 +546,9 @@ body.eink .rel-grade { color: #000; }
 /* ---------- finger-sized map buttons in e-ink mode ---------- */
 body.eink .leaflet-bar a, body.eink .leaflet-touch .leaflet-bar a { width: 46px; height: 46px; line-height: 44px; font-size: 26px; color: #000; border-color: #000; }
 body.eink .leaflet-bar { border: 2px solid #000; }
+
+/* cards, continued: cells that are only text (a count, a date, a name) share a line; cells with a box take a full line */
+body.compact table.grid tr { display: flex; flex-wrap: wrap; column-gap: 20px; }
+body.compact table.grid td { flex: 1 1 100%; }
+body.compact table.grid td:not(:has(input, select, textarea, .mselect)) { flex: 0 1 auto; }
+body.compact table.grid td:not(:has(input, select, textarea, .mselect))::before { flex: none; max-width: none; }
