@@ -68,7 +68,29 @@ The Google side lives in a Google Cloud project owned by the same account; its c
   offers *Add to Home screen* (Android) or an install icon in the address bar (PC). The installed app
   opens full screen, starts offline, and caches its own files; only map tiles need internet. When a new
   version is published, a "Reload" notice appears.
-* On narrow screens the details panel in the Ties and Network tabs slides over the graph and has a ✕.
+* **Size: A− and A+** in the top bar make every letter, box and button smaller or larger together, from
+  90% to 200%. The choice is kept on each device, so the tablet and the PC can differ. In E-ink mode
+  anything you tap is at least finger-sized.
+* **The page stays put.** The app itself never zooms or slides under your fingers; only the map zooms
+  with a pinch. Every tab is exactly as wide as the screen.
+* **☰ folds the left panel away** on the Map, Ties, Network and Family tabs, so the map or drawing takes
+  the whole width. Tap it again to bring the panel back.
+* **Drawings** (Ties, Network, Family) open at reading size: everything when it fits, otherwise centred
+  on the chosen marker. Drag with one finger to move around. **+** and **−** change the size, **⌂** returns
+  to reading size on the chosen marker, and **Fit** shows the whole drawing. Pinching is off in the
+  drawings; on a PC the mouse wheel still zooms.
+* **The marker editor is its own page.** New marker and Edit open a full-screen view. When a step needs
+  the map (Place on map, Move pin, Draw, Edit border, the 🎯 buttons) the editor steps aside with your
+  work kept and returns by itself when the step ends. **Minimise** does the same by hand, and a
+  *Back to editing* button brings you back. The box you are typing in stays above the keyboard.
+* **Tied names are links.** In a marker's information, tap the name of anyone it is tied to and that
+  marker's information opens, with a **← Back** button to where you came from. On the Map tab, a marker
+  with nothing placed on the map shows its information in a dialog.
+* **Library tables become cards** on a narrow screen: one labelled, full-width box per line.
+* On narrow screens the details panel in the Ties, Network and Family tabs slides over the drawing and
+  has a ✕.
+* If something is still too small or does not fit, Library → Backup shows a line beginning *This
+  screen:* with the numbers that describe the device. Send that line with the report.
 
 ## The five tabs
 
@@ -364,7 +386,7 @@ js/store.js       data model, saving, import/export
 js/sample.js      the sample dataset
 js/map.js         Map tab (markers, time slider, pick/draw and edit modes)
 js/overlay.js     picture overlay: georeferencing, fill and trace tools
-js/editor.js      marker editor drawer
+js/editor.js      marker editor (a full-screen view that parks while the map is in use)
 js/graph.js       graph drawing (used by Ties and Network)
 js/ties.js        Ties tab
 js/network.js     Network tab

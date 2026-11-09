@@ -266,7 +266,7 @@ they are made.
       2067 BC "Abram, later Abraham"; after it "Abraham, earlier Abram". Map labels and pins use the
       name in force; the Family tree, which has no slider, uses the latest name.
 
-## 8. Boox tablet usability (raised 9 Nov 2026, under discussion, nothing built)
+## 8. Boox tablet usability (raised 9 Nov 2026, built 9 Nov 2026)
 
 Raised by the user: input on the Boox is difficult because letters and boxes are small; some tabs do
 not fit the page or zoom in and out. Measured on 9 Nov with E-ink mode on, at a tablet-sized screen
@@ -291,24 +291,28 @@ What exists today for that last point: tied names are already links in every inf
 E-ink mode they are plain black text with no underline and a small tap area, and on the Map tab a tied
 marker with no place opens the editor instead of showing its information.
 
-Revised proposals in build order, each its own commit (awaiting the go-ahead):
+Revised proposals in build order, each its own commit. The user said "Build it" on 9 Nov 2026; assumptions kept: the full-screen editor applies on the PC too, and the drawings use drag plus buttons instead of pinch.
 
-- [ ] **8.1 The page stays put.** The app itself never zooms or slides: pinch and double-tap zoom are
+- [x] **8.1 The page stays put. Built 9 Nov 2026.** The app itself never zooms or slides: pinch and double-tap zoom are
       off everywhere except the map; the Ties and Network overflow is fixed so every tab is exactly
       the width of the screen.
-- [ ] **8.2 One size setting for the whole app.** A Size control beside the E-ink button (Normal, Large,
+- [x] **8.2 One size setting for the whole app. Built 9 Nov 2026.** A Size control beside the E-ink button (Normal, Large,
       Larger, Largest), remembered per device, scaling every letter, box and button together,
       including the text that is fixed today; anything tappable is at least finger-sized in E-ink mode.
-- [ ] **8.3 The marker editor is its own view.** New marker and Edit open a full-screen page with its
+- [x] **8.3 The marker editor is its own view. Built 9 Nov 2026.** New marker and Edit open a full-screen page with its
       own Save and Close, fields in one column on an upright tablet, and the box being typed in kept
       above the keyboard. Place on map / Move pin / Draw switch to the map and come straight back.
       Proposed for both the Boox and the PC, so there is one behaviour to learn.
-- [ ] **8.4 Drawings open at reading size.** Family, Ties and Network open with boxes at a readable size
+- [x] **8.4 Drawings open at reading size. Built 9 Nov 2026.** Family, Ties and Network open with boxes at a readable size
       centred on the chosen person, instead of shrinking everything to fit. Drag with a finger to move
       around; +, − and Fit buttons replace pinching.
-- [ ] **8.5 Tied names lead to that marker.** Tied names are underlined and finger-sized; tapping one
+- [x] **8.5 Tied names lead to that marker. Built 9 Nov 2026.** Tied names are underlined and finger-sized; tapping one
       shows that marker's information panel in every tab, including markers with no place on the Map
       tab, with a Back button to the marker you came from.
-- [ ] **8.6 Library on an upright tablet.** Rows become cards with labelled full-width boxes instead of a
+- [x] **8.6 Library on an upright tablet. Built 9 Nov 2026.** Rows become cards with labelled full-width boxes instead of a
       nine-column table.
-- [ ] **8.7 More room.** On an upright tablet the left sidebar folds away behind a button.
+- [x] **8.7 More room. Built 9 Nov 2026.** On an upright tablet the left sidebar folds away behind a button.
+
+Built notes: the Size control is A− / A+ (90% to 200%) rather than four named sizes; the fold button (☰)
+and the full-screen editor apply on every device; Library → Backup reports the screen's size and pixel
+ratio. Not yet checked on the Boox itself: only at a tablet-sized window on the PC.
