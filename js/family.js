@@ -145,7 +145,7 @@ window.Family = (() => {
       u.persons.forEach(p => { cxOf.set(p, px); place(p, px, y, p === u.id ? extra : { partner: true }); px += W + GX; });
       const me = cxOf.get(u.id), midY = y + H / 2;
       // lines between neighbours: solid/dashed to the partner beside the person, dotted on to the next partner
-      for (const side of [u.left, u.right]) {
+      for (const side of [u.left || [], u.right || []]) {
         side.forEach((p, j) => {
           const a = j === 0 ? me : cxOf.get(side[j - 1]), b = cxOf.get(p);
           const x1 = Math.min(a, b) + W / 2, x2 = Math.max(a, b) - W / 2;
@@ -186,7 +186,8 @@ window.Family = (() => {
     const visited = new Set();
     const rootUnit = unit(R, rootId, 0, visited);
     const sibIds = pref.showSibs ? [...new Set(R.parents(rootId).flatMap(p => R.children(p)))].filter(s => s !== rootId) : [];
-    const row = byBirth([rootId, ...sibIds]).map(id => id === rootId ? rootUnit : { id, persons: [id], groups: [], width: W });
+    // a brother or sister is a leaf: one box, no partners or children drawn (it still needs the empty partner lists)
+    const row = byBirth([rootId, ...sibIds]).map(id => id === rootId ? rootUnit : { id, persons: [id], left: [], right: [], groups: [], width: W });
     const rowW = row.reduce((s, u) => s + u.width, 0) + GX * (row.length - 1);
     const pedRoot = ped(R, rootId, 0, new Set());
     const aboveW = pedRoot.parents.length ? pedRoot.width : 0;
@@ -206,7 +207,8 @@ window.Family = (() => {
   function draw(refit = false) {
     const host = $('fam-tree');
     const eink = App.isEink();
-    const tree = rootId ? build() : null;
+    let tree = null, failed = null;
+    try { tree = rootId ? build() : null; } catch (e) { console.error(e); failed = e; }
     if (!svg) {
       svg = d3.select(host).append('svg');
       g = svg.append('g');
@@ -216,6 +218,10 @@ window.Family = (() => {
     }
     g.selectAll('*').remove();
     const empty = $('fam-empty');
+    if (failed) { // never leave the previous person's tree on screen as if it were this one's
+      empty.textContent = 'This tree could not be drawn (' + failed.message + '). Please report it.';
+      empty.classList.remove('hidden'); empty.classList.remove('ask'); $('fam-stats').textContent = ''; renderInfo(); return;
+    }
     if (!tree) {
       empty.textContent = Store.markers().length ? 'Pick a person on the left, or press 🌳 Family in a person\'s bubble.' : 'No markers yet.';
       empty.classList.remove('hidden'); empty.classList.remove('ask'); $('fam-stats').textContent = ''; renderInfo(); return;
