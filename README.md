@@ -79,7 +79,9 @@ The Google side lives in a Google Cloud project owned by the same account; its c
   on the chosen marker. Drag with one finger to move around. **+** and **−** change the size, **⌂** returns
   to reading size on the chosen marker, and **Fit** shows the whole drawing. Pinching is off in the
   drawings; on a PC the mouse wheel still zooms.
-* **The marker editor is its own page.** New marker and Edit open a full-screen view. When a step needs
+* **The marker editor is its own page on a tablet.** (On a PC, meaning a wide screen with a mouse and
+  E-ink mode off, it is a drawer at the right-hand side and the tab stays in view beside it.) On the
+  tablet, New marker and Edit open a full-screen view. When a step needs
   the map (Place on map, Move pin, Draw, Edit border, the 🎯 buttons) the editor steps aside with your
   work kept and returns by itself when the step ends. **Minimise** does the same by hand, and a
   *Back to editing* button brings you back. The box you are typing in stays above the keyboard.
@@ -386,7 +388,7 @@ js/store.js       data model, saving, import/export
 js/sample.js      the sample dataset
 js/map.js         Map tab (markers, time slider, pick/draw and edit modes)
 js/overlay.js     picture overlay: georeferencing, fill and trace tools
-js/editor.js      marker editor (a full-screen view that parks while the map is in use)
+js/editor.js      marker editor (side drawer on a PC; on a tablet a full-screen view that parks while the map is in use)
 js/graph.js       graph drawing (used by Ties and Network)
 js/ties.js        Ties tab
 js/network.js     Network tab

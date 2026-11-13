@@ -262,6 +262,9 @@ body.eink .info .tie-row, body.eink .info .fact-list li { margin: 2px 0 6px; }
 .drawer-foot { display: flex; gap: 8px; padding: 10px var(--ed-pad); border-top: 1px solid var(--border); flex: none; }
 @media (max-height: 560px) { .drawer-foot { display: none; } } /* keyboard up: Save is in the header, the room goes to the form */
 body.editing .modal-overlay.side-modal { display: none; } /* map panels wait behind the editor */
+/* On a PC (wide screen, mouse, E-ink mode off) the editor is the side drawer it first was: the tab stays in view beside it */
+body.ed-side .drawer { inset: var(--top-h) 0 0 auto; width: var(--drawer-w); max-width: 100vw; --ed-pad: 14px; border-left: 1px solid var(--border); box-shadow: -8px 0 30px rgba(0,0,0,.5); }
+body.ed-side .ed-min { display: none; }
 .editor-pill { position: fixed; top: calc(var(--top-h) + 10px); left: 50%; transform: translateX(-50%); z-index: 1400; max-width: calc(100vw - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
 /* on a narrow screen the boxes of a row stack instead of squeezing */
 body.compact .ed-row { flex-wrap: wrap; }

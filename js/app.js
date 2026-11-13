@@ -35,7 +35,11 @@ window.App = (() => {
   let size = 1;
   function readSize() { try { const v = +localStorage.getItem(SIZE_KEY); return SIZES.includes(v) ? v : 1; } catch (e) { return 1; } }
   function fitLayout() {
-    document.body.classList.toggle('compact', window.innerWidth / size < 1000);
+    const compact = window.innerWidth / size < 1000;
+    document.body.classList.toggle('compact', compact);
+    // the marker editor: a side drawer on a PC (wide, mouse, E-ink mode off), a full-screen view on a tablet
+    let coarse = false; try { coarse = window.matchMedia('(pointer: coarse)').matches; } catch (e) { /* ignore */ }
+    document.body.classList.toggle('ed-side', !compact && !eink && !coarse);
     const top = document.querySelector('.topbar');
     if (top) document.documentElement.style.setProperty('--top-h', top.offsetHeight + 'px');
   }

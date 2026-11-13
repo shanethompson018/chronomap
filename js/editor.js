@@ -1,6 +1,7 @@
-/* Marker editor: its own full-screen view (the element is still called the drawer). While the map is needed
- * (placing a point, drawing, looking at a position) the view is parked: hidden with the work kept, and it comes
- * back by itself when the map step ends, or from the "Back to editing" button.
+/* Marker editor. On a PC (wide screen, mouse, E-ink mode off: body.ed-side, set by app.js) it is a drawer at the
+ * right-hand side and the tab stays visible beside it. On a tablet it is its own full-screen view, and while the
+ * map is needed (placing a point, drawing, looking at a position) the view is parked: hidden with the work kept,
+ * and it comes back by itself when the map step ends, or from the "Back to editing" button.
  * Marker editor, as it was first described: a right-hand drawer. Edits a draft copy of the marker (name, shape, facts, fields, images,
  * citations) and saves it in one go. Time gaps are saved immediately because they join two markers. */
 window.Editor = (() => {
@@ -16,18 +17,19 @@ window.Editor = (() => {
 
   // ---------- the view: shown, parked, or closed ----------
   let parked = false, unparkTimer = null, pill = null;
+  const full = () => !document.body.classList.contains('ed-side'); // full-screen view (tablet) or side drawer (PC)
   const touch = () => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } };
   function syncView() {
     const open = !!draft && !drawer.classList.contains('hidden');
     if (!open) parked = false;
     drawer.classList.toggle('parked', open && parked);
-    document.body.classList.toggle('editing', open && !parked);
+    document.body.classList.toggle('editing', open && !parked && full());
     const showPill = open && parked && !MapView.isPicking(); // while picking, the yellow bar is the way back
     pill.classList.toggle('hidden', !showPill);
     if (showPill) pill.textContent = `✏️ Back to editing ${draft.name || 'the marker'}`;
   }
   // Hide the editor with the work kept, to use or look at the map or another tab.
-  function park() { if (!draft) return; clearTimeout(unparkTimer); parked = true; syncView(); }
+  function park() { if (!draft || !full()) return; clearTimeout(unparkTimer); parked = true; syncView(); } // a side drawer never needs to step aside
   // Bring it back; "soon" waits a moment so that one map step handing over to the next does not flash the editor.
   function unpark(soon) {
     if (!draft || !parked) return;
@@ -42,6 +44,7 @@ window.Editor = (() => {
     pill = document.getElementById('editor-pill');
     pill.addEventListener('click', () => { if (MapView.isPicking()) MapView.cancelPick(); unpark(); });
     new MutationObserver(syncView).observe(drawer, { attributes: true, attributeFilter: ['class'] });
+    window.addEventListener('resize', () => { if (parked && !full()) unpark(); else syncView(); }); // the window grew into a PC layout
     // on a touch screen the box being typed in stays in view above the on-screen keyboard
     const keepInView = el => { if (el && drawer.contains(el) && el.matches('input, textarea, select') && touch()) el.scrollIntoView({ block: 'center' }); };
     drawer.addEventListener('focusin', e => { const el = e.target; setTimeout(() => { if (document.activeElement === el) keepInView(el); }, 350); });
@@ -314,7 +317,7 @@ window.Editor = (() => {
     );
     drawer.append(
       h('div', { class: 'drawer-head' }, h('h2', {}, isNew ? 'New marker' : 'Edit marker'), h('span', { class: 'spacer' }),
-        h('button', { class: 'small', title: 'Hide the editor to look at the map or another tab. Your work is kept, and a button brings you back.', onclick: () => park() }, '▁ Minimise'),
+        h('button', { class: 'small ed-min', title: 'Hide the editor to look at the map or another tab. Your work is kept, and a button brings you back.', onclick: () => park() }, '▁ Minimise'),
         h('button', { class: 'primary small', onclick: save }, 'Save'),
         h('button', { class: 'icon-btn', title: 'Close', onclick: () => cancel() }, '✕')),
       body,

@@ -316,3 +316,9 @@ Revised proposals in build order, each its own commit. The user said "Build it" 
 Built notes: the Size control is A− / A+ (90% to 200%) rather than four named sizes; the fold button (☰)
 and the full-screen editor apply on every device; Library → Backup reports the screen's size and pixel
 ratio. Not yet checked on the Boox itself: only at a tablet-sized window on the PC.
+
+- [x] **8.8 On the PC the editor is a side drawer again (raised 13 Nov 2026). Built 13 Nov 2026.** The user
+      asked for new markers to "pop up on the side like it originally did" on the PC. The full-screen
+      editor of 8.3 now applies only on a tablet: a narrow screen for the chosen size, a touch screen,
+      or E-ink mode. On a wide screen with a mouse and E-ink mode off it is the right-hand drawer, the
+      tab stays visible beside it, and it does not step aside for map steps.
