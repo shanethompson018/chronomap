@@ -26,6 +26,7 @@
     <button class="tab" data-tab="ties">Ties</button>
     <button class="tab" data-tab="network">Network</button>
     <button class="tab" data-tab="family">Family</button>
+    <button class="tab" data-tab="timeline">Timeline</button>
     <button class="tab" data-tab="data">Library</button>
   </nav>
   <div class="topbar-right">
@@ -171,6 +172,34 @@
     <button class="info-close" id="fam-info-close" title="Close details">✕</button>
   </section>
 
+  <!-- ================= TIMELINE TAB ================= -->
+  <section id="tab-timeline" class="tab-panel">
+    <aside class="side">
+      <div class="side-section">
+        <div class="side-title">Markers on the timeline <button id="tl-clear" class="link-btn hidden">clear all</button></div>
+        <div id="tl-add"></div>
+        <div id="tl-chosen" class="tl-chosen"></div>
+        <p class="hint">Add one marker to read its facts in date order, or several to see them together. Tap a name here to jump to that marker's first fact.</p>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Display</div>
+        <label class="field">With several markers
+          <select id="tl-layout">
+            <option value="list">One list, every marker together</option>
+            <option value="lanes">Side by side, a column each</option>
+          </select>
+        </label>
+        <label title="Facts written on another marker that name this one, such as Son: Isaac from Isaac's Born fact"><input type="checkbox" id="tl-mirrors" checked> Facts from other markers</label>
+        <label><input type="checkbox" id="tl-gaps" checked> Time between dates</label>
+        <button id="tl-top" class="small" style="margin-top:8px">Back to the top</button>
+      </div>
+      <div class="side-section"><div id="tl-stats" class="muted"></div></div>
+    </aside>
+    <div class="tl-area"><div id="tl-body" class="tl-body"></div></div>
+    <aside class="info-panel" id="tl-info"></aside>
+    <button class="info-close" id="tl-info-close" title="Close details">✕</button>
+  </section>
+
   <!-- ================= NETWORK TAB ================= -->
   <section id="tab-network" class="tab-panel">
     <aside class="side">
@@ -249,6 +278,7 @@
 <script src="js/ties.js"></script>
 <script src="js/network.js"></script>
 <script src="js/family.js"></script>
+<script src="js/timeline.js"></script>
 <script src="js/data.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/app.js"></script>

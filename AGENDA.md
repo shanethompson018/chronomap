@@ -322,3 +322,13 @@ ratio. Not yet checked on the Boox itself: only at a tablet-sized window on the 
       editor of 8.3 now applies only on a tablet: a narrow screen for the chosen size, a touch screen,
       or E-ink mode. On a wide screen with a mouse and E-ink mode off it is the right-hand drawer, the
       tab stays visible beside it, and it does not step aside for map steps.
+
+## 9. Timeline tab (raised 13 Nov 2026, built 13 Nov 2026)
+
+- [x] **9.1 A Timeline tab.** Asked for: "When you select a marker you see all the facts in a timeline you
+      can scroll. Also you can add more than one marker to the timeline." Built as a vertical list on a
+      spine, one row per date, with the time between dates written on the spine; several markers either
+      in one list or side by side in columns; mirrored facts included (switchable); undated facts last;
+      🕒 Timeline button in a marker's information; choice of markers and layout kept per device.
+      Choices made without asking, open to change: equal spacing between rows rather than spacing to
+      scale (the Bible's spans would leave most of the page empty); no jump-to-year box yet.

@@ -1,1 +1,1 @@
-window.ChronoVersion = '2026-11-09 11:52'; // written by tools/stamp_release.py
+window.ChronoVersion = '2026-11-13 15:21'; // written by tools/stamp_release.py

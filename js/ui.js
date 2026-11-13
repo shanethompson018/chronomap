@@ -283,19 +283,26 @@ window.UI = (() => {
         + `<button data-action="network" data-id="${esc(m.id)}">🕸️ Network</button>`
         + `<button data-action="ties" data-id="${esc(m.id)}">🔗 Ties</button>`
         + (Store.linksOf(m.id).some(l => /^(parent|spouse) of$/i.test(((Store.linkType(l.typeId) || {}).name || '').trim())) ? `<button data-action="family" data-id="${esc(m.id)}">🌳 Family</button>` : '')
+        + ((m.facts || []).length || (m.mirrors || []).length ? `<button data-action="timeline" data-id="${esc(m.id)}" title="Add this marker to the Timeline tab">🕒 Timeline</button>` : '')
         + '</div>';
     }
     return out + '</div>';
   }
   // One fact as a bubble line: "4004 BC · Born · Eden · Father: Adam, Mother: Eve – note 📖 source"
-  function factLineHTML(m, f, badge) {
+  function factWhenHTML(m, f) {
+    const t = Store.factType(f.typeId);
+    const w = Facts.when(f);
+    if (w.date) return esc(Dates.formatRange(w.date, w.min, w.max)) + (t && t.hasEnd && w.dateEnd ? ' – ' + esc(Dates.formatRange(w.dateEnd, w.endMin, w.endMax)) : '');
+    if (f.dateMin || f.dateMax) return esc(f.dateMin ? 'after ' + Dates.formatInput(f.dateMin) : 'before ' + Dates.formatInput(f.dateMax));
+    if ((m.undetermined || []).includes('fact:' + f.id)) return '<span class="muted">undeterminable</span>';
+    return '';
+  }
+  const mirrorWhenHTML = mi => (mi.date ? esc(Dates.formatRange(mi.date, mi.dateMin, mi.dateMax)) + (mi.dateEnd ? ' – ' + esc(Dates.formatRange(mi.dateEnd, mi.dateEndMin, mi.dateEndMax)) : '') : '');
+  // opts.noDate leaves the date out and opts.bare leaves the <li> off (the Timeline tab shows the date beside the card)
+  function factLineHTML(m, f, badge, opts = {}) {
     const t = Store.factType(f.typeId);
     const bits = [];
-    let when = '';
-    const w = Facts.when(f);
-    if (w.date) when = esc(Dates.formatRange(w.date, w.min, w.max)) + (t && t.hasEnd && w.dateEnd ? ' – ' + esc(Dates.formatRange(w.dateEnd, w.endMin, w.endMax)) : '');
-    else if (f.dateMin || f.dateMax) when = esc(f.dateMin ? 'after ' + Dates.formatInput(f.dateMin) : 'before ' + Dates.formatInput(f.dateMax));
-    else if ((m.undetermined || []).includes('fact:' + f.id)) when = '<span class="muted">undeterminable</span>';
+    const when = opts.noDate ? '' : factWhenHTML(m, f);
     const b = badge ? badge('fact:' + f.id) + (t && t.hasEnd && f.dateEnd ? badge('fact:' + f.id + ':end') : '') : '';
     const title = `<strong>${esc(f.label || (t ? t.name : 'Fact'))}</strong>`;
     let where = '';
@@ -315,14 +322,14 @@ window.UI = (() => {
     if (f.note) line += ` <span class="muted">– ${esc(f.note)}</span>`;
     if (f.sourceId) line += ' ' + citeHTML(f.sourceId, f.page);
     if (f.confidence && f.reason) line += `<div class="grade-reason">${esc(CONFIDENCE_LABELS[f.confidence])}: ${textToHTML(f.reason)}</div>`;
-    return `<li>${line}</li>`;
+    return opts.bare ? line : `<li>${line}</li>`;
   }
 
   // One mirrored fact: "1 Jan 1901 BC · Born · Son: Isaac · Beersheba · from Isaac's Born fact".
-  function mirrorLineHTML(mi) {
+  function mirrorLineHTML(mi, opts = {}) {
     const o = Store.marker(mi.markerId); if (!o) return '';
     const bits = [];
-    if (mi.date) bits.push(esc(Dates.formatRange(mi.date, mi.dateMin, mi.dateMax)) + (mi.dateEnd ? ' – ' + esc(Dates.formatRange(mi.dateEnd, mi.dateEndMin, mi.dateEndMax)) : ''));
+    if (mi.date && !opts.noDate) bits.push(mirrorWhenHTML(mi));
     bits.push(`<strong>${esc(mi.factTitle)}</strong>`);
     bits.push(`<strong>${esc(mi.word)}</strong>: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`);
     if (mi.place) bits.push(esc(mi.place));
@@ -333,7 +340,7 @@ window.UI = (() => {
     if (mi.note) line += ` <span class="muted">– ${esc(mi.note)}</span>`;
     if (mi.sourceId) line += ' ' + citeHTML(mi.sourceId, mi.page);
     line += ` <span class="muted mirror-from">from ${esc(o.name)}'s ${esc(mi.factTitle)} fact</span>`;
-    return `<li class="mirror" title="Shown here from ${esc(o.name)}'s marker; edit it there">${line}</li>`;
+    return opts.bare ? line : `<li class="mirror" title="Shown here from ${esc(o.name)}'s marker; edit it there">${line}</li>`;
   }
 
   // Combobox for choosing a marker. Returns an element with getValue()/setValue().
@@ -427,6 +434,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, parseLatLng, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

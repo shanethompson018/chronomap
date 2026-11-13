@@ -559,3 +559,43 @@ body.compact table.grid tr { display: flex; flex-wrap: wrap; column-gap: 20px; }
 body.compact table.grid td { flex: 1 1 100%; }
 body.compact table.grid td:not(:has(input, select, textarea, .mselect)) { flex: 0 1 auto; }
 body.compact table.grid td:not(:has(input, select, textarea, .mselect))::before { flex: none; max-width: none; }
+
+/* ---------- Timeline tab ---------- */
+.tl-area { flex: 1; min-width: 0; position: relative; display: flex; background: var(--bg); }
+.tl-body { flex: 1; min-width: 0; overflow: auto; padding: 0 16px 80px; overscroll-behavior: contain; }
+.tl-empty { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); padding: 24px; }
+.tl-grid { display: grid; align-items: stretch; padding-top: 14px; min-width: min-content; }
+.tl-grid.lanes { padding-top: 0; }
+.tl-head { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 8px 0 8px 16px; border-bottom: 2px solid var(--border); }
+.tl-head.tl-corner { padding: 8px 14px 8px 0; text-align: right; color: var(--muted); font-size: calc(12px * var(--fs)); display: flex; align-items: center; justify-content: flex-end; }
+.tl-head .tl-chip { margin: 0; }
+/* the date column carries the spine: a line down its right edge with a dot at every date */
+.tl-date { padding: 10px 14px 8px 0; text-align: right; font-weight: 700; white-space: nowrap; border-right: 3px solid var(--border); position: relative; }
+.tl-date:not(.gap)::after { content: ''; position: absolute; right: -8px; top: calc(10px + .3em); width: 13px; height: 13px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); box-sizing: border-box; }
+.tl-date.none { font-weight: 400; color: var(--muted); }
+.tl-date.none::after { background: var(--muted); }
+.tl-date.gap { padding: 0; }
+.tl-gap { padding: 3px 0 3px 16px; color: var(--muted); font-size: calc(12px * var(--fs)); font-style: italic; }
+.tl-cell { padding: 3px 0 3px 16px; min-width: 0; }
+.tl-card { background: var(--bg2); border: 1px solid var(--border); border-left: 5px solid var(--accent); border-radius: 6px; padding: 7px 10px; margin: 4px 0; line-height: 1.45; overflow-wrap: anywhere; }
+.tl-card.mirror { border-left-style: dashed; }
+.tl-card a.mlink { color: var(--accent); cursor: pointer; text-decoration: none; }
+.tl-card a.mlink:hover { text-decoration: underline; }
+.tl-when { font-size: calc(12px * var(--fs)); margin-bottom: 2px; }
+.tl-chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 2px 10px 2px 5px; margin: 0 0 5px; border-radius: 14px; max-width: 100%; }
+.tl-chosen { margin-top: 8px; }
+.tl-row { display: flex; align-items: center; gap: 4px; padding: 3px 0; }
+.tl-row-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.tl-row-name .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-row-name:hover .name { text-decoration: underline; }
+/* the details panel of this tab only takes room while a marker is chosen, and always has its ✕ */
+#tl-info:not(.open) { display: none; }
+#tl-info.open + .info-close { display: block; position: absolute; top: 8px; right: 8px; z-index: 21; }
+@media (pointer: coarse) { .tl-card a.mlink { text-decoration: underline; text-underline-offset: 3px; } }
+body.eink .tl-area, body.eink .tl-head { background: #fff; }
+body.eink .tl-card { background: #fff; border-color: #000; border-left-width: 6px; }
+body.eink .tl-card a.mlink { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; font-weight: 600; display: inline-block; padding: 6px 2px; }
+body.eink .tl-date { border-right-color: #000; }
+body.eink .tl-date:not(.gap)::after { background: #000; border-color: #fff; }
+body.eink .tl-gap { color: #000; }
+body.eink .tl-chip { min-height: 36px; }

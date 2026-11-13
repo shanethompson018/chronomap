@@ -94,7 +94,7 @@ The Google side lives in a Google Cloud project owned by the same account; its c
 * If something is still too small or does not fit, Library → Backup shows a line beginning *This
   screen:* with the numbers that describe the device. Send that line with the report.
 
-## The five tabs
+## The six tabs
 
 ### Map
 * **Time slider** at the bottom. Drag it, press ▶ to play, step by day/week/month/year/decade, or type a
@@ -137,6 +137,21 @@ icon, the name, the Begins and Ends dates and the sex. Click a person for their 
 to make them the root. The 🌳 Family button in a person's bubble opens the tree on them. *Up* and
 *Down* are typed numbers of generations, or *All* (the default) to follow the ties as far as they go;
 a tree of more than 300 people shows its size and a *Draw it* button rather than drawing at once.
+
+### Timeline
+The facts of one or more markers in date order, as a list you scroll. Add a marker in the left panel,
+or press 🕒 Timeline in a marker's information. Each date is a row on the spine with its facts beside
+it; facts on the same date share a row, and the time that passed is written between rows ("130 years
+later", no finer than the dates themselves). Facts with no date come last. A card with a dashed edge
+is a fact written on another marker that names this one.
+
+With several markers there are two layouts: **one list** (everyone's facts together, each card naming
+its marker) and **side by side** (a column per marker with the names fixed at the top, to compare
+lives). In one list, a fact whose own marker is also on the timeline is shown once, not twice. The
+arrows beside a name change the order of the columns, ✕ takes a marker off, and tapping a name in the
+left panel jumps to that marker's first fact. Tap a marker's name on a card for its information, or a
+tied name to see that marker and add it to the timeline. The markers and layout chosen are remembered
+on each device. Nothing is added to your data.
 
 ### Library
 A strip of sub-tabs, one section at a time: Sync, Time gaps, Sources, Images, Categories, Fact types,
@@ -393,6 +408,7 @@ js/graph.js       graph drawing (used by Ties and Network)
 js/ties.js        Ties tab
 js/network.js     Network tab
 js/family.js      Family tab (family tree)
+js/timeline.js    Timeline tab (facts of chosen markers in date order)
 js/data.js        Library tab
 js/photos.js      photo library (images in IndexedDB), picker, lightbox
 js/sync.js        Google Drive sync (sign-in, Drive folder, per-record merge, photos)

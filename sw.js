@@ -2,11 +2,11 @@
  * installs to the home screen. Map tiles and Google APIs always go straight to the network.
  * VERSION is stamped by tools/stamp_release.py before every commit, so each release installs as a new worker: the
  * app then reloads itself (or offers Reload while something is being edited) and every file is fresh. */
-const VERSION = 'chronomap-202611091152';
+const VERSION = 'chronomap-202611131521';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/config.js', './js/version.js', './js/dates.js', './js/ui.js', './js/isbn.js', './js/sample.js', './js/facts.js', './js/store.js', './js/photos.js', './js/relations.js', './js/graph.js', './js/map.js', './js/overlay.js',
-  './js/editor.js', './js/ties.js', './js/network.js', './js/family.js', './js/data.js', './js/sync.js', './js/app.js',
+  './js/editor.js', './js/ties.js', './js/network.js', './js/family.js', './js/timeline.js', './js/data.js', './js/sync.js', './js/app.js',
   './assets/chronomap.png', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
