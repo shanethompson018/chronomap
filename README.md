@@ -265,7 +265,13 @@ manuscripts have no ISBN and are typed by hand as before.
   overlapping range: at that moment only the exact one shows.
 * **Somewhere in an area.** A fact's "where" can be *at / inside another marker*. The pin then sits at
   that marker's centre (following its border as it changes), gets a dashed ring, fans out beside other
-  pins in the same area, and hovering it lights the area up in the pin's colour.
+  pins in the same area, and hovering it lights the area up in the pin's colour. The fan follows the
+  zoom: while the area is large enough on screen the pins sit at their full spacing; as you zoom out
+  they draw closer together so they stay within the area; and when there is no longer room to tell
+  them apart they become **one pin showing how many there are** ("8", labelled "8 in Canaan"). Tap
+  that pin for the list of names: a name zooms in until the pins have room and opens that marker's
+  bubble, and *Zoom in to spread them out* does the same without opening one. Zooming in by hand
+  separates them again. Ties to a marker under a shared pin are drawn to that pin.
 * **Rough borders.** An area outline can carry a second, lighter dashed outline: the **largest possible
   extent** ("Draw extent"). Each edge of either outline can be marked **firm** (solid: a coast, a
   river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the

@@ -332,3 +332,13 @@ ratio. Not yet checked on the Boox itself: only at a tablet-sized window on the 
       🕒 Timeline button in a marker's information; choice of markers and layout kept per device.
       Choices made without asking, open to change: equal spacing between rows rather than spacing to
       scale (the Bible's spans would leave most of the page empty); no jump-to-year box yet.
+
+## 10. Map: pins inside an area merge when zoomed out (raised 18 Nov 2026, built 18 Nov 2026)
+
+- [x] **10.1** Reported: "if multiple markers are inside a marker zooming out keeps the same spacing. They
+      should eventually become one pin." Cause: pins placed inside an area were fanned at a fixed 18
+      pixels whatever the zoom, so zoomed out they covered far more ground than the area. Built: the
+      ring spacing follows the area's size on screen (18 px down to 9 px), and below that the pins
+      share one counted pin whose bubble lists them and offers to zoom in. Applies to pins whose
+      "where" is at / inside an area marker. Pins at separate typed coordinates that happen to be close
+      together are not merged; say if that is wanted too.

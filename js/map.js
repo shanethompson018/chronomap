@@ -29,6 +29,7 @@ window.MapView = (() => {
     };
     tieLayer = L.layerGroup().addTo(map);
     map.on('click', onMapClick);
+    map.on('zoomend', () => { if (fanAreas) refresh(); }); // pins inside an area tighten, merge or spread with the zoom
     // a bubble opened after the Size setting changed takes the new size, within the map
     map.on('popupopen', e => {
       const fs = App.size(), room = Math.max(220, map.getSize().x - 40), o = e.popup.options;
@@ -255,6 +256,8 @@ window.MapView = (() => {
     const keep = new Set(), keepKeys = new Set();
     primary.clear();
     const insideCount = new Map(); // areaId -> pins placed inside it so far (for fanning them out)
+    const insideTotal = new Map(); // areaId -> how many pins sit inside it at this time
+    const groups = new Map();      // areaId -> the pins that share one counted pin at this zoom
     const wanted = [];
     for (const m of Store.markers()) {
       if (!passesFilter(m)) continue;
@@ -268,28 +271,124 @@ window.MapView = (() => {
         wanted.push({ m, mv, geo, opacity: Math.min(1, p * w), weight: p * w });
       }
     }
+    for (const it of wanted) if (it.geo.inside) insideTotal.set(it.geo.inside, (insideTotal.get(it.geo.inside) || 0) + 1);
+    const layout = new Map([...insideTotal].map(([areaId, n]) => [areaId, insideLayout(areaId, n, tt)]));
+    fanAreas = [...insideTotal.values()].filter(n => n > 1).length;
     for (const it of wanted) {
+      const lay = it.geo.inside ? layout.get(it.geo.inside) : null;
+      if (lay && lay.collapsed) { // no room to tell them apart at this zoom: they share one counted pin
+        if (!groups.has(it.geo.inside)) groups.set(it.geo.inside, []);
+        groups.get(it.geo.inside).push(it);
+        continue;
+      }
       let fan = 0;
       if (it.geo.inside) { fan = insideCount.get(it.geo.inside) || 0; insideCount.set(it.geo.inside, fan + 1); }
-      const rec = upsert(it.m, it.mv, it.geo, it.opacity, fan);
+      const rec = upsert(it.m, it.mv, it.geo, it.opacity, fan, lay ? lay.step : FAN_STEP);
       rec.weight = it.weight;
       keep.add(it.m.id); keepKeys.add(rec.key);
       const cur = primary.get(it.m.id);
       if (!cur || it.weight > cur.weight) primary.set(it.m.id, rec);
+    }
+    for (const [areaId, items] of groups) {
+      const g = upsertGroup(areaId, items, layout.get(areaId));
+      keepKeys.add(g.key);
+      for (const it of items) {
+        keep.add(it.m.id);
+        // each member still counts as on the map: its ties and "locate" go to the shared pin
+        const cur = primary.get(it.m.id);
+        if (!cur || it.weight > cur.weight) primary.set(it.m.id, { key: it.m.id + '|' + it.mv.id, markerId: it.m.id, kind: 'pin', layer: g.layer, group: g, weight: it.weight });
+      }
     }
     for (const [k, rec] of layers) if (!keepKeys.has(k)) { map.removeLayer(rec.layer); layers.delete(k); }
     drawTies(keep, tt);
     renderList(keep, tt);
   }
 
-  // Pixel offset for the n-th pin fanned out around an area's centre.
-  function fanOffset(n) {
+  // ---------- pins inside an area ----------
+  // Pins that sit "somewhere inside" an area are fanned out in rings around its centre. The rings are FAN_STEP
+  // pixels apart while the area is large enough on screen to hold them; as you zoom out the rings tighten with
+  // the area, and once they would be closer than FAN_MIN the pins merge into one pin showing how many there are.
+  const FAN_STEP = 18, FAN_MIN = 9;
+  let fanAreas = 0; // areas holding more than one pin at the last refresh (a zoom then needs a new layout)
+  const fanRing = n => (n === 0 ? 0 : (Math.ceil((Math.sqrt(1 + (8 * n) / 6) - 1) / 2) || 1)); // 6 per ring, growing
+  function insideLayout(areaId, n, tt) {
+    const open = { step: FAN_STEP, raw: Infinity, collapsed: false };
+    const rings = fanRing(n - 1);
+    if (!rings) return open; // a single pin needs no room
+    const area = Store.marker(areaId), mv = area && Store.positionAt(area, tt), geo = mv && Store.resolveMove(mv, tt);
+    if (!geo || !geo.coords || !geo.coords.length) return open;
+    const b = L.latLngBounds(geo.coords.map(c => [+c[0], +c[1]])), z = map.getZoom();
+    const p1 = map.project(b.getNorthWest(), z), p2 = map.project(b.getSouthEast(), z);
+    const raw = 0.5 * Math.min(Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y)) / rings; // ring spacing that keeps the fan inside the area
+    return { step: Math.max(FAN_MIN, Math.min(FAN_STEP, raw)), raw, collapsed: raw < FAN_MIN, name: area.name, color: Store.displayColor(area) };
+  }
+  // Pixel offset for the n-th pin fanned out around an area's centre, rings `step` pixels apart.
+  function fanOffset(n, step = FAN_STEP) {
     if (n === 0) return [0, 0];
-    const ring = Math.ceil((Math.sqrt(1 + (8 * n) / 6) - 1) / 2) || 1; // 6 per ring, growing
+    const ring = fanRing(n);
     const idx = n - 1 - 6 * (ring * (ring - 1)) / 2 * 1, per = 6 * ring;
     const a = (2 * Math.PI * (idx % per)) / per;
-    const r = 18 * ring;
+    const r = step * ring;
     return [Math.round(r * Math.cos(a)), Math.round(r * Math.sin(a))];
+  }
+  // The one pin that stands for every pin inside an area while the map is zoomed too far out to tell them apart.
+  function groupIcon(g) {
+    const label = showLabels ? `<div class="pin-label">${UI.esc(`${g.ids.length} in ${g.name}`)}</div>` : '';
+    const html = `<div class="pin-wrap" style="opacity:${g.opacity.toFixed(2)}"><div class="pin-ring" style="border-color:${UI.esc(g.color)}"></div><div class="pin-dot pin-group" style="background:${UI.esc(g.color)}">${g.ids.length}</div>${label}</div>`;
+    return L.divIcon({ className: 'pin-icon', html, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -12] });
+  }
+  function groupPopup(g) {
+    return UI.h('div', { class: 'info' },
+      UI.h('div', { class: 'info-name' }, `${g.ids.length} markers in ${g.name}`),
+      UI.h('div', { class: 'info-cat' }, 'They share one pin at this zoom. Zoom in and they spread out inside the area.'),
+      UI.h('ul', { class: 'fact-list group-list' }, ...g.ids.map(id => {
+        const m = Store.marker(id);
+        return m ? UI.h('li', {}, UI.h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m)), ' ',
+          UI.h('a', { class: 'mlink', 'data-action': 'goto-marker', 'data-id': id, title: 'Zoom in to this marker and open its information' }, Store.displayName(m))) : null;
+      })),
+      UI.h('div', { class: 'info-actions' }, UI.h('button', { onclick: () => expandGroup(g) }, '🔍 Zoom in to spread them out')));
+  }
+  function upsertGroup(areaId, items, lay) {
+    const key = 'group|' + areaId;
+    const ids = [...new Set(items.map(it => it.m.id))];
+    const ll = [+items[0].geo.lat, +items[0].geo.lng];
+    let g = layers.get(key);
+    const fresh = !g;
+    if (fresh) g = { key, kind: 'pin', isGroup: true, areaId, inside: areaId };
+    Object.assign(g, { ids, ll, raw: lay.raw, name: lay.name, color: lay.color, opacity: Math.max(...items.map(it => it.opacity)) });
+    const sig = [ids.join(','), g.color, g.name, showLabels, g.opacity.toFixed(2)].join('|');
+    if (fresh) {
+      g.layer = L.marker(ll, { icon: groupIcon(g), riseOnHover: true });
+      const fs = App.size(), room = Math.max(220, map.getSize().x - 40);
+      g.layer.bindPopup(() => groupPopup(g), { maxWidth: Math.min(room, Math.round(360 * fs)), minWidth: Math.min(room, Math.round(260 * fs)), maxHeight: Math.max(200, Math.min(map.getSize().y - 80, Math.round(340 * fs))), className: 'cm-popup' });
+      g.layer.on('mouseover popupopen', () => showInside(areaId, g.color));
+      g.layer.on('mouseout popupclose', hideInside);
+      g.layer.addTo(map);
+      layers.set(key, g);
+    } else {
+      g.layer.setLatLng(ll);
+      if (g.sig !== sig) g.layer.setIcon(groupIcon(g));
+    }
+    g.sig = sig;
+    return g;
+  }
+  // Zoom in on a shared pin until its markers have room to spread; openId then gets its own bubble.
+  function expandGroup(g, openId) {
+    const z = map.getZoom(), top = Math.min(18, isFinite(map.getMaxZoom()) ? map.getMaxZoom() : 18);
+    const need = g.raw > 0 ? Math.ceil(Math.log2(FAN_STEP / g.raw)) : Infinity;
+    const target = Math.min(top, z + need);
+    map.closePopup();
+    if (!isFinite(need) || target <= z) { // as far in as the map goes: show the information without moving
+      if (openId) UI.markerCard(openId); else UI.toast('The map cannot zoom in far enough to spread these out. Tap a name in the list for its information.');
+      return;
+    }
+    map.once('moveend', () => setTimeout(() => {
+      refresh();
+      if (!openId) return;
+      const r = primary.get(openId);
+      if (r && !r.group) r.layer.openPopup(); else UI.markerCard(openId);
+    }, 30));
+    goTo(L.latLng(g.ll), target);
   }
   function pinIcon(m, color, icon, opts) {
     const label = showLabels ? `<div class="pin-label">${UI.esc(Store.nameAt(m, ignoreTime ? null : t))}</div>` : '';
@@ -324,7 +423,7 @@ window.MapView = (() => {
   }
   function hideInside() { if (hoverLayer) { map.removeLayer(hoverLayer); hoverLayer = null; } }
 
-  function upsert(m, mv, geo, opacity, fan) {
+  function upsert(m, mv, geo, opacity, fan, step) {
     const color = Store.displayColor(m), icon = Store.displayIcon(m);
     const key = m.id + '|' + mv.id;
     let rec = layers.get(key);
@@ -333,7 +432,7 @@ window.MapView = (() => {
       let ll;
       if (geo.lat != null) ll = [+geo.lat, +geo.lng];
       else { const c = geo.coords.reduce((a, p) => [a[0] + +p[0], a[1] + +p[1]], [0, 0]); ll = [c[0] / geo.coords.length, c[1] / geo.coords.length]; }
-      const opts = { opacity, inside: geo.inside || null, fan: fanOffset(fan), confidence: mv.confidence || '', reason: mv.reason || '' };
+      const opts = { opacity, inside: geo.inside || null, fan: fanOffset(fan, step), confidence: mv.confidence || '', reason: mv.reason || '' };
       const sig = `${color}|${icon}|${Store.nameAt(m, ignoreTime ? null : t)}|${showLabels}|${Photos.thumb(m.photoId) || ''}|${opacity.toFixed(2)}|${opts.inside || ''}|${opts.fan.join(',')}|${opts.confidence}|${opts.reason}`;
       if (!rec) {
         const layer = L.marker(ll, { icon: pinIcon(m, color, icon, opts), riseOnHover: true });
@@ -423,6 +522,7 @@ window.MapView = (() => {
     for (const l of Store.links()) {
       if (!keep.has(l.fromId) || !keep.has(l.toId) || !Store.linkActiveAt(l, tt)) continue;
       const ra = primary.get(l.fromId), rb = primary.get(l.toId);
+      if (ra && rb && ra.layer === rb.layer) continue; // both under the same shared pin: nothing to draw between them
       const a = centerOf(ra), b = centerOf(rb);
       if (!a || !b) continue;
       const type = Store.linkType(l.typeId);
@@ -472,10 +572,12 @@ window.MapView = (() => {
       rec = primary.get(id);
       if (!rec) { map.closePopup(); UI.markerCard(id); return; } // nothing placed on the map: its information in a dialog
     }
+    if (rec.group) { expandGroup(rec.group, id); return; }
     const c = centerOf(rec);
     if (rec.kind === 'pin') goTo(c, Math.max(map.getZoom(), 6));
     else goToBounds(rec.layer.getBounds());
-    setTimeout(() => rec.layer.openPopup(c), App.isEink() ? 0 : 650);
+    // the zoom may re-lay the pins of an area, so the record is looked up again before its bubble opens
+    setTimeout(() => { const r = primary.get(id) || rec; if (r.group) expandGroup(r.group, id); else if (map.hasLayer(r.layer)) r.layer.openPopup(r.kind === 'pin' ? undefined : c); }, App.isEink() ? 0 : 650);
   }
 
   // Pan to one position (a move) and flash a highlight there, whatever the slider says.

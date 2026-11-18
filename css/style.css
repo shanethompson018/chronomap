@@ -521,6 +521,11 @@ body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px soli
 .pin-wrap .pin-dot { position: absolute; left: 0; top: 0; }
 .pin-ring { position: absolute; left: -5px; top: -5px; width: 34px; height: 34px; border-radius: 50%; border: 2px dashed #4f8cff; pointer-events: none; }
 .inside-hatch { pointer-events: none; }
+/* the shared pin for every marker inside an area while the map is zoomed too far out to tell them apart */
+.pin-dot.pin-group { color: #fff; font-size: 13px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+.group-list { list-style: none; padding-left: 0 !important; }
+.group-list li { display: flex; align-items: center; gap: 6px; }
+body.eink .pin-dot.pin-group { background: #fff !important; color: #000; border-width: 3px; }
 
 /* ---------- rough borders: numbered corners while editing ---------- */
 .vertex-num { background: none; border: none; }
