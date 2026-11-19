@@ -185,7 +185,7 @@ window.App = (() => {
     };
     document.addEventListener('chrono-sync', paintSync);
     paintSync();
-    syncBtn.addEventListener('click', () => { if (!Sync.configured()) { UI.toast('Sync is not configured in js/config.js', 'error'); return; } if (Sync.enabled() && Sync.hasToken()) Sync.run({ interactive: true, reason: 'button' }); else Sync.signIn().catch(e => UI.toast('Sign-in: ' + e.message, 'error')); });
+    syncBtn.addEventListener('click', () => { if (!Sync.configured()) { UI.toast('Sync is not configured in js/config.js', 'error'); return; } if (Sync.enabled()) Sync.run({ interactive: true, reason: 'button' }); /* renews an expired sign-in for the same account */ else Sync.signIn().catch(e => UI.toast('Sign-in: ' + e.message, 'error')); });
     document.addEventListener('click', onGlobalClick);
     // Library tables turn into cards on a narrow screen (css: body.compact table.grid); for that every cell
     // carries the heading of its column, filled in whenever a table is drawn.

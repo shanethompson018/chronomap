@@ -73,9 +73,11 @@ window.DataTab = (() => {
         : 'Sync is not configured: js/config.js has no Google client ID.'),
       statusLine,
       h('div', { class: 'backup-row', style: { marginTop: '10px' } },
-        Sync.enabled() && Sync.hasToken()
-          ? h('button', { class: 'primary', onclick: () => Sync.run({ interactive: true, reason: 'button' }) }, '⟳ Sync now')
-          : h('button', { class: 'primary', disabled: !configured, onclick: () => Sync.signIn().then(() => render()).catch(e => UI.toast('Sign-in: ' + e.message, 'error')) }, Sync.enabled() ? '🔑 Sign in again' : '🔑 Sign in with Google'),
+        // signed in before on this device: Sync now also renews the hour-long sign-in; otherwise the first sign-in
+        Sync.enabled()
+          ? h('button', { class: 'primary', onclick: () => Sync.run({ interactive: true, reason: 'button' }) }, Sync.hasToken() ? '⟳ Sync now' : '⟳ Sync now (renews the sign-in)')
+          : h('button', { class: 'primary', disabled: !configured, onclick: () => Sync.signIn().then(() => render()).catch(e => UI.toast('Sign-in: ' + e.message, 'error')) }, '🔑 Sign in with Google'),
+        Sync.enabled() ? h('button', { title: 'Sign in again and choose the Google account, for a device that is on the wrong one', onclick: () => Sync.signIn().then(() => render()).catch(e => UI.toast('Sign-in: ' + e.message, 'error')) }, '🔑 Switch account…') : null,
         Sync.enabled() ? h('button', { onclick: () => { if (confirm('Stop syncing on this device? Your data stays here and in Drive; nothing is deleted.')) { Sync.signOut(); render(); } } }, 'Sign out') : null,
         folder ? h('a', { href: folder, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)' } }, 'Open the Drive folder ↗') : null,
         h('span', { class: 'spacer' }),

@@ -38,7 +38,7 @@ window.Sync = (() => {
     if (!configured()) return setStatus('off', 'Sync not configured');
     if (!enabled()) return setStatus('off', 'Sign in to sync');
     if (!navigator.onLine) return setStatus('offline', 'Offline');
-    if (!hasToken()) return setStatus('signin', 'Sign in to sync');
+    if (!hasToken()) return setStatus('signin', 'The hour-long Google sign-in has run out. Tap Sync to renew it; your changes are kept here meanwhile.');
     setStatus('ok', 'Synced ' + timeAgo(Store.settings().driveLastSync));
   }
 
@@ -57,9 +57,13 @@ window.Sync = (() => {
       (function poll() { if (gisReady()) return resolve(true); if (Date.now() - t0 > ms) return resolve(false); setTimeout(poll, 150); })();
     });
   }
-  // Get an access token. Google may open a small popup the first time, or when the hour-long token has expired.
-  async function getToken(interactive) {
+  // Get an access token. Google's sign-in lasts an hour, and asking for a new one always opens a Google window.
+  // So only a tap may ask: mode 'renew' (the same account again; the window closes by itself) or 'choose' (the
+  // account chooser). An automatic sync passes no mode: it never opens a window, it waits for a tap on Sync.
+  const NEEDS_TAP = 'sign-in needed';
+  async function getToken(mode) {
     if (hasToken()) return token;
+    if (!mode) throw new Error(NEEDS_TAP);
     if (!navigator.onLine) throw new Error('offline');
     if (!(await waitForGis())) throw new Error('Google sign-in could not load (blocked or offline)');
     if (!tokenClient) {
@@ -74,11 +78,14 @@ window.Sync = (() => {
         resolve(token);
       };
       tokenClient.error_callback = err => { clearTimeout(timeout); reject(new Error(err && err.type === 'popup_failed_to_open' ? 'the Google sign-in window was blocked; allow popups for this site and click Sync again' : (err && err.type === 'popup_closed' ? 'sign-in cancelled' : 'sign-in failed'))); };
-      tokenClient.requestAccessToken({ prompt: interactive ? 'select_account' : '' }); // the Sign in button always offers the account chooser, so a device on the wrong Google account can be switched
+      const user = Store.settings().driveUser;
+      // renewing goes straight back to the account already in use; Sign in / Switch account offers the chooser
+      tokenClient.requestAccessToken(mode === 'renew' && user ? { prompt: '', login_hint: user } : { prompt: 'select_account' });
     });
   }
   async function signIn() {
-    await getToken(true);
+    dropToken(); // Sign in / Switch account always asks Google afresh
+    await getToken('choose');
     Store.setSetting('driveSync', true);
     return run({ interactive: true, reason: 'sign-in' });
   }
@@ -91,7 +98,7 @@ window.Sync = (() => {
 
   // ---------- Drive helpers ----------
   async function api(path, opts = {}) {
-    const t = await getToken(!!opts.interactive);
+    const t = await getToken(false); // a run gets its token once, at the start; nothing later may open a window
     const headers = Object.assign({ Authorization: 'Bearer ' + t }, opts.headers || {});
     const res = await fetch(path.startsWith('http') ? path : API + path, Object.assign({}, opts, { headers }));
     if (res.status === 401) { dropToken(); throw new Error('Google signed the app out; sign in again'); }
@@ -192,7 +199,7 @@ window.Sync = (() => {
     setStatus('syncing', 'Syncing…');
     try {
       if (!navigator.onLine) throw new Error('offline');
-      await getToken(interactive);
+      await getToken(interactive ? 'renew' : false);
       if (!Store.settings().driveUser) await whoAmI();
       const { folderId, photosId, extraFolders } = await ensureFolders();
 
@@ -242,6 +249,7 @@ window.Sync = (() => {
       lastError = e;
       console.warn('Sync failed', e);
       if (e.message === 'offline') setStatus('offline', 'Offline');
+      else if (e.message === NEEDS_TAP) setStatus('signin', 'The hour-long Google sign-in has run out. Tap Sync to renew it; your changes are kept here meanwhile.');
       else if (!hasToken()) setStatus('signin', 'Sign in to sync');
       else setStatus('error', 'Sync failed');
       if (interactive && e.message !== 'offline') UI.toast('Sync: ' + e.message, 'error');
