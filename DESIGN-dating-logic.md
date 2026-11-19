@@ -1,6 +1,6 @@
 # Dating logic, modelled on Primavera P6
 
-Steps A and B (the calculation and the tie dialog) were built on 19 Nov 2026. Steps C, D and E are not built. Agenda sections 12, 13 and 14 lead to this document.
+Steps A and B (the calculation and the tie dialog) and step D (people assigned to a fact, "they go there too") were built on 19 Nov 2026. Steps C (lifetime rule) and E (bar layout) are not built. Agenda sections 12, 13 and 14 lead to this document.
 
 Revision 2, 19 Nov 2026. The first draft gave every tie a "kind" (exactly, about, at least, at most,
 some time). The user pointed out that this is unnecessary: a date already has an approximation with two

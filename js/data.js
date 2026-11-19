@@ -263,7 +263,7 @@ window.DataTab = (() => {
     const used = new Map();
     Store.markers().forEach(m => m.facts.forEach(f => used.set(f.typeId, (used.get(f.typeId) || 0) + 1)));
     for (const t of Store.factTypes().slice().sort((a, b) => a.name.localeCompare(b.name))) {
-      const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}` + (r.mirror === false ? ' (not shown on theirs)' : ` (theirs: ${r.mirrorWord || Facts.defaultMirrorWord(t, r)})`); }).join(', ');
+      const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}` + (r.mirror === false ? ' (not shown on theirs)' : ` (theirs: ${r.mirrorWord || Facts.defaultMirrorWord(t, r)})`) + (r.goes ? ' (they go there too)' : ''); }).join(', ');
       const implies = [t.begins ? 'begins' : null, t.ends ? 'ends' : null, t.placeFrom ? 'place from ' + ((t.roles.find(r => r.id === t.placeFrom) || {}).name || '?') : null].filter(Boolean).join(', ');
       tb.append(h('tr', {},
         h('td', {}, t.name),
@@ -312,10 +312,13 @@ window.DataTab = (() => {
         word.addEventListener('input', () => { r.mirrorWord = word.value; });
         const show = h('input', { type: 'checkbox', checked: r.mirror !== false });
         show.addEventListener('change', () => { r.mirror = show.checked; });
+        const goes = h('input', { type: 'checkbox', checked: !!r.goes });
+        goes.addEventListener('change', () => { r.goes = goes.checked; });
         rolesHost.append(h('div', { class: 'card' },
           h('div', { class: 'ed-row' }, nm, tie, h('button', { class: 'small narrow', title: 'Remove role', onclick: () => { t.roles.splice(i, 1); renderRoles(); renderPlaceFrom(); } }, '✕')),
           h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Tie direction', dir)),
-          h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'On their marker as', word), h('label', { style: { alignSelf: 'end', whiteSpace: 'nowrap' } }, show, ' show on their marker'))));
+          h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'On their marker as', word), h('label', { style: { alignSelf: 'end', whiteSpace: 'nowrap' } }, show, ' show on their marker')),
+          h('label', { title: 'For a fact that has a place: everyone named in this role is put at that place too, over the fact\'s dates. One fact then moves the whole party, with one date and one source. Example: a "Moved to" fact on Terah with the role "Took with him" naming Abram, Sarai and Lot.' }, goes, ' they go there too (the fact\'s place and dates apply to them as well)')));
       });
       rolesHost.append(h('button', { class: 'small', onclick: () => { t.roles.push({ id: Store.uid(), name: '', tieTypeId: null, direction: 'this-to-other' }); renderRoles(); renderPlaceFrom(); } }, '+ Add role'));
     }

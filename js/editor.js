@@ -465,7 +465,7 @@ window.Editor = (() => {
         const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
         return h('div', { class: 'card fact-card mirror-card' },
           h('div', { class: 'row' },
-            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact`)),
+            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
             h('button', { type: 'button', class: 'small narrow', title: `Open ${o.name} to edit that fact`, onclick: () => open(o.id) }, '✏️ ' + o.name)));
       }).filter(Boolean)];
   }
@@ -628,7 +628,8 @@ window.Editor = (() => {
       h('button', { type: 'button', class: 'small narrow', title: 'Remove', onclick: () => { draft.facts[i].participants.splice(idx, 1); render(); } }, '✕')));
     const adder = UI.markerSelect({ exclude: [id, ...mine.map(x => x.p.markerId)], placeholder: mine.length ? `+ another ${role.name.toLowerCase()}…` : `${role.name}…`, onChange: v => { if (v) { draft.facts[i].participants.push({ roleId: role.id, markerId: v }); render(); } } });
     const tie = Store.linkType(role.tieTypeId);
-    return h('div', { class: 'fact-role' }, h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, role.name, tie ? h('span', { class: 'muted' }, ` · tie: ${tie.name}`) : h('span', { class: 'muted' }, ' · no tie type set')), ...items, row(adder));
+    return h('div', { class: 'fact-role' }, h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, role.name, tie ? h('span', { class: 'muted' }, ` · tie: ${tie.name}`) : h('span', { class: 'muted' }, ' · no tie type set'),
+      role.goes ? h('span', { class: 'muted', title: 'Set in Library → Fact types. Everyone named here is placed where this fact is, over its dates.' }, ' · they go there too') : null), ...items, row(adder));
   }
   function renderAddFact() {
     const sel = typeSelect(null, v => { addFact(v); });

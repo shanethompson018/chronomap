@@ -338,7 +338,7 @@ window.UI = (() => {
     if (mi.confidence) line += ' ' + gradeBadgeHTML(mi.confidence, mi.reason);
     if (mi.note) line += ` <span class="muted">– ${esc(mi.note)}</span>`;
     if (mi.sourceId) line += ' ' + citeHTML(mi.sourceId, mi.page);
-    line += ` <span class="muted mirror-from">from ${esc(o.name)}'s ${esc(mi.factTitle)} fact</span>`;
+    line += ` <span class="muted mirror-from">from ${esc(o.name)}'s ${esc(mi.factTitle)} fact${mi.placed ? ', which also places this marker' : ''}</span>`;
     return opts.bare ? line : `<li class="mirror" title="Shown here from ${esc(o.name)}'s marker; edit it there">${line}</li>`;
   }
 

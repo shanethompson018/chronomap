@@ -291,6 +291,14 @@ manuscripts have no ISBN and are typed by hand as before.
   that pin for the list of names: a name zooms in until the pins have room and opens that marker's
   bubble, and *Zoom in to spread them out* does the same without opening one. Zooming in by hand
   separates them again. Ties to a marker under a shared pin are drawn to that pin.
+* **A party that travels together.** In Library → Fact types, each role has a tick **they go there too**.
+  A fact of that type that has a place then puts everyone named in the role at that place as well, over
+  the fact's dates. So a journey is entered once: a fact type such as "Moved to" with a role "Took with
+  him", entered on the leader with the destination as its place and the companions named in the role,
+  moves every pin together. It carries one date (or one set of limits) and one source. Each
+  companion's information shows the line as coming from the leader's fact, "which also places this
+  marker", and their own facts are not changed. Untick the role and the companions stay where their
+  own facts put them.
 * **Rough borders.** An area outline can carry a second, lighter dashed outline: the **largest possible
   extent** ("Draw extent"). Each edge of either outline can be marked **firm** (solid: a coast, a
   river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the

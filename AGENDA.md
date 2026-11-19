@@ -432,7 +432,7 @@ Tried on throwaway markers, 19 Nov:
 
 Proposal:
 
-- [ ] **13.1 A shared fact that places everyone in it.** A role in a fact type gets a new tick, "they go
+- [x] **13.1 A shared fact that places everyone in it. Built 19 Nov 2026.** A role in a fact type gets a new tick, "they go
       there too". A fact type such as "Moved to" on Terah, with place Haran and the role "Took with him"
       naming Abram, Sarai and Lot, is then entered once: one date or range, one citation, four pins move,
       and each person's information shows the line as coming from Terah's fact. Depends on section 12
@@ -479,7 +479,7 @@ Worked through:
 - [x] **14.3 Logic list on each fact. Built 19 Nov 2026.** Predecessors and successors with tie, lag, and which one drives.
 - [ ] **14.4 (optional) Bar layout in the Timeline tab.** Lives and stays as bars to scale, windows hatched,
       like a P6 Gantt chart.
-- [ ] **14.5 Assigned people** = section 13.1.
+- [x] **14.5 Assigned people** = section 13.1. Built 19 Nov 2026.
 
 Questions for the user: P6's terms (FS, Early, Late, Total float) on screen, or plain words; whether the
 bar layout is wanted; whether the app should add lifetime ties by itself (12.4).
@@ -504,6 +504,13 @@ rule (12.4 / design decision 2), people assigned to a fact (13.1 / 14.5), the ba
 A one-sided window places the fact at its one end for ordering and on the map, as a one-sided typed
 approximation already did.
 
-Decision, 19 Nov 2026: the shared journey fact (13.1 / 14.5, "they go there too") is NOT to be built.
-Asked whether to build it next, the user answered: "No do not do that. I will be doing that myself."
-The journey is entered by the user with the tools that exist. Do not offer it again unless asked.
+Correction, 19 Nov 2026: an earlier note here said the shared journey fact was declined. That was a
+misunderstanding. The user had taken the question to mean entering the journey's data for him, and
+declined that ("I will be doing that myself"). Once the feature was explained he asked for it: "Please
+include that in the build, and I will enter the data myself." So 13.1 / 14.5 is built (see below), and
+the journey's markers, fact type, fact and ties remain the user's to enter.
+
+Built 19 Nov 2026 (13.1 / 14.5): in Library → Fact types, each role has a tick "they go there too". A
+fact of that type with a place then puts everyone named in the role at that place over the fact's
+dates, on the map and in their Location line; their information shows the line as coming from the
+other marker's fact, "which also places this marker". No fact type was added: the user creates his own.

@@ -230,6 +230,7 @@ window.Facts = (() => {
   // Fill marker.start/startLabel/end/endLabel/moves and d.links from every marker's facts.
   function derive(d) {
     const links = [];
+    const taken = []; // places a fact gives to the people in a role marked "they go there too": { to, mv }
     for (const m of d.markers) {
       const facts = m.facts || [];
       const W = new Map(facts.map(f => [f.id, when(f)]));
@@ -261,6 +262,13 @@ window.Facts = (() => {
         else if (where.kind === 'marker') { mv.atMarkerId = where.markerId; if (!mv.label) { const o = d.markers.find(x => x.id === where.markerId); mv.label = o ? o.name : ''; } }
         else continue;
         m.moves.push(mv);
+        // a role marked "they go there too": everyone named in it is at the same place over the same dates
+        if (t) for (const p of f.participants || []) {
+          const role = t.roles.find(r => r.id === p.roleId);
+          if (!role || !role.goes || !p.markerId || p.markerId === m.id || p.markerId === mv.atMarkerId) continue;
+          if (taken.some(x => x.to === p.markerId && x.mv.id === mv.id)) continue; // named twice in one fact
+          taken.push({ to: p.markerId, mv: Object.assign({}, mv, { sharedFrom: m.id }) });
+        }
       }
       m.moves.sort((a, b) => (dayOf(a.date) ?? -Infinity) - (dayOf(b.date) ?? -Infinity));
       for (const f of facts) {
@@ -275,6 +283,11 @@ window.Facts = (() => {
             note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factId: f.id, ownerId: m.id, roleName: role.name, confidence: f.confidence || '', reason: f.reason || '' });
         }
       }
+    }
+    if (taken.length) { // every marker's own places are in: now the places others take them to
+      const byId = new Map(d.markers.map(x => [x.id, x])), touched = new Set();
+      for (const x of taken) { const o = byId.get(x.to); if (o) { o.moves.push(x.mv); touched.add(o); } }
+      for (const o of touched) o.moves.sort((a, b) => (dayOf(a.date) ?? -Infinity) - (dayOf(b.date) ?? -Infinity));
     }
     deriveSiblings(d, links);
     deriveMirrors(d);
@@ -321,6 +334,7 @@ window.Facts = (() => {
             birth: tieName.get(r.tieTypeId) === 'parent of' && r.direction !== 'other-to-this', // the owner is the parent: this is the child's birth
             date: w.date || '', dateMin: w.min || '', dateMax: w.max || '', dateEnd: t.hasEnd ? (w.dateEnd || '') : '', dateEndMin: t.hasEnd ? (w.endMin || '') : '', dateEndMax: t.hasEnd ? (w.endMax || '') : '',
             when: whenLabel(w, !!t.hasEnd), known: w.known, // the date in words (a window when no date is known)
+            placed: !!(r.goes && (f.where || t.placeFrom)),   // the fact also puts this marker at its place
             place, details: Object.assign({}, f.details || {}), note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
         }
       }
