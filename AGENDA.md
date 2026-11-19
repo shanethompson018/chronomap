@@ -342,3 +342,34 @@ ratio. Not yet checked on the Boox itself: only at a tablet-sized window on the 
       share one counted pin whose bubble lists them and offers to zoom in. Applies to pins whose
       "where" is at / inside an area marker. Pins at separate typed coordinates that happen to be close
       together are not merged; say if that is wanted too.
+
+## 11. Boox: the app "crashes" when switching to the textbook and back (raised 19 Nov 2026, investigated, nothing built)
+
+Not reproduced (it only happens on the Boox). Found by reading the code that runs when the app is hidden
+and shown again:
+
+* Nothing about the session survives a restart: the tab, the map's place and zoom, the slider date, the
+  tree's root person and, above all, an unsaved marker being edited. If Android or the Boox stops the
+  app in the background, coming back looks like a crash and loses the typing.
+* On every return after more than a minute the app runs a full sync. That sync rewrites the whole data
+  to storage several times, re-reads every stored picture, and redraws every tab, even when nothing
+  changed. In the Library it also rebuilds the table being typed in.
+* When the hour-long Google sign-in has run out, that automatic sync asks Google for a new one, which
+  opens a Google window without a tap. If pop-ups were allowed for the site, a window appears over the
+  app on returning to it.
+* The picture store's connection can be closed by Android while the app is hidden; the app does not
+  reopen it, so pictures and sync fail until a restart.
+* The app keeps no record of errors or of how the last session ended, so the cause cannot be confirmed.
+
+Proposals, each its own commit:
+
+- [ ] **11.1 Pick up where you left off.** Remember the tab, map view, slider date and the chosen marker
+      of each tab; keep an unsaved marker edit as you type and offer it back after a restart.
+- [ ] **11.2 A quiet return.** No sync on return unless something is waiting or five minutes have passed;
+      a sync that changes nothing touches nothing on screen; settings saved once per sync; pictures
+      re-read only when pictures changed; never rebuild a box being typed in.
+- [ ] **11.3 No Google window without a tap.** An automatic sync never opens the sign-in; the Sync button
+      shows "Sign in" and one tap renews it.
+- [ ] **11.4 Picture store reconnects** after the app has been in the background.
+- [ ] **11.5 A problems log** in Library → Backup: errors, and whether the last session was closed, stopped
+      in the background or reloaded, so the real cause can be read off the tablet.
