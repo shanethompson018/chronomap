@@ -414,3 +414,31 @@ Proposal:
 
 Questions for the user: range only, or also a most-likely date in the middle; whether 12.4 is wanted;
 whether a date bounded on one side only should show on the map at all.
+
+## 13. A journey several people make together: Terah, Abram, Sarai and Lot from Ur to Haran, Genesis 11:31 (raised 19 Nov 2026, under discussion, nothing built)
+
+Tried on throwaway markers, 19 Nov:
+
+* **One "Located at" fact per person** (at Ur, then at Haran) works when the move has a date: the pin
+  moves when the slider passes it. With no date on either, the person shows at BOTH places at once.
+  Four people means the same fact, date and citation typed four times.
+* **One Event marker that moves** (Located at Ur, then Located at Haran) with a "Present at" fact on each
+  person also works today: all four pins follow the event from Ur to Haran, and the event lists who was
+  present. The date and citation live once on the event, but each person still needs their own fact
+  and date, the event is an extra pin, and people stay "at the journey" until their next location.
+* A fact that names other people (a role) shows on their markers but never moves them.
+* The verse gives no date. It falls after Abram married Sarai (11:29) and before Terah died in Haran
+  (11:32) and Abram left Haran aged 75 (12:4), so it needs the limits of section 12.
+
+Proposal:
+
+- [ ] **13.1 A shared fact that places everyone in it.** A role in a fact type gets a new tick, "they go
+      there too". A fact type such as "Moved to" on Terah, with place Haran and the role "Took with him"
+      naming Abram, Sarai and Lot, is then entered once: one date or range, one citation, four pins move,
+      and each person's information shows the line as coming from Terah's fact. Depends on section 12
+      for the undated case.
+- [ ] **13.2 (optional) Where from, and where they meant to go.** "From" (Ur) and "Bound for" (Canaan) as
+      detail boxes on the fact; a line on the map from Ur to Haran while the fact is selected.
+
+Questions for the user: one shared fact on Terah, or the journey as its own Event marker; whether the
+map should draw the journey as a line; build order (12 before 13).
