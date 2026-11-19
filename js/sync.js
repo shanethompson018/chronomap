@@ -196,6 +196,7 @@ window.Sync = (() => {
     if (!enabled() && !interactive) return false;
     if (running) { dirty = true; return false; }
     running = true; lastError = null;
+    const t0 = Date.now();
     setStatus('syncing', 'Syncing…');
     try {
       if (!navigator.onLine) throw new Error('offline');
@@ -240,14 +241,19 @@ window.Sync = (() => {
 
       // 2. photos
       await syncPhotos(photosId);
+      // 3. this device's problems log, so it can be read on another device
+      await uploadLog(folderId);
 
       Store.setSetting('driveLastSync', Date.now());
       Store.setSetting('driveSync', true);
       idleStatus();
+      Log.add('sync', `${reason || 'sync'}: done in ${((Date.now() - t0) / 1000).toFixed(1)} s` + (uploaded ? ', wrote the Drive file' : ', nothing to write'));
       return true;
     } catch (e) {
       lastError = e;
-      console.warn('Sync failed', e);
+      const quiet = e.message === NEEDS_TAP || e.message === 'offline';
+      Log.add('sync', `${reason || 'sync'}: ` + (e.message === NEEDS_TAP ? 'waiting for a tap on Sync to renew the Google sign-in' : e.message === 'offline' ? 'offline' : 'FAILED after ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s: ' + e.message));
+      if (!quiet) console.warn('Sync failed', e);
       if (e.message === 'offline') setStatus('offline', 'Offline');
       else if (e.message === NEEDS_TAP) setStatus('signin', 'The hour-long Google sign-in has run out. Tap Sync to renew it; your changes are kept here meanwhile.');
       else if (!hasToken()) setStatus('signin', 'Sign in to sync');
@@ -279,6 +285,35 @@ window.Sync = (() => {
     const ids = new Set(photos.map(p => p.id));
     for (const [pid, f] of remoteByPid) if (!ids.has(pid)) await api(`files/${f.id}`, { method: 'DELETE' });
     if (changed) Store.notify({ type: 'photos' });
+  }
+  // ---------- the problems log travels too ----------
+  // Each device keeps its own file, Chrono Map/chronomap-log-<device id>.json, rewritten when its log has new lines.
+  const LOG_UP = 'chronomap.logUp';
+  const logName = id => `chronomap-log-${id}.json`;
+  async function uploadLog(folderId) {
+    try {
+      let st = {}; try { st = JSON.parse(localStorage.getItem(LOG_UP)) || {}; } catch (e) { /* ignore */ }
+      if (!(Log.changedAt() > (st.at || 0))) return;
+      const doc = Log.exportDoc(), blob = new Blob([JSON.stringify(doc)], { type: 'application/json' });
+      let fileId = st.folder === folderId ? st.fileId : null;
+      if (fileId) { try { await uploadUpdate(fileId, blob); } catch (e) { fileId = null; } }
+      if (!fileId) {
+        const found = await listAll(`name='${logName(doc.device.id)}' and trashed=false and '${folderId}' in parents`, 'id,name');
+        if (found.length) { fileId = found[0].id; await uploadUpdate(fileId, blob); }
+        else fileId = (await uploadNew({ name: logName(doc.device.id), parents: [folderId], mimeType: 'application/json' }, blob)).id;
+      }
+      localStorage.setItem(LOG_UP, JSON.stringify({ at: doc.at, fileId, folder: folderId }));
+    } catch (e) { /* the log is never worth failing a sync over */ }
+  }
+  // The logs the other devices have put in Drive (asked for with a tap, so it may renew the sign-in).
+  async function otherLogs() {
+    await getToken('renew');
+    const mine = logName(Log.device().id), out = [];
+    for (const f of await listAll(`name contains 'chronomap-log-' and trashed=false`, 'id,name,modifiedTime')) {
+      if (f.name === mine) continue;
+      try { const doc = await (await download(f.id)).json(); if (doc && Array.isArray(doc.entries)) out.push(doc); } catch (e) { /* skip an unreadable one */ }
+    }
+    return out.sort((a, b) => (b.at || 0) - (a.at || 0));
   }
   const extFor = type => (type === 'image/png' ? '.png' : type === 'image/gif' ? '.gif' : type === 'image/webp' ? '.webp' : '.jpg');
 
@@ -315,5 +350,5 @@ window.Sync = (() => {
   }
   function folderUrl() { const id = Store.settings().driveFolderId; return id ? `https://drive.google.com/drive/folders/${id}` : null; }
 
-  return { init, run, signIn, signOut, schedule, flush, mergeDocs, folderUrl, status: () => status, lastError: () => lastError, enabled, configured, hasToken, timeAgo };
+  return { init, run, signIn, signOut, schedule, flush, otherLogs, mergeDocs, folderUrl, status: () => status, lastError: () => lastError, enabled, configured, hasToken, timeAgo };
 })();

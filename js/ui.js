@@ -428,7 +428,7 @@ window.UI = (() => {
   }
 
   function download(filename, text) {
-    const blob = new Blob([text], { type: 'application/json' });
+    const blob = new Blob([text], { type: /\.txt$/i.test(filename) ? 'text/plain' : 'application/json' });
     const a = h('a', { href: URL.createObjectURL(blob), download: filename });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);

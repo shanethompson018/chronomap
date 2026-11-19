@@ -25,6 +25,7 @@ window.App = (() => {
     if (on && s.basemap !== 'light' && s.basemap !== 'none') { Store.setSetting('basemapBeforeEink', s.basemap); Store.setSetting('basemap', 'light'); }
     if (!on && s.basemapBeforeEink) { Store.setSetting('basemap', s.basemapBeforeEink); Store.setSetting('basemapBeforeEink', null); }
     Store.setSetting('eink', on);
+    Log.add('reload', 'E-ink mode switched ' + (on ? 'on' : 'off'));
     location.reload(); // the map's animation settings are fixed when it is created
   }
   const isEink = () => eink;
@@ -212,7 +213,7 @@ window.App = (() => {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (reloading) return;
       const busy = (window.Editor && Editor.isOpen()) || (window.MapView && MapView.isPicking());
-      if (!busy) { reloading = true; location.reload(); }
+      if (!busy) { reloading = true; Log.add('reload', 'a new version of the app was installed'); location.reload(); }
       else { const t = UI.h('div', { class: 'toast' }, 'A new version of Chrono Map is ready. ', UI.h('button', { class: 'small', onclick: () => location.reload() }, 'Reload')); document.getElementById('toast-host').append(t); }
     });
     navigator.serviceWorker.register('sw.js').then(reg => {

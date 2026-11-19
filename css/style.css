@@ -346,6 +346,12 @@ body.compact table.grid tr:hover td { background: none; }
 body.eink.compact table.grid tr { border: 2px solid #000; background: #fff; }
 .backup-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .backup-row select { width: auto; }
+/* problems log */
+.log-block { margin: 10px 0 14px; }
+.log-view { margin: 6px 0 0; padding: 8px 10px; max-height: min(60vh, calc(460px * var(--fs))); overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font: calc(12px * var(--fs))/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
+.log-bad { color: var(--danger); font-weight: 600; }
+body.eink .log-view { border: 2px solid #000; background: #fff; }
+body.eink .log-bad { color: #000; text-decoration: underline; }
 
 /* ---------- modal ---------- */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 2500; display: flex; align-items: center; justify-content: center; padding: 20px; }

@@ -5,7 +5,7 @@ window.DataTab = (() => {
   // Sub-tabs: one section shows at a time; the last one opened is remembered on this device.
   const SUBS = [['sync', 'Sync', () => syncSection()], ['gaps', 'Time gaps', () => relationsSection()], ['sources', 'Sources', () => sourcesSection()],
     ['images', 'Images', () => photosSection()], ['categories', 'Categories', () => categoriesSection()], ['facttypes', 'Fact types', () => factTypesSection()],
-    ['tietypes', 'Tie types', () => linkTypesSection()], ['markers', 'Markers', () => markersSection()], ['backup', 'Backup', () => backupSection()]];
+    ['tietypes', 'Tie types', () => linkTypesSection()], ['markers', 'Markers', () => markersSection()], ['backup', 'Backup', () => backupSection()], ['log', 'Problems log', () => logSection()]];
   const SUB_KEY = 'chronomap.librarySub';
   let sub = (() => { try { return localStorage.getItem(SUB_KEY) || 'sync'; } catch (e) { return 'sync'; } })();
   function setSub(key) { if (!SUBS.some(s => s[0] === key)) return; sub = key; try { localStorage.setItem(SUB_KEY, key); } catch (e) { /* ignore */ } render(); }
@@ -371,6 +371,40 @@ window.DataTab = (() => {
       h('h2', {}, `Markers (${all.length})`, h('span', { class: 'spacer' }), searchBox, h('button', { class: 'small primary', onclick: () => App.newMarker() }, '+ New marker')),
       table,
       all.length > shown.length ? h('p', { class: 'hint' }, `Showing the first ${shown.length}. Use the filter to find others.`) : null);
+  }
+
+  // ---------- problems log ----------
+  let otherLogs = null; // the logs of the other devices, once loaded from Drive
+  function logSection() {
+    const dev = Log.device();
+    const copy = (text, what) => {
+      const ok = () => UI.toast(what + ' copied. Paste it into a message.');
+      const old = () => { const ta = h('textarea', { style: { position: 'fixed', top: '0', opacity: '0' } }, text); document.body.append(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) { UI.toast('Could not copy. Use Save as a file.', 'error'); } ta.remove(); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, old); else old();
+    };
+    const block = (title, text, fileName) => h('div', { class: 'log-block' },
+      h('div', { class: 'backup-row' }, h('strong', {}, title), h('span', { class: 'spacer' }),
+        h('button', { class: 'small', onclick: () => copy(text, 'Log') }, '📋 Copy'),
+        h('button', { class: 'small', onclick: () => UI.download(fileName, text) }, '⬇ Save as a file')),
+      h('pre', { class: 'log-view' }, text));
+    const name = h('input', { type: 'text', value: dev.name, style: { maxWidth: 'calc(320px * var(--fs))' }, title: 'A name for this device, shown at the top of its log' });
+    name.addEventListener('change', () => { Log.renameDevice(name.value); render(); });
+    const loadBtn = h('button', { disabled: !Sync.enabled(), title: Sync.enabled() ? 'Each device puts a copy of its log in the Drive folder when it syncs' : 'Sign in to sync first', onclick: async () => {
+      loadBtn.disabled = true; loadBtn.textContent = 'Loading…';
+      try { otherLogs = await Sync.otherLogs(); render(); } catch (e) { UI.toast('Could not load the logs: ' + e.message, 'error'); loadBtn.disabled = false; loadBtn.textContent = '⬇ Load the logs of my other devices'; }
+    } }, otherLogs ? '⟳ Load them again' : '⬇ Load the logs of my other devices');
+    const end = Log.lastEnd();
+    return h('div', { class: 'data-section' },
+      h('h2', {}, 'Problems log'),
+      h('p', { class: 'hint' }, 'A record each device keeps of how the app has been running: when it was opened, put in the background and brought back, how the session before ended, every error, and every sync. It holds none of your markers, facts or sources. When something goes wrong, the lines around that time say what happened. Each device puts a copy of its log in your Drive folder when it syncs, so the tablet\'s log can be read here on the PC.'),
+      h('div', { class: 'backup-row' }, h('span', { class: 'muted' }, 'This device is called'), name),
+      h('p', { class: /STOPPED/.test(end) ? 'log-bad' : 'muted' }, 'The session before this one ', end.replace(/^This is.*$/, '') || 'was the first the log has seen.'),
+      block(`This device: ${dev.name}`, Log.text(), `chronomap-log-${Dates.iso(Dates.today())}.txt`),
+      h('div', { class: 'backup-row' }, h('button', { class: 'small', onclick: () => { if (confirm('Clear this device\'s log?')) { Log.clear(); render(); } } }, 'Clear this log')),
+      h('h2', { style: { marginTop: '22px' } }, 'Other devices'),
+      h('div', { class: 'backup-row' }, loadBtn),
+      otherLogs ? (otherLogs.length ? h('div', {}, ...otherLogs.map(d => block(`${d.device ? d.device.name : 'Unknown device'}`, Log.textOf(d), `chronomap-log-${(d.device && d.device.name || 'device').replace(/[^a-z0-9]+/gi, '-')}.txt`)))
+        : h('p', { class: 'muted' }, 'No other device has put a log in Drive yet. A device does so the next time it syncs after this version has reached it.')) : null);
   }
 
   function backupSection() {
