@@ -343,7 +343,7 @@ ratio. Not yet checked on the Boox itself: only at a tablet-sized window on the 
       "where" is at / inside an area marker. Pins at separate typed coordinates that happen to be close
       together are not merged; say if that is wanted too.
 
-## 11. Boox: the app "crashes" when switching to the textbook and back (raised 19 Nov 2026, investigated, nothing built)
+## 11. Boox: the app "crashes" when switching to the textbook and back (raised 19 Nov 2026, built 19 Nov 2026)
 
 Not reproduced (it only happens on the Boox). Found by reading the code that runs when the app is hidden
 and shown again:
@@ -363,13 +363,19 @@ and shown again:
 
 Proposals, each its own commit:
 
-- [ ] **11.1 Pick up where you left off.** Remember the tab, map view, slider date and the chosen marker
+- [x] **11.1 Pick up where you left off. Built 19 Nov 2026.** Remember the tab, map view, slider date and the chosen marker
       of each tab; keep an unsaved marker edit as you type and offer it back after a restart.
-- [ ] **11.2 A quiet return.** No sync on return unless something is waiting or five minutes have passed;
+- [x] **11.2 A quiet return. Built 19 Nov 2026.** No sync on return unless something is waiting or five minutes have passed;
       a sync that changes nothing touches nothing on screen; settings saved once per sync; pictures
       re-read only when pictures changed; never rebuild a box being typed in.
-- [ ] **11.3 No Google window without a tap.** An automatic sync never opens the sign-in; the Sync button
+- [x] **11.3 No Google window without a tap. Built 19 Nov 2026.** An automatic sync never opens the sign-in; the Sync button
       shows "Sign in" and one tap renews it.
-- [ ] **11.4 Picture store reconnects** after the app has been in the background.
-- [ ] **11.5 A problems log** in Library → Backup: errors, and whether the last session was closed, stopped
+- [x] **11.4 Picture store reconnects Built 19 Nov 2026.** after the app has been in the background.
+- [x] **11.5 A problems log Built 19 Nov 2026.** in Library → Backup: errors, and whether the last session was closed, stopped
       in the background or reloaded, so the real cause can be read off the tablet.
+
+Built notes (19 Nov): the session comes back only within twelve hours, so the Ties tab still opens empty
+on a fresh day (decision 7.6). The cause is still not confirmed: the problems log on the Boox will say
+whether the app is being stopped in the background, crashing on screen, or neither. The user asked
+whether the Boox can report by itself: its log goes to the Drive folder at each sync and can be loaded
+in Library → Problems log on the PC.

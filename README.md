@@ -93,6 +93,25 @@ The Google side lives in a Google Cloud project owned by the same account; its c
   has a ✕.
 * If something is still too small or does not fit, Library → Backup shows a line beginning *This
   screen:* with the numbers that describe the device. Send that line with the report.
+* **If the tablet stops the app in the background.** Android, and the Boox in particular, may stop an
+  app that is not on screen, for example while you read in another app. Chrono Map is built to make
+  that harmless:
+  * Within twelve hours it reopens **where you were**: the same tab, the map's place, zoom and date,
+    and the marker chosen in the Family, Ties and Network tabs. After twelve hours it starts afresh.
+  * **A marker you were editing is kept** as you type, saved or not. When the app reopens, the editor
+    comes back with your text and a note; press Save to keep it or Close to drop it.
+  * Coming back is quiet: no sync unless the last one was more than five minutes ago, and a sync that
+    finds nothing new changes nothing on screen. The Library never rebuilds a box you are typing in.
+  * Google's sign-in lasts an hour, and renewing it opens a Google window. The app never does that by
+    itself: the Sync button shows **Sign in**, and one tap renews it. Your changes are kept on the
+    device meanwhile and go up at the next sync.
+  * On the Boox, also look in Settings → Apps for the setting that freezes or optimises apps in the
+    background, and exempt Chrome and Chrono Map from it. (The wording differs between Boox versions.)
+* **Problems log** (Library → Problems log). Each device keeps a short record of how the app has been
+  running: when it was opened and how the session before ended (closed, stopped in the background, or
+  stopped while on screen), when it was hidden and shown again, every error, and every sync. It holds
+  none of your markers, facts or sources. *Copy* and *Save as a file* take it out. A sync also puts a
+  copy in the Drive folder, so on the PC *Load the logs of my other devices* shows the tablet's log.
 
 ## The six tabs
 
@@ -418,6 +437,7 @@ js/timeline.js    Timeline tab (facts of chosen markers in date order)
 js/data.js        Library tab
 js/photos.js      photo library (images in IndexedDB), picker, lightbox
 js/sync.js        Google Drive sync (sign-in, Drive folder, per-record merge, photos)
+js/log.js         problems log (loaded first; errors, background and restart record, shared through Drive)
 js/config.js      deployment settings (Google client ID)
 js/version.js     release stamp (written by tools/stamp_release.py before each commit; shown in Library → Backup)
 js/app.js         tabs, e-ink mode, start-up, service worker registration
