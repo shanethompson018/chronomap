@@ -4,6 +4,7 @@ window.Photos = (() => {
   const { h, esc } = UI;
   const DB = 'chronomap-photos', STORE = 'images', MAX_SIDE = 1600, THUMB = 200;
   let db = null, ready = false;
+  let available = false; // the picture store opened at least once (db itself may be null while its connection is closed)
   const cache = new Map(); // id -> { url, thumbUrl }
 
   // ---------- IndexedDB ----------
@@ -11,18 +12,40 @@ window.Photos = (() => {
     return new Promise((res, rej) => {
       const r = indexedDB.open(DB, 1);
       r.onupgradeneeded = () => r.result.createObjectStore(STORE, { keyPath: 'id' });
-      r.onsuccess = () => res(r.result);
+      r.onsuccess = () => {
+        const d = r.result;
+        // Android can close the connection while the app is in the background; forget it so the next use reopens it
+        d.onclose = () => { if (db === d) db = null; Log.add('info', 'the picture store was closed by the system; it reopens on next use'); };
+        d.onversionchange = () => { try { d.close(); } catch (e) { /* ignore */ } if (db === d) db = null; };
+        res(d);
+      };
       r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error('the picture store is held open by another window'));
     });
   }
-  function tx(mode, fn) {
+  function txOnce(mode, fn) {
     return new Promise((res, rej) => {
       const t = db.transaction(STORE, mode);
       const req = fn(t.objectStore(STORE));
       t.oncomplete = () => res(req ? req.result : undefined);
       t.onerror = () => rej(t.error);
-      t.onabort = () => rej(t.error);
+      t.onabort = () => rej(t.error || new Error('the picture store stopped the operation'));
     });
+  }
+  // One operation on the picture store. If the connection has gone (closed in the background), it is reopened and
+  // the operation tried once more; reads, puts and deletes are all safe to repeat.
+  async function tx(mode, fn) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        if (!db) db = await openDB();
+        return await txOnce(mode, fn);
+      } catch (e) {
+        if (attempt > 0) throw e;
+        Log.add('info', `picture store: ${e && e.name ? e.name : 'error'}${e && e.message ? ' (' + e.message + ')' : ''}; reconnecting`);
+        try { if (db) db.close(); } catch (e2) { /* ignore */ }
+        db = null;
+      }
+    }
   }
   function remember(id, blob, thumb) {
     forget(id);
@@ -34,7 +57,7 @@ window.Photos = (() => {
   }
 
   async function init() {
-    try { db = await openDB(); } catch (e) { console.warn('Photo storage unavailable', e); return; }
+    try { db = await openDB(); available = true; } catch (e) { console.warn('Photo storage unavailable', e); return; }
     await prune();
     ready = true;
     Store.subscribe(evt => { if (evt.type === 'all') prune().then(() => Store.notify({ type: 'photos' })); });
@@ -42,7 +65,7 @@ window.Photos = (() => {
   }
   // Load every stored image; drop any that no longer has a Photo record.
   async function prune() {
-    if (!db) return;
+    if (!available) return;
     const all = await tx('readonly', s => s.getAll());
     const known = new Set(Store.photos().map(p => p.id));
     for (const rec of all || []) {
@@ -83,7 +106,7 @@ window.Photos = (() => {
 
   // ---------- public API ----------
   async function add(file, meta = {}) {
-    if (!db) throw new Error('Photo storage is not available in this browser');
+    if (!available) throw new Error('Photo storage is not available in this browser');
     const { blob, thumb, w, h: hgt } = await process(file);
     const id = Store.uid();
     await tx('readwrite', s => s.put({ id, blob, thumb }));
@@ -94,17 +117,17 @@ window.Photos = (() => {
     if (window.Overlay && Overlay.photoId() === id) Overlay.remove(); // it may be lying on the map right now
     Store.deletePhoto(id);
     forget(id);
-    if (db) await tx('readwrite', s => s.delete(id));
+    if (available) await tx('readwrite', s => s.delete(id));
   }
   // Store image bytes for a photo record that already exists (used when sync downloads a photo).
   async function putBlob(id, blob) {
-    if (!db) throw new Error('Photo storage is not available');
+    if (!available) throw new Error('Photo storage is not available');
     const { blob: b, thumb } = await process(blob);
     await tx('readwrite', s => s.put({ id, blob: b, thumb }));
     remember(id, b, thumb);
   }
   async function getBlob(id) {
-    if (!db) return null;
+    if (!available) return null;
     const rec = await tx('readonly', s => s.get(id));
     return rec ? rec.blob : null;
   }
@@ -115,7 +138,7 @@ window.Photos = (() => {
 
   const blobToDataURL = blob => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
   async function exportAll() {
-    if (!db) return [];
+    if (!available) return [];
     const all = await tx('readonly', s => s.getAll());
     const known = new Set(Store.photos().map(p => p.id));
     const out = [];
@@ -123,7 +146,7 @@ window.Photos = (() => {
     return out;
   }
   async function importAll(list) {
-    if (!db || !Array.isArray(list)) return 0;
+    if (!available || !Array.isArray(list)) return 0;
     let n = 0;
     for (const it of list) {
       if (!it || !it.id || !it.data) continue;
