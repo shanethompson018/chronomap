@@ -150,11 +150,14 @@ Latest drops to 2091 BC without anything more being entered, because the first t
 ```
 Ties for   Abram · Married Sarai
 
-  Part        How long (blank = same date) Other marker    Which date
-  [Earliest]  [   ] y [  ] m [  ] d  [after ]  [Abram ]   [Born  2166 BC]   ✕
-  [Earliest]  [   ] y [  ] m [  ] d  [after ]  [Sarai ]   [Born  2156 BC]   ✕
-  [Latest  ]  [   ] y [  ] m [  ] d  [after ]  [Abram ]   [Died  1991 BC]   ✕
-  [Latest  ]  [   ] y [  ] m [  ] d  [after ]  [Sarai ]   [Died  2029 BC]   ✕
+  Part        Where                                  Other marker   Which date        Reads as
+  [Earliest]  [on           ]                        [Abram ]  [Born  2166 BC]   not before Abram's birth        ✕
+  [Earliest]  [on           ]                        [Sarai ]  [Born  2156 BC]   not before Sarai's birth        ✕
+  [Latest  ]  [on           ]                        [Abram ]  [Died  1991 BC]   not after Abram's death         ✕
+  [Latest  ]  [on           ]                        [Sarai ]  [Died  2029 BC]   not after Sarai's death         ✕
+  with a length, for comparison:
+  [Earliest]  [after ] [13] y [  ] m [  ] d          [Sarai ]  [Born  2156 BC]   not before 13 years after Sarai's birth
+  [Latest  ]  [before] [  ] y [ 9] m [  ] d          [Isaac ]  [Born         ]   not after 9 months before Isaac's birth
   + Add another tie
 
   For all of these:
@@ -163,10 +166,14 @@ Ties for   Abram · Married Sarai
   Result: between 2156 BC and 2029 BC                 [ Save 4 ties ]  [ Cancel ]
 ```
 
-* "How long" is the time between the other date and this part, in years, months and days, as in "130
-  years after Adam was born". Left blank, the part is the same date as the other one, which is what
-  "not before Sarai was born" needs. The after / before box only matters once a length is typed, and is
-  greyed out until then.
+* "Where" has three choices: **on** (the same date as the other one), **after** and **before**. The
+  years, months and days boxes appear only for after and before, because only then is there a length to
+  give. A new row starts on "on". So a row never shows "after" or "before" unless you chose it.
+* "Reads as" spells each row out in words, so it can be checked at a glance: an Earliest row always
+  reads "not before …" and a Latest row always reads "not after …".
+* (Corrected 19 Nov 2026: the first sketch showed "after" on the two Latest rows. With no length the
+  word did nothing, so the result was right, but it read as the opposite of what was meant. The user
+  caught it.)
 * The source, note and confidence are typed once and saved on every tie in the dialog.
 * Each row can take its own verse when it differs; left blank, it uses the shared one.
 * The other marker defaults to the fact's own marker, as now.
