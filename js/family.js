@@ -298,5 +298,7 @@ window.Family = (() => {
     info.classList.toggle('open', !!m);
   }
 
-  return { init, show, setRoot, select };
+  const getState = () => rootId;
+  function setState(id) { if (id && Store.marker(id)) { rootId = id; selectedId = null; rootSel.setValue(id); } } // drawn when the tab is shown
+  return { init, show, setRoot, select, getState, setState };
 })();

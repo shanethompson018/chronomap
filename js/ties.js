@@ -73,5 +73,12 @@ window.Ties = (() => {
     info.classList.toggle('open', !!m); // on narrow screens the panel slides over the graph only when something is selected
   }
 
-  return { init, show, setHub, select };
+  const getState = () => ({ typeId, hubId });
+  function setState(s) { // drawn when the tab is shown
+    if (!s) return;
+    if (s.typeId === '' || s.typeId === NONE || (s.typeId && Store.linkType(s.typeId))) typeId = s.typeId;
+    if (s.hubId && Store.marker(s.hubId)) { hubId = s.hubId; hubSel.setValue(hubId); }
+    fresh = true; fillTypes();
+  }
+  return { init, show, setHub, select, getState, setState };
 })();

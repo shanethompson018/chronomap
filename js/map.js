@@ -126,6 +126,15 @@ window.MapView = (() => {
   }
 
   function show() { setTimeout(() => map.invalidateSize(), 0); }
+  // Where the map is looking and when, so the app can pick up there after a restart.
+  function getState() { if (!map) return null; const c = map.getCenter(); return { lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), zoom: map.getZoom(), t, all: ignoreTime }; }
+  function setState(s) {
+    if (!map || !s) return;
+    const num = v => typeof v === 'number' && isFinite(v);
+    if (num(s.lat) && num(s.lng) && num(s.zoom)) map.setView([s.lat, s.lng], s.zoom, { animate: false });
+    if (s.all) { ignoreTime = true; $('t-ignore').checked = true; $('t-slider').disabled = true; updateTimeLabel(); refresh(); }
+    else if (num(s.t) && s.t >= range.min && s.t <= range.max) setTime(s.t);
+  }
 
   // ---------- time ----------
   function resetRange(jumpToStart) {
@@ -801,5 +810,5 @@ window.MapView = (() => {
     });
   }
 
-  return { init, show, refresh, locate, showPosition, setTime, time, pickPoint, drawShape, editShape, movePoint, cancelPick, fitAll, goToBounds, showVertexNumbers, hideVertexNumbers, isPicking: () => !!pick, leaflet: () => map };
+  return { init, show, getState, setState, refresh, locate, showPosition, setTime, time, pickPoint, drawShape, editShape, movePoint, cancelPick, fitAll, goToBounds, showVertexNumbers, hideVertexNumbers, isPicking: () => !!pick, leaflet: () => map };
 })();

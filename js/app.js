@@ -71,10 +71,33 @@ window.App = (() => {
   }
   const sideClosed = () => document.body.classList.contains('side-closed');
 
+  // ---------- picking up where you left off ----------
+  // A tablet may stop the app while it is in the background. The tab, the map's view and date, and the marker
+  // chosen in each tab are noted as you go, and put back when the app is opened again within twelve hours (after
+  // that it starts afresh, as it always did). An unsaved marker edit is kept separately by the editor.
+  const SESSION_KEY = 'chronomap.session', SESSION_MAX_AGE = 12 * 3600 * 1000;
+  let sessionReady = false;
+  function saveSession() {
+    if (!sessionReady) return;
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify({ at: Date.now(), tab: current, map: MapView.getState(), family: Family.getState(), ties: Ties.getState(), network: Network.getState() })); } catch (e) { /* ignore */ }
+  }
+  function restoreSession() {
+    let s = null; try { s = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { /* ignore */ }
+    sessionReady = true;
+    if (!s || !s.at || Date.now() - s.at > SESSION_MAX_AGE) return;
+    try {
+      MapView.setState(s.map); Family.setState(s.family); Ties.setState(s.ties); Network.setState(s.network);
+      if (s.tab && s.tab !== current && document.getElementById('tab-' + s.tab)) showTab(s.tab);
+      const mins = Math.round((Date.now() - s.at) / 60000);
+      Log.add('info', `picked up where it was ${mins < 1 ? 'a moment' : mins + ' min'} ago: the ${s.tab === 'data' ? 'Library' : s.tab} tab`);
+    } catch (e) { console.warn('Could not put the last view back', e); }
+  }
+
   function showTab(name) {
     document.body.dataset.tab = name;
     if (current === name) { if (name === 'map') MapView.show(); return; }
     current = name;
+    setTimeout(saveSession, 0);
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
     if (name === 'map') MapView.show();
@@ -169,6 +192,17 @@ window.App = (() => {
     document.getElementById('btn-size-up').addEventListener('click', () => stepSize(1));
     window.addEventListener('resize', fitLayout);
     fitLayout();
+    restoreSession();
+    if (Editor.resume) Editor.resume(); // an unsaved marker edit from a session that was stopped
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'hidden') return;
+      // a Library box still being typed in saves its text now, in case the app is stopped in the background
+      const a = document.activeElement;
+      if (a && a.closest && a.closest('#data-page') && /^(INPUT|TEXTAREA)$/.test(a.tagName)) a.blur();
+      saveSession();
+    });
+    window.addEventListener('pagehide', saveSession);
+    setInterval(() => { if (document.visibilityState === 'visible') saveSession(); }, 15000);
     // Conflict badge: visible only while some related dates disagree
     const cBtn = document.getElementById('btn-conflicts');
     const paintConflicts = () => { const n = Relations.conflicts().length; cBtn.textContent = `⚠ ${n} conflict${n === 1 ? '' : 's'}`; cBtn.classList.toggle('hidden', n === 0); };

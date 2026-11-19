@@ -119,5 +119,11 @@ window.Network = (() => {
     renderFilters(); fresh = true; draw();
   }
 
-  return { init, show, setCenter, select };
+  const getState = () => ({ centerId, degrees });
+  function setState(s) { // drawn when the tab is shown
+    if (!s) return;
+    if (s.centerId && Store.marker(s.centerId)) { centerId = s.centerId; centerSel.setValue(centerId); fresh = true; }
+    if (s.degrees >= 1 && s.degrees <= 6) { degrees = Math.round(s.degrees); $('net-degrees').value = degrees; $('net-deg-val').textContent = degrees; }
+  }
+  return { init, show, setCenter, select, getState, setState };
 })();

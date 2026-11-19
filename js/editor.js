@@ -11,6 +11,37 @@ window.Editor = (() => {
   let savedSnapshot = '';    // the draft as last opened or saved, to know whether closing would lose anything
   const snapshot = () => JSON.stringify(draft);
   const isDirty = () => !!draft && snapshot() !== savedSnapshot;
+  // An unsaved edit is kept in this browser as it is typed, so that it survives the app being stopped in the
+  // background. It is removed as soon as the marker is saved or the editor is closed.
+  const DRAFT_KEY = 'chronomap.draft';
+  let pendingDraft = (() => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY)); } catch (e) { return null; } })(); // read once, at start-up
+  let draftTimer = null;
+  function persistDraft() {
+    clearTimeout(draftTimer); draftTimer = null;
+    if (pendingDraft) return; // start-up has not yet decided what to do with the one found
+    try {
+      if (draft && isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify({ at: Date.now(), id, isNew, draft, openFacts: [...openFacts] }));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch (e) { /* ignore */ }
+  }
+  const persistSoon = () => { if (!draftTimer) draftTimer = setTimeout(persistDraft, 800); };
+  // Start-up: put back the edit that was open when the app last stopped.
+  function resume() {
+    const sv = pendingDraft; pendingDraft = null;
+    if (!sv || !sv.draft || draft) { persistDraft(); return false; }
+    if (!sv.isNew && !Store.marker(sv.id)) { persistDraft(); return false; } // the marker has since been deleted
+    id = sv.id; isNew = !!sv.isNew; openFacts = new Set(sv.openFacts || []);
+    if (isNew) savedSnapshot = '';
+    else { draft = tidy(JSON.parse(JSON.stringify(Store.marker(id)))); savedSnapshot = snapshot(); }
+    draft = tidy(sv.draft);
+    parked = false;
+    safeRender();
+    drawer.classList.remove('hidden');
+    syncView();
+    UI.toast(`Your unsaved changes to "${draft.name || 'the marker'}" were kept. Press Save to keep them, or Close to drop them.`);
+    Log.add('info', 'put back an unsaved marker edit from the session that stopped');
+    return true;
+  }
   const SECTIONS_KEY = 'chronomap.editorSections';
   function sectionState() { try { return JSON.parse(localStorage.getItem(SECTIONS_KEY)) || {}; } catch (e) { return {}; } }
   function setSectionOpen(key, open) { const st = sectionState(); st[key] = open; try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(st)); } catch (e) { /* ignore */ } }
@@ -27,6 +58,7 @@ window.Editor = (() => {
     const showPill = open && parked && !MapView.isPicking(); // while picking, the yellow bar is the way back
     pill.classList.toggle('hidden', !showPill);
     if (showPill) pill.textContent = `✏️ Back to editing ${draft.name || 'the marker'}`;
+    persistSoon(); // opened, parked or closed: the kept copy follows
   }
   // Hide the editor with the work kept, to use or look at the map or another tab.
   function park() { if (!draft || !full()) return; clearTimeout(unparkTimer); parked = true; syncView(); } // a side drawer never needs to step aside
@@ -44,6 +76,8 @@ window.Editor = (() => {
     pill = document.getElementById('editor-pill');
     pill.addEventListener('click', () => { if (MapView.isPicking()) MapView.cancelPick(); unpark(); });
     new MutationObserver(syncView).observe(drawer, { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persistDraft(); });
+    window.addEventListener('pagehide', persistDraft);
     window.addEventListener('resize', () => { if (parked && !full()) unpark(); else syncView(); }); // the window grew into a PC layout
     // on a touch screen the box being typed in stays in view above the on-screen keyboard
     const keepInView = el => { if (el && drawer.contains(el) && el.matches('input, textarea, select') && touch()) el.scrollIntoView({ block: 'center' }); };
@@ -159,6 +193,7 @@ window.Editor = (() => {
   // ---------- two-way binding for simple text boxes ----------
   function onInput(e) {
     const el = e.target;
+    persistSoon();
     if (!draft || !el.isConnected) return; // an element-level handler may already have re-rendered
     if (el.dataset.field != null) { draft.fields[el.dataset.field] = el.value; return; }
     const path = el.dataset.bind; if (!path) return;
@@ -328,6 +363,7 @@ window.Editor = (() => {
         h('button', { class: 'danger', onclick: remove }, 'Delete')),
     );
     body.scrollTop = scroll;
+    persistSoon();
   }
 
   // ---------- facts ----------
@@ -682,5 +718,5 @@ window.Editor = (() => {
     return out;
   }
 
-  return { init, open, openNew, cancel, isOpen, changeBorderHere, park, unpark };
+  return { init, open, openNew, cancel, isOpen, changeBorderHere, park, unpark, resume };
 })();
