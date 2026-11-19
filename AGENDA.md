@@ -483,3 +483,7 @@ Worked through:
 
 Questions for the user: P6's terms (FS, Early, Late, Total float) on screen, or plain words; whether the
 bar layout is wanted; whether the app should add lifetime ties by itself (12.4).
+
+The detailed design for sections 12 to 14 is in DESIGN-dating-logic.md (drawn up 19 Nov 2026 at the
+user's request, awaiting approval and six decisions listed at its end). The arithmetic of its examples
+was checked with a prototype of the forward and backward pass.
