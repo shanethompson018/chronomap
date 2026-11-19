@@ -10,16 +10,24 @@ window.DataTab = (() => {
   let sub = (() => { try { return localStorage.getItem(SUB_KEY) || 'sync'; } catch (e) { return 'sync'; } })();
   function setSub(key) { if (!SUBS.some(s => s[0] === key)) return; sub = key; try { localStorage.setItem(SUB_KEY, key); } catch (e) { /* ignore */ } render(); }
 
+  // The page is never rebuilt under a box that is being typed in or a list that is open (a sync finishing, a
+  // picture arriving, or the box just left saving its value would close the keyboard): the rebuild waits until
+  // the box is left.
+  let stale = false;
+  const typing = () => { const a = document.activeElement; return !!(a && host.contains(a) && (a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|file|color|range)$/i.test(a.type)))); };
+  const redraw = () => { if (App.currentTab() !== 'data') return; if (typing()) { stale = true; return; } render(); };
   function init() {
     host = document.getElementById('data-page');
-    Store.subscribe(evt => { if (App.currentTab() === 'data' && !(evt.type === 'photos' && document.activeElement && host.contains(document.activeElement))) render(); });
-    document.addEventListener('chrono-sync', e => { if (App.currentTab() === 'data' && e.detail && e.detail.state !== 'syncing' && !(document.activeElement && host.contains(document.activeElement) && document.activeElement.tagName === 'INPUT')) render(); });
+    Store.subscribe(redraw);
+    document.addEventListener('chrono-sync', e => { if (e.detail && e.detail.state !== 'syncing') redraw(); });
+    host.addEventListener('focusout', () => setTimeout(() => { if (stale && !typing() && App.currentTab() === 'data') render(); }, 150));
   }
   function show(which) { if (which) setSub(which); else render(); }
 
   const KIND_OPTS = [['pin', 'Pin'], ['area', 'Area'], ['path', 'Path']];
 
   function render() {
+    stale = false;
     const scroll = host.scrollTop;
     host.innerHTML = '';
     const cur = SUBS.find(s => s[0] === sub) || SUBS[0];

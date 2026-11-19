@@ -210,8 +210,9 @@ window.App = (() => {
     // A new release installs as a new worker. If nothing is being edited the page reloads itself so every file
     // is from the same release; otherwise a toast offers Reload.
     let reloading = false;
+    const hadWorker = !!navigator.serviceWorker.controller; // false on the very first visit: the files on screen are already the newest
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloading) return;
+      if (reloading || !hadWorker) return;
       const busy = (window.Editor && Editor.isOpen()) || (window.MapView && MapView.isPicking());
       if (!busy) { reloading = true; Log.add('reload', 'a new version of the app was installed'); location.reload(); }
       else { const t = UI.h('div', { class: 'toast' }, 'A new version of Chrono Map is ready. ', UI.h('button', { class: 'small', onclick: () => location.reload() }, 'Reload')); document.getElementById('toast-host').append(t); }

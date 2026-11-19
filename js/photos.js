@@ -60,18 +60,30 @@ window.Photos = (() => {
     try { db = await openDB(); available = true; } catch (e) { console.warn('Photo storage unavailable', e); return; }
     await prune();
     ready = true;
-    Store.subscribe(evt => { if (evt.type === 'all') prune().then(() => Store.notify({ type: 'photos' })); });
+    // after a sync or an import: only tell the views when the set of pictures really changed
+    Store.subscribe(evt => { if (evt.type === 'all') prune().then(changed => { if (changed) Store.notify({ type: 'photos' }); }).catch(e => console.warn('Could not refresh the pictures', e)); });
     Store.notify({ type: 'photos' });
   }
-  // Load every stored image; drop any that no longer has a Photo record.
+  // Bring the pictures held ready in line with the Photo records: load what is new, drop what has no record.
+  // Only the first run reads the whole store; later runs touch just the pictures that changed. Returns true when
+  // anything was loaded or dropped.
+  let loadedAll = false;
   async function prune() {
-    if (!available) return;
-    const all = await tx('readonly', s => s.getAll());
+    if (!available) return false;
     const known = new Set(Store.photos().map(p => p.id));
-    for (const rec of all || []) {
-      if (!known.has(rec.id)) { await tx('readwrite', s => s.delete(rec.id)); forget(rec.id); continue; }
-      if (!cache.has(rec.id)) remember(rec.id, rec.blob, rec.thumb);
+    let changed = false;
+    if (!loadedAll) {
+      const all = await tx('readonly', s => s.getAll());
+      for (const rec of all || []) {
+        if (!known.has(rec.id)) { await tx('readwrite', s => s.delete(rec.id)); forget(rec.id); continue; }
+        if (!cache.has(rec.id)) { remember(rec.id, rec.blob, rec.thumb); changed = true; }
+      }
+      loadedAll = true;
+      return changed;
     }
+    for (const id of [...cache.keys()]) if (!known.has(id)) { await tx('readwrite', s => s.delete(id)); forget(id); changed = true; }
+    for (const id of known) if (!cache.has(id)) { const rec = await tx('readonly', s => s.get(id)); if (rec) { remember(id, rec.blob, rec.thumb); changed = true; } }
+    return changed;
   }
 
   // ---------- image processing ----------

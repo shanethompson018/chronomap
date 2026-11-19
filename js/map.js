@@ -77,6 +77,7 @@ window.MapView = (() => {
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && pick && !document.querySelector('.modal-overlay:not(.side-modal)')) cancelPick(); });
 
     Store.subscribe(onStore);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && playTimer) togglePlay(); }); // no playing in the background
     resetRange(true);
     renderCats();
     refresh();

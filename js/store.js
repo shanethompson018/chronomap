@@ -610,7 +610,13 @@ window.Store = (() => {
     if (changed) commit({ type: 'relations' });
     return changed;
   }
-  function setSetting(k, v) { S.settings[k] = v; save(); }
+  // Saving a setting writes the whole data to storage, so an unchanged value is not written again.
+  function setSetting(k, v) { if (S.settings[k] === v && (v === null || typeof v !== 'object')) return; S.settings[k] = v; save(); }
+  function setSettings(obj) {
+    let changed = false;
+    for (const [k, v] of Object.entries(obj)) if (S.settings[k] !== v || (v !== null && typeof v === 'object')) { S.settings[k] = v; changed = true; }
+    if (changed) save();
+  }
 
   // ---------- backup ----------
   function exportJSON() { return JSON.stringify(S, null, 2); }
@@ -680,7 +686,7 @@ window.Store = (() => {
   return {
     load, subscribe, notify, uid, otherNames, allNames, nameAt, nameLine, tagOf, displayName, matchesName, otherNamesShown, NAME_KINDS,
     markers, categories, linkTypes, factTypes, links, sources, photos, relations, settings, marker, category, linkType, factType, link, source, photo, relation, linksOf, displayColor, displayIcon,
-    sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
+    setSettings, sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
     refKey, parseRefKey, sameRef, factRef, slotOwner, refExists, slotValue, slotRange, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
     slotLabel, slotsOfMarker, factTitle, mentionsOf, relationsFor, relationsOfRef, addRelation, updateRelation, deleteRelation, applySolved,
     addFactType, updateFactType, deleteFactType,

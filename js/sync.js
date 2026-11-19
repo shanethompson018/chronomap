@@ -15,6 +15,12 @@ window.Sync = (() => {
   const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/';
   let tokenClient = null, token = null, expiresAt = 0;
   let running = false, dirty = false, timer = null;
+  let runStarted = 0, runNo = 0;          // when the current run began, and which run it is
+  const RESUME_AFTER = 5 * 60 * 1000;     // back on screen: sync only if the last one was longer ago than this
+  // the same text for the same content whatever order the keys were written in (to tell "nothing changed" reliably)
+  const stable = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, key) => { o[key] = x[key]; return o; }, {}) : x));
+  // ...of the shared part of a document only (a document read back from Drive also carries things that do not sync)
+  const sharedKey = doc => stable(['version', 'deleted', ...Store.syncCollections()].reduce((o, k) => { o[k] = doc[k]; return o; }, {}));
   let status = { state: 'off', text: 'Sync off' }, lastError = null;
 
   const cfg = () => window.ChronoConfig || {};
@@ -194,9 +200,12 @@ window.Sync = (() => {
   async function run({ interactive = false, reason = '' } = {}) {
     if (!configured()) { idleStatus(); return false; }
     if (!enabled() && !interactive) return false;
-    if (running) { dirty = true; return false; }
-    running = true; lastError = null;
+    // a run the system froze in the background may never finish: after three minutes a new one may start
+    if (running && Date.now() - runStarted < 180000) { dirty = true; return false; }
+    const my = ++runNo;
+    running = true; runStarted = Date.now(); lastError = null;
     const t0 = Date.now();
+    let report = null; // what this run found, saved with the other settings at the end (one write, not several)
     setStatus('syncing', 'Syncing…');
     try {
       if (!navigator.onLine) throw new Error('offline');
@@ -220,15 +229,20 @@ window.Sync = (() => {
       if (remote && Store.settings().sampleUntouched) merged = remote;           // fresh device: take what is in Drive, do not mix in the sample
       else if (remote) merged = mergeDocs(local, remote);
       else merged = local;
-      Store.replaceSyncDoc(merged);
+      // Only when the merge really changes this device's data is it put in place (that saves everything and
+      // redraws every view). A sync that finds nothing new leaves the screen and the storage alone.
+      const localKey = sharedKey(local);
+      const changedHere = sharedKey(merged) !== localKey;
+      if (changedHere) Store.replaceSyncDoc(merged);
       Store.setSetting('sampleUntouched', false);
-      const finalDoc = Store.exportSyncDoc();
+      const finalDoc = changedHere ? Store.exportSyncDoc() : local;
+      const finalKey = changedHere ? sharedKey(finalDoc) : localKey;
       const text = docText(finalDoc);
       let uploaded = false;
       if (!dataId) {
         const j = await uploadNew({ name: DATA_NAME, parents: [folderId], mimeType: 'application/json' }, new Blob([text], { type: 'application/json' }));
         dataId = j.id; uploaded = true;
-      } else if (text !== remoteText) {
+      } else if (text !== remoteText && !(copies.length === 1 && remote && sharedKey(remote) === finalKey)) { // same content in another key order is not a change
         await uploadUpdate(dataId, new Blob([text], { type: 'application/json' })); uploaded = true;
       }
       Store.setSetting('driveDataFileId', dataId);
@@ -236,21 +250,21 @@ window.Sync = (() => {
         try { await api(`files/${extra.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) }); } catch (e) { /* next time */ }
       }
       const count = doc => ({ markers: (doc && doc.markers ? doc.markers : []).length, sources: (doc && doc.sources ? doc.sources : []).length, photos: (doc && doc.photos ? doc.photos : []).length });
-      Store.setSetting('driveLastReport', { at: Date.now(), reason, remote: count(remote), before: count(local), after: count(finalDoc), uploaded,
-        remoteModified: copies.length ? copies[0].modifiedTime : null, copies: copies.length, extraFolders });
+      report = { at: Date.now(), reason, remote: count(remote), before: count(local), after: count(finalDoc), uploaded,
+        remoteModified: copies.length ? copies[0].modifiedTime : null, copies: copies.length, extraFolders };
 
       // 2. photos
       await syncPhotos(photosId);
       // 3. this device's problems log, so it can be read on another device
       await uploadLog(folderId);
 
-      Store.setSetting('driveLastSync', Date.now());
-      Store.setSetting('driveSync', true);
+      Store.setSettings({ driveLastReport: report, driveLastSync: Date.now(), driveSync: true });
       idleStatus();
-      Log.add('sync', `${reason || 'sync'}: done in ${((Date.now() - t0) / 1000).toFixed(1)} s` + (uploaded ? ', wrote the Drive file' : ', nothing to write'));
+      Log.add('sync', `${reason || 'sync'}: done in ${((Date.now() - t0) / 1000).toFixed(1)} s` + (changedHere ? ', new data arrived' : '') + (uploaded ? ', wrote the Drive file' : ', nothing to write'));
       return true;
     } catch (e) {
       lastError = e;
+      if (report) Store.setSetting('driveLastReport', report); // the data part succeeded before the failure
       const quiet = e.message === NEEDS_TAP || e.message === 'offline';
       Log.add('sync', `${reason || 'sync'}: ` + (e.message === NEEDS_TAP ? 'waiting for a tap on Sync to renew the Google sign-in' : e.message === 'offline' ? 'offline' : 'FAILED after ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s: ' + e.message));
       if (!quiet) console.warn('Sync failed', e);
@@ -261,8 +275,10 @@ window.Sync = (() => {
       if (interactive && e.message !== 'offline') UI.toast('Sync: ' + e.message, 'error');
       return false;
     } finally {
-      running = false;
-      if (dirty) { dirty = false; schedule(3000); }
+      if (runNo === my) { // (a run that was overtaken after freezing must not clear the newer one's flag)
+        running = false;
+        if (dirty) { dirty = false; schedule(3000); }
+      }
     }
   }
   async function syncPhotos(photosId) {
@@ -340,9 +356,14 @@ window.Sync = (() => {
     });
     window.addEventListener('online', () => { if (enabled()) run({ reason: 'online' }); else idleStatus(); });
     window.addEventListener('offline', idleStatus);
+    // Coming back to the app is kept quiet: the screen settles first, and a sync runs only if the last one was
+    // more than five minutes ago (changes made here are already sent when the app is hidden, or by their own timer).
+    let resumeTimer = null;
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') flush();
-      else if (document.visibilityState === 'visible' && enabled() && Date.now() - (Store.settings().driveLastSync || 0) > 60000) run({ reason: 'visible' });
+      clearTimeout(resumeTimer);
+      if (document.visibilityState === 'hidden') { flush(); return; }
+      if (!enabled() || Date.now() - (Store.settings().driveLastSync || 0) < RESUME_AFTER) return;
+      resumeTimer = setTimeout(() => { if (document.visibilityState === 'visible') run({ reason: 'visible' }); }, 4000);
     });
     window.addEventListener('pagehide', flush);
     setInterval(() => { if (status.state === 'ok') idleStatus(); }, 60000);
