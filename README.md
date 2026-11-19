@@ -13,7 +13,8 @@ address in Chrome and choose *Add to Home screen*.
 
 Opening `index.html` straight from this folder still works for development, but that copy has its own
 separate data store and cannot sign in to Google (the client ID is tied to the published address and to
-`http://localhost:8765`, which `py -m http.server 8765` serves for testing).
+`http://localhost:8765`, which `py -3 tools/dev_server.py` serves for testing; that test copy keeps no
+offline cache, so a changed file always shows at once).
 
 The Start Menu shortcut lives at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Chrono Map.lnk`.
 To recreate it, run this in PowerShell from this folder:

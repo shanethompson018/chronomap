@@ -3,6 +3,18 @@
 Things to work on next. This is a working list, separate from the app itself; add to it freely and
 cross items off as they land. We go through it one item at a time.
 
+## Still open (kept current; everything else below is built or decided)
+
+- **Section 11:** the Boox "crash" when switching apps. Five fixes are built; the cause is not confirmed.
+  Waiting for the Boox's problems log (Library, Problems log).
+- **12.4 / design step C:** the lifetime rule (the app limits a person's facts to between their Born and
+  Died by itself). Not decided.
+- **13.2 (optional):** "From" and "Bound for" on a journey fact. Not decided.
+- **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
+- **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
+- Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
+- None of the work since section 8 has been checked on the Boox itself.
+
 ## 1. Approximation
 
 Going through these in order:
@@ -380,7 +392,7 @@ whether the app is being stopped in the background, crashing on screen, or neith
 whether the Boox can report by itself: its log goes to the Drive folder at each sync and can be loaded
 in Library → Problems log on the PC.
 
-## 12. Time gaps: dates known only as "after this" and "before that" (raised 19 Nov 2026, under discussion, nothing built)
+## 12. Time gaps: dates known only as "after this" and "before that" (raised 19 Nov 2026, built 19 Nov 2026 as 14.1 to 14.3; 12.4 still open)
 
 Raised by the user: Abram and Sarai's marriage has no date; it must fall after both were born and before
 either died. A time gap "after Abram born" should not run on to the present, and a second gap "before
@@ -396,16 +408,16 @@ What the app does today (checked on a throwaway Abram, 2166 to 1991 BC):
 
 Proposal:
 
-- [ ] **12.1 A second kind of time gap: a limit.** The dialog offers "exactly / about N after or before"
+- [x] **12.1 A second kind of time gap: a limit. Built 19 Nov 2026 in the form of 14.1 to 14.3.** The dialog offers "exactly / about N after or before"
       (today's gap, which places the date) or "some time after" / "some time before" (a limit, which only
       bounds it). A limit may carry an amount: "at least 13 years after Abram born".
-- [ ] **12.2 Limits combine into one range.** A date can have any number of limits. The earliest it can be
+- [x] **12.2 Limits combine into one range. Built 19 Nov 2026 in the form of 14.1 to 14.3.** A date can have any number of limits. The earliest it can be
       is the latest of its "after" limits; the latest it can be is the earliest of its "before" limits.
       The fact shows one line, "between 2156 BC and 2029 BC", with the limits listed behind it. One side
       only reads "after 2156 BC" or "before 2029 BC". No single date is invented. On the map the marker
       shows across the range at the reduced strength already used for approximate dates; the Timeline
       places it at the middle of the range, marked as a range.
-- [ ] **12.3 Limits and gaps together.** A real gap still places the date; limits then narrow its range.
+- [x] **12.3 Limits and gaps together. Built 19 Nov 2026 in the form of 14.1 to 14.3.** A real gap still places the date; limits then narrow its range.
       A date placed outside its limits, or limits that cross (earliest later than latest), is a conflict.
       Limits never join two other dates together, so they cannot make a birth equal a death.
 - [ ] **12.4 (optional) Limits the app can supply.** For a Married fact: within both spouses' lifetimes.
@@ -415,7 +427,7 @@ Proposal:
 Questions for the user: range only, or also a most-likely date in the middle; whether 12.4 is wanted;
 whether a date bounded on one side only should show on the map at all.
 
-## 13. A journey several people make together: Terah, Abram, Sarai and Lot from Ur to Haran, Genesis 11:31 (raised 19 Nov 2026, under discussion, nothing built)
+## 13. A journey several people make together: Terah, Abram, Sarai and Lot from Ur to Haran, Genesis 11:31 (raised 19 Nov 2026, 13.1 built 19 Nov 2026; 13.2 still open)
 
 Tried on throwaway markers, 19 Nov:
 
@@ -443,7 +455,7 @@ Proposal:
 Questions for the user: one shared fact on Terah, or the journey as its own Event marker; whether the
 map should draw the journey as a line; build order (12 before 13).
 
-## 14. Dating logic modelled on Primavera P6 (suggested by the user 19 Nov 2026, under discussion, nothing built)
+## 14. Dating logic modelled on Primavera P6 (suggested by the user 19 Nov 2026, built 19 Nov 2026 except 14.4)
 
 The user suggested entering the logic the way Primavera P6 does. Assessment: it fits, and it replaces the
 "limits" idea of section 12 with a model the user already knows. How P6's parts map onto the app:
@@ -514,3 +526,19 @@ Built 19 Nov 2026 (13.1 / 14.5): in Library → Fact types, each role has a tick
 fact of that type with a place then puts everyone named in the role at that place over the fact's
 dates, on the map and in their Location line; their information shows the line as coming from the
 other marker's fact, "which also places this marker". No fact type was added: the user creates his own.
+
+## 15. Lower token use (raised and set up 19 Nov 2026)
+
+The user asked how to use fewer tokens without losing quality, and what to make of sub-agents. Decided
+and set up:
+
+- [x] **15.1 One session per agenda item.** `CLAUDE.md` (loaded by every session) holds the owner's rules,
+      the code rules, testing, release and a map of the files; `docs/code-notes.md` holds how each file
+      works inside. A new session starts from those and this agenda, not from a long conversation.
+- [x] **15.2 The test copy never shows an old file.** `tools/dev_server.py` serves this PC's test copy
+      with caching off, and the app skips its offline cache on localhost (`?sw=1` turns it on to test the
+      cache itself). The live app and the Boox are unchanged.
+- [x] **15.3 Model by task.** The top model for design-heavy work; a cheaper one, chosen by the user in
+      the model menu, for small fixes. Claude says at the start when a cheaper model would do.
+- [x] **15.4 Sub-agents only for testing and review.** Not for building. A browser test run with bulky
+      output, or an independent review of a large change before release.

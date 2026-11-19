@@ -241,6 +241,17 @@ window.App = (() => {
   // Browsers only allow this over https or localhost, so it is skipped when opened as a file.
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    // The test copy on this PC (localhost) keeps no offline cache, so a changed file is always the one on screen.
+    // A worker and cache left from before are removed. Adding "?sw=1" to the address turns the cache on there,
+    // for testing the cache itself.
+    if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && !/[?&]sw=1\b/.test(location.search)) {
+      const had = !!navigator.serviceWorker.controller; // this page was itself served from the old cache
+      Promise.all([
+        navigator.serviceWorker.getRegistrations().then(rs => Promise.all(rs.map(r => r.unregister()))),
+        window.caches ? caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('chronomap-')).map(k => caches.delete(k)))) : null,
+      ]).then(() => { if (had) location.reload(); }).catch(() => {});
+      return;
+    }
     // A new release installs as a new worker. If nothing is being edited the page reloads itself so every file
     // is from the same release; otherwise a toast offers Reload.
     let reloading = false;
