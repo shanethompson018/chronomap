@@ -472,11 +472,11 @@ Worked through:
 * Ur to Haran: one activity (a shared fact or an Event marker) with Terah, Abram, Sarai and Lot assigned;
   predecessor "Abram married Sarai", successors "Terah died" and "Abram left Haran aged 75".
 
-- [ ] **14.1 Logic ties.** The time gap dialog offers: exactly N, at least N, at most N, or some time,
+- [x] **14.1 Logic ties. Built 19 Nov 2026.** The time gap dialog offers: exactly N, at least N, at most N, or some time,
       after or before another date. Any date to any date, which covers FS, SS, FF and SF.
-- [ ] **14.2 Forward and backward pass.** Every date gets an earliest and a latest; a date with no typed
+- [x] **14.2 Forward and backward pass. Built 19 Nov 2026.** Every date gets an earliest and a latest; a date with no typed
       value shows as that window. Conflicts are windows that close (negative float) and loops.
-- [ ] **14.3 Logic list on each fact.** Predecessors and successors with tie, lag, and which one drives.
+- [x] **14.3 Logic list on each fact. Built 19 Nov 2026.** Predecessors and successors with tie, lag, and which one drives.
 - [ ] **14.4 (optional) Bar layout in the Timeline tab.** Lives and stays as bars to scale, windows hatched,
       like a P6 Gantt chart.
 - [ ] **14.5 Assigned people** = section 13.1.
@@ -493,3 +493,13 @@ three parts (Earliest, the date, Latest) and any part can be tied to another dat
 different marker; "after" and "before" only give the direction of the gap. Several ties are entered in
 one dialog with the source typed once. Approximations stay. Checked with the prototype: same windows as
 revision 1.
+
+Built 19 Nov 2026 (sections 12 and 14.1 to 14.3, design steps A and B): ties on a date's Earliest and
+Latest ends, the forward and backward pass, windows shown as "between…", window conflicts, the tie
+dialog with several rows and one source, the editor lines naming the governing tie, and one-tap
+conversion of zero-gap workarounds in Library → Time gaps. Decisions taken as recommended without a
+separate answer: window only, no date in the middle; shared source with an optional verse per row.
+Existing time gaps are untouched and give the same dates (checked). Not built, still open: the lifetime
+rule (12.4 / design decision 2), people assigned to a fact (13.1 / 14.5), the bar layout (14.4).
+A one-sided window places the fact at its one end for ordering and on the map, as a one-sided typed
+approximation already did.

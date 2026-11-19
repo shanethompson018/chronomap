@@ -100,7 +100,10 @@ window.Store = (() => {
   // Relation: to = from + (years, months, days). status 'overruled' keeps the record but leaves it out of the maths.
   function normOffset(x) { return x && (x.years || x.months || x.days) ? { years: Math.trunc(+x.years || 0), months: Math.trunc(+x.months || 0), days: Math.trunc(+x.days || 0) } : null; }
   function normRelation(r) {
-    const o = Object.assign({ id: uid(), from: null, to: null, years: 0, months: 0, days: 0, min: null, max: null, note: '', sourceId: null, page: '', status: 'active', confidence: '', reason: '' }, r || {});
+    const o = Object.assign({ id: uid(), from: null, to: null, part: 'date', years: 0, months: 0, days: 0, min: null, max: null, note: '', sourceId: null, page: '', status: 'active', confidence: '', reason: '' }, r || {});
+    // which part of the "to" date the tie sets: the date itself, or one end of its window ('min' = earliest:
+    // not before; 'max' = latest: not after)
+    if (o.part !== 'min' && o.part !== 'max') o.part = 'date';
     if (!CONFIDENCE.includes(o.confidence)) o.confidence = '';
     o.from = normRef(o.from); o.to = normRef(o.to);
     o.years = Math.trunc(+o.years || 0); o.months = Math.trunc(+o.months || 0); o.days = Math.trunc(+o.days || 0);
@@ -413,6 +416,12 @@ window.Store = (() => {
     if (e) { f.dateEnd = v; if (min !== undefined) { f.dateEndMin = min; f.dateEndMax = max; } }
     else { f.date = v; if (min !== undefined) { f.dateMin = min; f.dateMax = max; } }
   }
+  // What is stored in a slot's three boxes (typed, or written by the date solver), without the ends that ties work out.
+  function slotTyped(ref) {
+    const o = slotOwner(ref); const f = slotFact(o, ref.slot); if (!f) return null;
+    const e = slotParts(ref.slot).isEnd;
+    return { date: (e ? f.dateEnd : f.date) || '', min: (e ? f.dateEndMin : f.dateMin) || '', max: (e ? f.dateEndMax : f.dateMax) || '' };
+  }
   const factRef = (markerId, factId, isEnd) => ({ kind: 'marker', id: markerId, slot: 'fact:' + factId + (isEnd ? ':end' : '') });
   const isPinned = ref => { const o = slotOwner(ref); return !!o && (o.pinned || []).includes(ref.slot); };
   const isUndetermined = ref => { const o = slotOwner(ref); return !!o && (o.undetermined || []).includes(ref.slot); };
@@ -577,11 +586,26 @@ window.Store = (() => {
     S.relations.push(r);
     // anchor rule: an end that already has a typed date becomes pinned, so the other end is computed from it.
     // A date that is itself computed from another relation is left alone, so chains stay anchored at one place.
+    if (r.part !== 'min' && r.part !== 'max') anchorEnds(r); // a tie on an end only limits; it never makes anything an anchor
+    commit({ type: 'relation', id: r.id }); return r;
+  }
+  function anchorEnds(r) {
     [r.from, r.to].forEach(ref => {
       const o = slotOwner(ref);
       if (o && slotValue(ref) && !(o.pinned || []).includes(ref.slot) && !isUndetermined(ref) && !derivedInfo(ref)) { o.pinned = [...(o.pinned || []), ref.slot]; touch(o); }
     });
-    commit({ type: 'relation', id: r.id }); return r;
+  }
+  // Several ties saved together (the tie dialog): one save, one recalculation.
+  function addRelations(list) {
+    const out = [];
+    for (const data of list) {
+      const r = touch(normRelation(data));
+      if (!r.from || !r.to) continue;
+      S.relations.push(r); out.push(r);
+      if (r.part !== 'min' && r.part !== 'max') anchorEnds(r);
+    }
+    if (out.length) commit({ type: 'relation', id: out[out.length - 1].id });
+    return out;
   }
   function updateRelation(id, patch) { const r = relation(id); if (!r) return null; Object.assign(r, normRelation(Object.assign({}, r, clone(patch), { id }))); touch(r); commit({ type: 'relation', id }); return r; }
   function deleteRelation(id) { if (relation(id)) tombstone('relations', id); S.relations = S.relations.filter(r => r.id !== id); commit({ type: 'relation', id, deleted: true }); }
@@ -604,8 +628,38 @@ window.Store = (() => {
           setSlotRaw(o, res.ref.slot, res.value, min, max); touch(o); changed = true;
         }
       }
+      // A date that was reckoned through a tie which is no longer a tie on a date (deleted, overruled, or turned
+      // into a limit on an end) is cleared, so it does not linger looking like a typed date.
+      for (const slot of Object.keys(o.derived || {})) {
+        if (nd[slot] || (o.pinned || []).includes(slot) || !slotFact(o, slot)) continue;
+        const rel = relation((o.derived[slot] || {}).relationId);
+        if (rel && rel.status === 'active' && rel.part !== 'min' && rel.part !== 'max') continue;
+        setSlotRaw(o, slot, '', '', ''); touch(o); changed = true;
+      }
       if (JSON.stringify(nd) !== JSON.stringify(o.derived || {})) { o.derived = nd; changed = true; }
       if (o.moves && changed) sortMovesInPlace(o);
+    }
+    if (changed) commit({ type: 'relations' });
+    return changed;
+  }
+  // Write the windows that ties on the ends work out: calcMin / calcMax (calcEndMin / calcEndMax for an "until"
+  // date) on each fact, removed where there is none. `map` is slot key -> { min, max }. Only facts whose window
+  // changed are marked as edited.
+  function applyWindows(map) {
+    let changed = false;
+    for (const o of S.markers) {
+      let touched = false;
+      for (const f of o.facts || []) {
+        for (const isEnd of [false, true]) {
+          const w = map.get(refKey(factRef(o.id, f.id, isEnd))) || { min: '', max: '' };
+          const kMin = isEnd ? 'calcEndMin' : 'calcMin', kMax = isEnd ? 'calcEndMax' : 'calcMax';
+          if ((f[kMin] || '') === (w.min || '') && (f[kMax] || '') === (w.max || '')) continue;
+          if (w.min) f[kMin] = w.min; else delete f[kMin];
+          if (w.max) f[kMax] = w.max; else delete f[kMax];
+          touched = true;
+        }
+      }
+      if (touched) { touch(o); changed = true; }
     }
     if (changed) commit({ type: 'relations' });
     return changed;
@@ -688,7 +742,7 @@ window.Store = (() => {
     markers, categories, linkTypes, factTypes, links, sources, photos, relations, settings, marker, category, linkType, factType, link, source, photo, relation, linksOf, displayColor, displayIcon,
     setSettings, sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
     refKey, parseRefKey, sameRef, factRef, slotOwner, refExists, slotValue, slotRange, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
-    slotLabel, slotsOfMarker, factTitle, mentionsOf, relationsFor, relationsOfRef, addRelation, updateRelation, deleteRelation, applySolved,
+    slotLabel, slotsOfMarker, factTitle, mentionsOf, relationsFor, relationsOfRef, addRelation, addRelations, updateRelation, deleteRelation, applySolved, applyWindows, slotTyped,
     addFactType, updateFactType, deleteFactType,
     sortedMoves, hasLocation, positionAt, visibleAt, linkActiveAt, firstDay, timeRange,
     addMarker, updateMarker, deleteMarker, resolveMove,

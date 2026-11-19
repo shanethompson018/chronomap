@@ -97,12 +97,19 @@ window.DataTab = (() => {
     const conflicts = Relations.conflicts();
     const undetCount = Relations.undetermined().size;
     const table = h('table', { class: 'grid' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Time gap'), h('th', {}, 'Source'), h('th', {}, 'Confidence'), h('th', {}, 'Note'), h('th', {}, 'Status'), h('th', {}))));
+      h('thead', {}, h('tr', {}, h('th', {}, 'Tie'), h('th', {}, 'Part'), h('th', {}, 'Source'), h('th', {}, 'Confidence'), h('th', {}, 'Note'), h('th', {}, 'Status'), h('th', {}))));
     const tb = h('tbody'); table.append(tb);
     for (const r of rels) {
       const over = r.status === 'overruled';
+      const isLimit = r.part === 'min' || r.part === 'max';
+      // a tie on a date with no length at all: often meant as "some time after / before", which is a limit on an end
+      const nothing = !isLimit && !r.years && !r.months && !r.days && !r.min && !r.max;
       tb.append(h('tr', { class: over ? 'muted' : '' },
-        h('td', {}, Relations.describeRelation(r)),
+        h('td', {}, Relations.describeRelation(r),
+          nothing ? h('div', { class: 'tie-convert' }, h('span', { class: 'muted' }, 'Says the two dates are the same. If you meant a limit: '),
+            h('button', { class: 'small', title: 'Change it to: not before the other date', onclick: () => Relations.convert(r.id, 'min') }, 'make it "not before"'), ' ',
+            h('button', { class: 'small', title: 'Change it to: not after the other date', onclick: () => Relations.convert(r.id, 'max') }, 'make it "not after"')) : null),
+        h('td', { class: 'narrow' }, r.part === 'min' ? 'earliest' : r.part === 'max' ? 'latest' : 'the date'),
         h('td', {}, r.sourceId && Store.source(r.sourceId) ? `${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}` : ''),
         h('td', { class: 'narrow' }, UI.confidenceSelect(r.confidence, v => Store.updateRelation(r.id, { confidence: v })), r.confidence ? cellInput(r.reason, v => Store.updateRelation(r.id, { reason: v }), 'why') : null),
         cell(r.note, v => Store.updateRelation(r.id, { note: v })),
@@ -112,7 +119,7 @@ window.DataTab = (() => {
           h('button', { class: 'small', onclick: () => { const ref = r.to.kind === 'marker' ? r.to : r.from; Editor.open(ref.kind === 'marker' ? ref.id : (Store.link(ref.id) || {}).fromId); } }, '✏️'), ' ',
           h('button', { class: 'small danger', onclick: () => { if (confirm('Delete this time gap?')) Store.deleteRelation(r.id); } }, '✕'))));
     }
-    if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 6, class: 'muted' }, 'No time gaps yet. Open a marker and press ⛓ beside one of its dates.')));
+    if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 7, class: 'muted' }, 'No ties between dates yet. Open a marker and press ⛓ beside one of its dates.')));
     return h('div', { class: 'data-section' },
       h('h2', {}, `Time gaps (${rels.length})`, h('span', { class: 'spacer' }),
         conflicts.length ? h('button', { class: 'small conflict-btn', onclick: () => Relations.showConflicts() }, `⚠ ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`) : h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'no conflicts'),

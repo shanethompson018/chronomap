@@ -198,11 +198,33 @@ window.Facts = (() => {
   const factLabel = (d, f) => f.label || (typeOf(d, f) || {}).name || 'Fact';
   const dayOf = s => (s ? Dates.toDays(s) : null);
   // Effective dates of a fact: the most-likely date (typed, or the midpoint of earliest/latest) plus its range.
+  // A fact's date has three parts: the earliest it can be, the date itself, the latest it can be. The ends are
+  // what was typed, tightened by what the ties on them work out (calcMin / calcMax and calcEndMin / calcEndMax,
+  // written by the solver in relations.js). `known` says a date was typed or reckoned; without one, `date` is
+  // only the middle of the window (or its one end), used to place the fact in order and on the map.
+  const laterOf = (a, b) => (!a ? b || '' : !b ? a : (Dates.toDays(a) >= Dates.toDays(b) ? a : b));
+  const earlierOf = (a, b) => (!a ? b || '' : !b ? a : (Dates.toDays(a, true) <= Dates.toDays(b, true) ? a : b));
   function when(f) {
-    const date = f.date || Dates.midpoint(f.dateMin, f.dateMax) || '';
-    const dateEnd = f.dateEnd || Dates.midpoint(f.dateEndMin, f.dateEndMax) || '';
-    return { date, min: f.dateMin || date, max: f.dateMax || date, dateEnd, endMin: f.dateEndMin || dateEnd, endMax: f.dateEndMax || dateEnd,
-      approx: !!(f.dateMin && f.dateMax && f.dateMin !== f.dateMax), approxEnd: !!(f.dateEndMin && f.dateEndMax && f.dateEndMin !== f.dateEndMax) };
+    const lo = laterOf(f.dateMin, f.calcMin), hi = earlierOf(f.dateMax, f.calcMax);
+    const loEnd = laterOf(f.dateEndMin, f.calcEndMin), hiEnd = earlierOf(f.dateEndMax, f.calcEndMax);
+    const date = f.date || Dates.midpoint(lo, hi) || '';
+    const dateEnd = f.dateEnd || Dates.midpoint(loEnd, hiEnd) || '';
+    return { date, min: lo || date, max: hi || date, dateEnd, endMin: loEnd || dateEnd, endMax: hiEnd || dateEnd,
+      lo, hi, loEnd, hiEnd, known: !!f.date, knownEnd: !!f.dateEnd,
+      approx: !!(lo && hi && lo !== hi), approxEnd: !!(loEnd && hiEnd && loEnd !== hiEnd) };
+  }
+  // The words for one date: the date with its range when there is one, otherwise its window. No date is made up.
+  function whenText(known, date, min, max, lo, hi) {
+    if (known && date) return Dates.formatRange(date, min, max);
+    if (lo && hi) return Dates.sameDate(lo, hi) ? Dates.formatInput(lo) : `between ${Dates.formatInput(lo)} and ${Dates.formatInput(hi)}`;
+    if (lo) return 'after ' + Dates.formatInput(lo);
+    if (hi) return 'before ' + Dates.formatInput(hi);
+    return '';
+  }
+  function whenLabel(w, hasEnd) {
+    const a = whenText(w.known, w.date, w.min, w.max, w.lo, w.hi);
+    const b = hasEnd ? whenText(w.knownEnd, w.dateEnd, w.endMin, w.endMax, w.loEnd, w.hiEnd) : '';
+    return b ? (a || '?') + ' – ' + b : a;
   }
 
   // Fill marker.start/startLabel/end/endLabel/moves and d.links from every marker's facts.
@@ -298,6 +320,7 @@ window.Facts = (() => {
           other.mirrors.push({ id: `mirror|${f.id}|${r.id}|${other.id}`, word: mirrorWordFor(t, r, sex), roleId: r.id, markerId: owner.id, factId: f.id, factTitle: factLabel(d, f),
             birth: tieName.get(r.tieTypeId) === 'parent of' && r.direction !== 'other-to-this', // the owner is the parent: this is the child's birth
             date: w.date || '', dateMin: w.min || '', dateMax: w.max || '', dateEnd: t.hasEnd ? (w.dateEnd || '') : '', dateEndMin: t.hasEnd ? (w.endMin || '') : '', dateEndMax: t.hasEnd ? (w.endMax || '') : '',
+            when: whenLabel(w, !!t.hasEnd), known: w.known, // the date in words (a window when no date is known)
             place, details: Object.assign({}, f.details || {}), note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
         }
       }
@@ -320,5 +343,5 @@ window.Facts = (() => {
     return key ? DEFAULTS_BY_CATEGORY[key] : [];
   }
 
-  return { ensureSeeds, migrateV2, derive, when, factLabel, defaultTypeIdsFor, sexOf, siblingWord, defaultMirrorWord, mirrorWordFor, TIE_DEFAULTS };
+  return { ensureSeeds, migrateV2, derive, when, whenText, whenLabel, factLabel, defaultTypeIdsFor, sexOf, siblingWord, defaultMirrorWord, mirrorWordFor, TIE_DEFAULTS };
 })();

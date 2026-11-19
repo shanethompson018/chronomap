@@ -244,7 +244,7 @@ window.UI = (() => {
     if (m.tags && m.tags.length) out += '<div>' + m.tags.map(tg => `<span class="tag">${esc(tg)}</span>`).join('') + '</div>';
 
     // facts, in date order (undated last); mirrored facts from other markers (Son: Isaac, Husband: Abraham) sort in with them
-    const own = (m.facts || []).map((f, i) => ({ f, i, d: f.date ? Dates.toDays(f.date) : null }));
+    const own = (m.facts || []).map((f, i) => { const d = Facts.when(f).date; return { f, i, d: d ? Dates.toDays(d) : null }; }); // a fact known only by its window sorts at the middle of it
     const mirrored = (m.mirrors || []).map((mi, i) => ({ mi, i: own.length + i, d: mi.date ? Dates.toDays(mi.date) : null }));
     const facts = [...own, ...mirrored].sort((a, b) => (a.d == null && b.d == null) ? a.i - b.i : a.d == null ? 1 : b.d == null ? -1 : a.d - b.d);
     if (facts.length) out += `<h4>Facts (${facts.length})</h4><ul class="fact-list">` + facts.map(x => x.f ? factLineHTML(m, x.f, badge) : mirrorLineHTML(x.mi)).join('') + '</ul>';
@@ -291,13 +291,12 @@ window.UI = (() => {
   // One fact as a bubble line: "4004 BC · Born · Eden · Father: Adam, Mother: Eve – note 📖 source"
   function factWhenHTML(m, f) {
     const t = Store.factType(f.typeId);
-    const w = Facts.when(f);
-    if (w.date) return esc(Dates.formatRange(w.date, w.min, w.max)) + (t && t.hasEnd && w.dateEnd ? ' – ' + esc(Dates.formatRange(w.dateEnd, w.endMin, w.endMax)) : '');
-    if (f.dateMin || f.dateMax) return esc(f.dateMin ? 'after ' + Dates.formatInput(f.dateMin) : 'before ' + Dates.formatInput(f.dateMax));
+    const label = Facts.whenLabel(Facts.when(f), !!(t && t.hasEnd)); // the date, or its window when no date is known
+    if (label) return esc(label);
     if ((m.undetermined || []).includes('fact:' + f.id)) return '<span class="muted">undeterminable</span>';
     return '';
   }
-  const mirrorWhenHTML = mi => (mi.date ? esc(Dates.formatRange(mi.date, mi.dateMin, mi.dateMax)) + (mi.dateEnd ? ' – ' + esc(Dates.formatRange(mi.dateEnd, mi.dateEndMin, mi.dateEndMax)) : '') : '');
+  const mirrorWhenHTML = mi => (mi.when != null ? esc(mi.when) : (mi.date ? esc(Dates.formatRange(mi.date, mi.dateMin, mi.dateMax)) + (mi.dateEnd ? ' – ' + esc(Dates.formatRange(mi.dateEnd, mi.dateEndMin, mi.dateEndMax)) : '') : ''));
   // opts.noDate leaves the date out and opts.bare leaves the <li> off (the Timeline tab shows the date beside the card)
   function factLineHTML(m, f, badge, opts = {}) {
     const t = Store.factType(f.typeId);

@@ -9,7 +9,8 @@ window.Editor = (() => {
   let drawer, draft = null, id = null, isNew = false;
   let openFacts = new Set(); // fact ids whose full card is open (the rest show as one summary line)
   let savedSnapshot = '';    // the draft as last opened or saved, to know whether closing would lose anything
-  const snapshot = () => JSON.stringify(draft);
+  const CALC = ['calcMin', 'calcMax', 'calcEndMin', 'calcEndMax']; // windows worked out from ties: the solver's, not the editor's
+  const snapshot = () => JSON.stringify(draft, (k, v) => (CALC.includes(k) ? undefined : v));
   const isDirty = () => !!draft && snapshot() !== savedSnapshot;
   // An unsaved edit is kept in this browser as it is typed, so that it survives the app being stopped in the
   // background. It is removed as soon as the marker is saved or the editor is closed.
@@ -173,6 +174,8 @@ window.Editor = (() => {
     draft.tags = (Array.isArray(draft.tags) ? draft.tags : String(draft.tags).split(',')).map(s => String(s).trim()).filter(Boolean);
     const wasNew = isNew, data = draft;
     draft = null; isNew = false; // the store event must not be taken for an outside change
+    const cur = wasNew ? null : Store.marker(data.id);
+    data.facts.forEach(f => { const sf = cur && cur.facts.find(x => x.id === f.id); CALC.forEach(k => { if (sf && sf[k]) f[k] = sf[k]; else delete f[k]; }); });
     const saved = wasNew ? Store.addMarker(data) : Store.updateMarker(data.id, data);
     UI.toast('Saved');
     // stay open on the saved marker: derived dates, mirrored lines and time gaps refresh in place
@@ -230,6 +233,7 @@ window.Editor = (() => {
       const sf = s.facts.find(x => x.id === f.id); if (!sf) return;
       if (reckoned('fact:' + f.id)) f.date = sf.date;
       if (reckoned('fact:' + f.id + ':end')) f.dateEnd = sf.dateEnd;
+      CALC.forEach(k => { if (sf[k]) f[k] = sf[k]; else delete f[k]; });
     });
     if (rerender) render();
   }
@@ -244,19 +248,28 @@ window.Editor = (() => {
     const reckoned = !!(st && st.derived && !st.pinned);
     const undet = !!(st && st.undetermined);
     const hasRange = approx && !!(approx.min || approx.max);
-    const open = hasRange || approxOpen.has(slot);
+    // limits on the ends of this date: what its ties work out, and which tie governs each end
+    const win = inStore && approx ? Relations.windowOf(ref) : null;
+    const hasWin = !!(win && (win.minTies.length || win.maxTies.length));
+    const open = hasRange || approxOpen.has(slot) || hasWin;
+    const endChain = part => h('button', { type: 'button', class: 'small icon', disabled: !inStore,
+      title: !inStore ? 'Save the marker first, then this end can be tied to another date' : (part === 'min' ? 'Tie the earliest end to another date: "not before…"' : 'Tie the latest end to another date: "not after…"'),
+      onclick: () => Relations.pick(ref, { part, onDone: () => syncDraftFromStore(true) }) }, '⛓');
+    const tiedHint = (v, by) => (by && v ? `${Dates.formatInput(v)} (tied)` : 'YYYY');
     const input = h('input', { type: 'text', 'data-bind': bind, value: undet ? '' : (value ?? ''), placeholder: undet ? 'undeterminable' : (open ? 'most likely (optional)' : placeholder),
       readonly: reckoned || undet, class: reckoned ? 'derived-input' : '', title: reckoned ? 'Reckoned from a time gap. Anchor it (🔒) to type a date here.' : '' });
     let approxRow = null, approxTick = null;
     if (approx && !undet) {
-      approxTick = h('input', { type: 'checkbox', checked: open, title: 'Approximate: give the earliest and latest it could be', disabled: reckoned, onchange: e => { if (e.target.checked) approxOpen.add(slot); else { approxOpen.delete(slot); const f = draft.facts[approx.i]; if (approx.end) { f.dateEndMin = ''; f.dateEndMax = ''; } else { f.dateMin = ''; f.dateMax = ''; } } render(); } });
+      approxTick = h('input', { type: 'checkbox', checked: open, title: hasWin ? 'The earliest and latest boxes stay open while an end is tied to another date' : 'Approximate: give the earliest and latest it could be', disabled: reckoned || hasWin, onchange: e => { if (e.target.checked) approxOpen.add(slot); else { approxOpen.delete(slot); const f = draft.facts[approx.i]; if (approx.end) { f.dateEndMin = ''; f.dateEndMax = ''; } else { f.dateMin = ''; f.dateMax = ''; } } render(); } });
       if (open) approxRow = h('div', { class: 'row approx-row', style: { gap: '4px' } },
         h('span', { class: 'muted', style: { flex: 'none', fontSize: 'calc(11px * var(--fs))' } }, 'earliest'),
-        h('input', { type: 'text', 'data-bind': approx.minBind, value: approx.min || '', placeholder: 'YYYY', readonly: reckoned, class: reckoned ? 'derived-input' : '' }),
+        h('input', { type: 'text', 'data-bind': approx.minBind, value: approx.min || '', placeholder: tiedHint(win && win.E, win && win.eBy), readonly: reckoned, class: reckoned ? 'derived-input' : '', title: 'The earliest it can be. Type a date, or tie this end to another date with ⛓.' }),
+        h('div', { class: 'narrow' }, endChain('min')),
         h('span', { class: 'muted', style: { flex: 'none', fontSize: 'calc(11px * var(--fs))' } }, 'latest'),
-        h('input', { type: 'text', 'data-bind': approx.maxBind, value: approx.max || '', placeholder: 'YYYY', readonly: reckoned, class: reckoned ? 'derived-input' : '' }));
+        h('input', { type: 'text', 'data-bind': approx.maxBind, value: approx.max || '', placeholder: tiedHint(win && win.L, win && win.lBy), readonly: reckoned, class: reckoned ? 'derived-input' : '', title: 'The latest it can be. Type a date, or tie this end to another date with ⛓.' }),
+        h('div', { class: 'narrow' }, endChain('max')));
     }
-    const chain = h('button', { type: 'button', class: 'small icon', disabled: !inStore, title: !inStore ? 'Save the marker first, then you can add a time gap to this date' : 'Time gap: relate this date to another date (e.g. "130 years after Adam was born")',
+    const chain = h('button', { type: 'button', class: 'small icon', disabled: !inStore, title: !inStore ? 'Save the marker first, then you can tie this date to another date' : 'Ties: place this date from another date ("130 years after Adam was born"), or limit it ("not before…", "not after…")',
       onclick: () => Relations.pick(ref, { onDone: () => syncDraftFromStore(true) }) }, '⛓');
     const pin = st && (st.related || st.pinned) ? h('button', { type: 'button', class: 'small icon' + (st.pinned ? ' src-on' : ''),
       title: st.pinned ? 'Anchor: other dates are reckoned from this one. Click to release it.' : 'Make this date the anchor, so the related dates are reckoned from it',
@@ -264,11 +277,25 @@ window.Editor = (() => {
     const restore = undet ? h('button', { type: 'button', class: 'small', title: 'Stop treating this date as undeterminable', onclick: () => { Store.setUndetermined(ref, false); syncDraftFromStore(true); } }, 'Restore') : null;
     let caption = null;
     if (reckoned) caption = h('div', { class: 'rel-caption' }, '⛓ reckoned from ' + Relations.describeDerived(ref) + (st.range && st.range.min !== st.range.max ? ` → ${Dates.formatRange(st.range.date, st.range.min, st.range.max)}` : ''));
-    if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
+    // what the ties on the ends work out: one line per end, naming the tie that governs it
+    let winCaption = null;
+    if (hasWin && !undet) {
+      const more = n => (n > 1 ? ` (and ${n - 1} more)` : '');
+      const lines = [];
+      if (win.E && win.eBy) lines.push(`⛓ earliest ${Dates.formatInput(win.E)}: ${Relations.governText(win.eBy)}${more(win.minTies.length)}`);
+      else if (win.minTies.length) lines.push(`⛓ earliest: ${win.minTies.length} tie${win.minTies.length > 1 ? 's' : ''}, waiting for the other date${win.minTies.length > 1 ? 's' : ''}`);
+      if (win.L && win.lBy) lines.push(`⛓ latest ${Dates.formatInput(win.L)}: ${Relations.governText(win.lBy)}${more(win.maxTies.length)}`);
+      else if (win.maxTies.length) lines.push(`⛓ latest: ${win.maxTies.length} tie${win.maxTies.length > 1 ? 's' : ''}, waiting for the other date${win.maxTies.length > 1 ? 's' : ''}`);
+      const a = Dates.parse(win.E), b = Dates.parse(win.L);
+      if (a && b && !win.conflict && b.y - a.y > 0) lines.push(`window ${b.y - a.y} year${b.y - a.y === 1 ? '' : 's'}`);
+      winCaption = h('div', { class: 'rel-caption' }, ...lines.map(t => h('div', {}, t)));
+    }
+    if (st && st.conflict && st.conflict.window) caption = h('div', { class: 'rel-caption conflict' }, '⚠ The limits on this date leave it no room. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
+    else if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
     if (undet) caption = h('div', { class: 'rel-caption' }, 'Marked undeterminable: not placed on the timeline.');
     return h('label', { class: 'field' }, label,
       h('div', { class: 'row', style: { gap: '4px' } }, input, approxTick ? h('div', { class: 'narrow', title: 'approximate' }, approxTick) : null, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),
-      approxRow, caption);
+      approxRow, winCaption, caption);
   }
 
   // ---------- rendering ----------
@@ -412,8 +439,8 @@ window.Editor = (() => {
     const t = Store.factType(f.typeId);
     const bits = [];
     const w = Facts.when(f);
-    if (w.date) bits.push(Dates.formatRange(w.date, w.min, w.max) + (t && t.hasEnd && w.dateEnd ? ' – ' + Dates.formatRange(w.dateEnd, w.endMin, w.endMax) : ''));
-    else if (f.dateMin || f.dateMax) bits.push(f.dateMin ? 'after ' + Dates.formatInput(f.dateMin) : 'before ' + Dates.formatInput(f.dateMax));
+    const whenLabel = Facts.whenLabel(w, !!(t && t.hasEnd)); // the date, or its window when no date is known
+    if (whenLabel) bits.push(whenLabel);
     const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${r ? r.name : 'with'}: ${Store.displayName(o)}` : ''; }).filter(Boolean).join(', ');
     let place = f.placeLabel || '';
     if (!place && f.where && f.where.kind === 'marker') place = (Store.marker(f.where.markerId) || {}).name || '';
@@ -696,7 +723,7 @@ window.Editor = (() => {
 
   // ---------- time gaps ----------
   function renderRelations() {
-    if (isNew) return h('p', { class: 'hint' }, 'Save the marker first, then you can relate its dates to other markers ("130 years after Adam was born").');
+    if (isNew) return h('p', { class: 'hint' }, 'Save the marker first, then you can tie its dates to other dates ("130 years after Adam was born", "not before Sarai was born").');
     const rels = Store.relationsFor(id);
     const out = [];
     if (!rels.length) out.push(h('p', { class: 'muted' }, 'No time gaps yet.'));

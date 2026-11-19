@@ -370,6 +370,47 @@ gap** records exactly that: *Seth · Born = Adam · Born + 130 y*, with the sour
   the slider until you decide). Two year-precision dates in the same year are not a conflict.
 * Time gaps sync between devices like everything else, and every device recomputes the same results.
 
+### Limits: a date known only as "after this" and "before that"
+
+A date has three parts: the **earliest** it can be, **the date** itself, and the **latest** it can be.
+Any of the three can be typed, or tied to another date on the same marker or a different one. A tie on
+the date is the time gap described above. A tie on an end is a limit:
+
+* **Earliest** tied to Sarai · Born says the marriage is *not before* her birth.
+* **Latest** tied to Sarai · Died says it is *not after* her death.
+* A length can be added: Earliest, 13 years *after* Sarai · Born. Latest, 9 months *before* a child's birth.
+
+An end can carry several ties. The latest of the "not before" limits governs the earliest end, and the
+earliest of the "not after" limits governs the latest end. A typed Earliest or Latest counts as one more
+limit. A date with limits and no date of its own shows as its window, "between 2156 BC and 2029 BC", or
+"after…" / "before…" when only one end is bounded. No date is invented for it: the map shows it across
+the window at the reduced strength used for approximate dates, and the Timeline gives it a row of its
+own labelled with the window.
+
+Every limit is used both ways, the way Primavera P6 works out early and late dates. If a journey is not
+before a marriage, the marriage is not after the journey, and you enter that once. A fact with a from
+and an until date carries one limit of its own: the until date is not before the from date.
+
+**The tie dialog.** Press ⛓ beside a date, or beside its Earliest or Latest box. Each row is one tie:
+the part (Earliest, The date, Latest), where (*on* the other date, or a length *after* or *before* it),
+the other marker and which of its dates. *Reads as* spells the row out in words. *Add another tie* adds
+a row. The source, verse, note and confidence at the bottom are typed once and saved on every row; a row
+can carry its own verse. The Result line shows what the rows give before anything is saved. On a "The
+date" row, *give or take* opens the smallest and largest the length could be.
+
+**In the editor**, the lines under a date's boxes name the tie that governs each end and how many others
+there are, with the width of the window.
+
+**Conflicts.** A window that has closed (its earliest is after its latest) is a conflict. The panel
+names the date and the tie that leaves it no room. Correct the date, or overrule the tie.
+
+**Earlier workarounds.** A time gap of nothing ("0 years after") says the two dates are the same. If it
+was meant as "some time after", Library → Time gaps offers *make it "not before"* and *make it "not
+after"* on that row. The date it had placed is cleared and the limit takes over.
+
+A date that was reckoned from a time gap is now cleared when that gap is deleted or overruled, instead
+of lingering as if it had been typed.
+
 **Approximate gaps.** Tick *approximate gap* and give the smallest and largest it could be ("at least
 500 y, at most 600 y"). The top box is the most likely gap and is what places the date; leave it
 blank and the app uses the middle of the range (550 y). Leave one limit blank for a one-sided gap

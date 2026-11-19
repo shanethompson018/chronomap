@@ -56,15 +56,16 @@ window.Timeline = (() => {
       const m = Store.marker(id);
       (m.facts || []).forEach((f, i) => {
         const w = Facts.when(f);
-        const date = w.date || f.dateMin || f.dateMax || '';
-        out.push({ m, lane, f, date, d: date ? Dates.toDays(date) : null, order: i });
+        const date = w.date || '';
+        // no date, only a window: placed at its middle (or its one end) and labelled as the window it is
+        out.push({ m, lane, f, date, d: date ? Dates.toDays(date) : null, order: i, win: !w.known && date ? Facts.whenText(false, '', '', '', w.lo, w.hi) : '' });
       });
       if (pref.mirrors) (m.mirrors || []).forEach((mi, i) => {
         // in one list, a fact whose own marker is also on the timeline is already there once
         if (pref.layout !== 'lanes' && on.has(mi.markerId)) return;
         if (!Store.marker(mi.markerId)) return;
         const date = mi.date || Dates.midpoint(mi.dateMin, mi.dateMax) || mi.dateMin || mi.dateMax || '';
-        out.push({ m, lane, mi, date, d: date ? Dates.toDays(date) : null, order: 100000 + i });
+        out.push({ m, lane, mi, date, d: date ? Dates.toDays(date) : null, order: 100000 + i, win: mi.known === false && date ? (mi.when || '') : '' });
       });
     });
     out.sort((a, b) => (a.d == null && b.d == null) ? (a.lane - b.lane || a.order - b.order) : a.d == null ? 1 : b.d == null ? -1 : (a.d - b.d || a.lane - b.lane || a.order - b.order));
@@ -75,8 +76,8 @@ window.Timeline = (() => {
     const out = [];
     for (const e of es) {
       const last = out[out.length - 1];
-      if (last && last.d === e.d) last.entries.push(e);
-      else out.push({ d: e.d, date: e.date, entries: [e] });
+      if (last && last.d === e.d && last.win === (e.win || '')) last.entries.push(e);
+      else out.push({ d: e.d, date: e.date, win: e.win || '', entries: [e] });
     }
     return out;
   }
@@ -145,12 +146,12 @@ window.Timeline = (() => {
     if (lanes) { grid.append(h('div', { class: 'tl-head tl-corner' }, 'Date')); ms.forEach(m => grid.append(h('div', { class: 'tl-head' }, chip(m)))); }
     gs.forEach((g, gi) => {
       const prev = gs[gi - 1];
-      if (pref.gaps && prev && g.d != null && prev.d != null) {
+      if (pref.gaps && prev && g.d != null && prev.d != null && !g.win && !prev.win) { // a window has no single date to measure from
         const txt = gapText(prev.date, g.date);
         if (txt) grid.append(h('div', { class: 'tl-date gap' }), h('div', { class: 'tl-gap', style: { gridColumn: '2 / -1' } }, `↓ ${txt} later`));
       }
-      const label = g.d == null ? 'No date' : Dates.formatInput(g.date);
-      grid.append(h('div', { class: 'tl-date' + (g.d == null ? ' none' : '') }, label));
+      const label = g.d == null ? 'No date' : (g.win || Dates.formatInput(g.date));
+      grid.append(h('div', { class: 'tl-date' + (g.d == null ? ' none' : '') + (g.win ? ' win' : ''), title: g.win ? 'No date is known, only this window. It is placed at the middle of the window.' : null }, label));
       if (lanes) ms.forEach(m => { const cell = h('div', { class: 'tl-cell' }); g.entries.filter(e => e.m === m).forEach(e => cell.append(card(e, false, label))); grid.append(cell); });
       else { const cell = h('div', { class: 'tl-cell' }); g.entries.forEach(e => cell.append(card(e, ms.length > 1, label))); grid.append(cell); }
     });
