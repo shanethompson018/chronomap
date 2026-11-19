@@ -379,3 +379,38 @@ on a fresh day (decision 7.6). The cause is still not confirmed: the problems lo
 whether the app is being stopped in the background, crashing on screen, or neither. The user asked
 whether the Boox can report by itself: its log goes to the Drive folder at each sync and can be loaded
 in Library → Problems log on the PC.
+
+## 12. Time gaps: dates known only as "after this" and "before that" (raised 19 Nov 2026, under discussion, nothing built)
+
+Raised by the user: Abram and Sarai's marriage has no date; it must fall after both were born and before
+either died. A time gap "after Abram born" should not run on to the present, and a second gap "before
+Abram died" should close the range, with the two shown as one.
+
+What the app does today (checked on a throwaway Abram, 2166 to 1991 BC):
+
+* A time gap always means "this date EQUALS that date plus a gap". A gap of nothing "after Abram born"
+  places the marriage on the day he was born (2166 BC), not "some time after".
+* A second gap "before Abram died" does not close a range. The app now has two answers for the marriage,
+  2166 BC and 1991 BC, and raises three conflicts, because the two gaps together also say that Abram's
+  birth and death are the same date.
+
+Proposal:
+
+- [ ] **12.1 A second kind of time gap: a limit.** The dialog offers "exactly / about N after or before"
+      (today's gap, which places the date) or "some time after" / "some time before" (a limit, which only
+      bounds it). A limit may carry an amount: "at least 13 years after Abram born".
+- [ ] **12.2 Limits combine into one range.** A date can have any number of limits. The earliest it can be
+      is the latest of its "after" limits; the latest it can be is the earliest of its "before" limits.
+      The fact shows one line, "between 2156 BC and 2029 BC", with the limits listed behind it. One side
+      only reads "after 2156 BC" or "before 2029 BC". No single date is invented. On the map the marker
+      shows across the range at the reduced strength already used for approximate dates; the Timeline
+      places it at the middle of the range, marked as a range.
+- [ ] **12.3 Limits and gaps together.** A real gap still places the date; limits then narrow its range.
+      A date placed outside its limits, or limits that cross (earliest later than latest), is a conflict.
+      Limits never join two other dates together, so they cannot make a birth equal a death.
+- [ ] **12.4 (optional) Limits the app can supply.** For a Married fact: within both spouses' lifetimes.
+      For a Had child fact: within the parent's lifetime. Shown as reckoned, switchable per fact type,
+      overridden by anything typed. To decide: wanted or not.
+
+Questions for the user: range only, or also a most-likely date in the middle; whether 12.4 is wanted;
+whether a date bounded on one side only should show on the map at all.
