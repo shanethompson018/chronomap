@@ -2,6 +2,11 @@
 
 Design for approval. Nothing here is built. Agenda sections 12, 13 and 14 lead to this document.
 
+Revision 2, 19 Nov 2026. The first draft gave every tie a "kind" (exactly, about, at least, at most,
+some time). The user pointed out that this is unnecessary: a date already has an approximation with two
+ends, and it is enough to be able to tie either end, or the date itself, to another date. This revision
+is built on that. The calculation and its results are unchanged.
+
 The dates in the examples belong to a throwaway Abram born in 2166 BC. They are there to show the
 arithmetic, not to suggest a chronology.
 
@@ -14,149 +19,165 @@ when Seth was born". It is wrong for "they married some time after they were bor
 * a second gap "before Abram died" gives the marriage two competing answers and raises conflicts, one of
   them claiming that Abram's birth and death are the same date.
 
-What is needed is what P6 calls logic: ties that only say what must come before what, and a calculation
-that turns all the ties on a date into the earliest and latest it can be.
+## 2. The idea
 
-## 2. The model in P6 terms
+A date has three parts, as it does today:
 
-| Primavera P6 | Chrono Map | Exists today |
+| Part | Meaning | Box in the editor today |
 |---|---|---|
-| Activity (start, finish) | A fact with a date and an "until" date: a life, a stay, a reign, a journey | yes |
-| Milestone | A fact with one date: Born, Died, Married | yes |
-| Relationship with lag | A tie between two dates | only the "exactly" kind |
-| FS, SS, FF, SF | Chosen by which two dates are tied (from or until, on each side) | yes |
-| Constraint: Start On or After, Finish On or Before | A fixed "not before" or "not after" date typed on a fact | partly (earliest / latest boxes) |
-| Mandatory Start | An anchor (the lock) | yes |
-| Forward pass → Early date | The earliest the date can be | no |
-| Backward pass → Late date | The latest the date can be | no |
-| Total float | The width of the window between them | no |
-| Driving relationship | The tie that sets the earliest, and the tie that sets the latest | no |
-| Negative float, loop | A conflict | yes, reworked |
-| Resources on an activity | People assigned to a shared fact (section 7) | no |
+| Earliest | it cannot be before this | Earliest |
+| The date | the most likely, or the known, date | the date box |
+| Latest | it cannot be after this | Latest |
 
-Left out on purpose: calendars, WBS, baselines, resource levelling, percent complete.
+Today only the date itself can be tied to another date. The change is one sentence:
 
-One deliberate difference from P6. P6 schedules every activity at its early date. History may not: a
-marriage that could fall anywhere in a 65-year window has no date, only a window. Chrono Map shows the
-window and invents nothing.
+**Any of the three parts can be typed, or tied to another date, on the same marker or a different one.**
 
-## 3. Ties
+A tie is always the same thing: *this part = that date, plus or minus a gap*. A blank gap means the two
+are the same.
 
-A tie joins one date to another. It has a kind:
+| What you want to say | How you say it |
+|---|---|
+| Seth was born 130 years after Adam | the date ← Adam · Born, 130 years after |
+| They married some time after Abram was born | Earliest ← Abram · Born |
+| They married before Sarai died | Latest ← Sarai · Died |
+| Sarai was at least 13 | Earliest ← Sarai · Born, 13 years after |
+| It happened about 40 years later, 35 to 45 | the date ← 40 after; Earliest ← 35 after; Latest ← 45 after |
+| Two things happened on the same date | the date ← the other date, blank gap |
 
-| Kind | Meaning | Example | P6 equivalent |
-|---|---|---|---|
-| exactly | this = that + N | Seth born = Adam born + 130 years | relationship with lag and zero float |
-| about | this = that + N, give or take | "about 40 years after" with smallest and largest | lag given as a range |
-| at least | this is no earlier than that + N | married at least 13 years after Sarai was born | FS or SS with lag N |
-| at most | this is no later than that + N | arrived at most 2 years after leaving | maximum lag |
-| some time after | this is no earlier than that | married after Abram was born | lag 0 |
-| some time before | this is no later than that | married before Sarai died | the same tie seen from the other end |
+"After" and "before" only say which way the gap runs. There are no kinds to choose.
 
-"Exactly" and "about" are today's time gaps and keep working unchanged. The other four are new.
+**More than one tie on the same end.** The marriage must come after two births and before two deaths.
+An end may carry any number of ties. For Earliest the latest of them governs; for Latest the earliest
+of them governs. The one that governs is marked.
 
-A date may carry any number of ties. Every tie keeps its own source, verse, note and confidence, as time
-gaps do now.
+**Typed and tied together.** A typed Earliest or Latest counts as one more limit beside the ties. The
+tighter one governs.
 
-A fact with an "until" date gets one tie for free: its until date is never earlier than its from date.
+**Tying to a date that is itself approximate.** You do not choose an end on the other side. Your
+Earliest follows the other date's earliest, and your Latest follows its latest.
+
+## 3. In P6 terms
+
+| Primavera P6 | Chrono Map |
+|---|---|
+| Activity (start, finish) | A fact with a date and an "until" date: a life, a stay, a journey |
+| Milestone | A fact with one date |
+| Relationship with lag | A tie on Earliest or Latest, with its gap |
+| FS, SS, FF, SF | Which two dates are tied (from or until, on each side) |
+| Start On or After, Finish On or Before | A typed Earliest or Latest |
+| Mandatory Start | An anchor (the lock) |
+| Forward pass → Early date | Earliest |
+| Backward pass → Late date | Latest |
+| Total float | The width of the window between them |
+| Driving relationship | The tie that governs each end |
+| Negative float, loop | A conflict |
+| Resources on an activity | People assigned to a shared fact (section 7) |
+
+Left out on purpose: calendars, WBS, baselines, resource levelling.
+
+One deliberate difference. P6 schedules every activity at its early date. History may not: a marriage
+that could fall anywhere in a 65-year window has no date, only a window. Chrono Map shows the window
+and invents nothing.
 
 ## 4. The calculation
 
-Every date gets a window: the earliest it can be and the latest it can be.
-
-1. A typed, anchored date has a window of that one date.
-2. **Forward pass.** Each tie pushes the earliest of the later date up: earliest(this) is at least
-   earliest(that) + N. With several ties, the one that pushes furthest wins. That tie is the driving one.
-3. **Backward pass.** Each tie pulls the latest of the earlier date down in the same way.
+1. A typed, anchored date has an Earliest and Latest equal to itself.
+2. **Forward pass.** A tie on Earliest pushes it up to the other date's earliest plus the gap.
+3. **Backward pass.** The same tie also works the other way: if the marriage is not before Sarai's
+   birth, then Sarai's birth is not after the marriage. You enter a tie once; both ends learn from it.
 4. The passes repeat until nothing moves.
 
 What is shown for a date:
 
 | Situation | Shown as |
 |---|---|
-| Typed, or reached from an anchor through "exactly" ties | the date, as today |
-| Reached through "about" ties | the date with its range, as today |
-| Bounded on both sides, no date | "between 2156 BC and 2091 BC" |
-| Bounded on one side only | "after 2166 BC" or "before 2029 BC" |
+| Typed, or reached from an anchor through ties on the date | the date, as today |
+| Bounded on both ends, no date | "between 2156 BC and 2091 BC" |
+| Bounded on one end only | "after 2166 BC" or "before 2029 BC" |
 | No anchor anywhere in its chain | "not yet anchored", as today |
 
-A window is written into the same earliest and latest fields that approximate dates already use, so the
-rest of the app needs no change to understand it: the map shows the marker across the window at the
-reduced strength used for approximate dates, and the Timeline places it at the middle of the window and
-labels it as a window. A date bounded on one side only stays off the map, as undated facts do now.
+The window goes into the Earliest and Latest boxes that already exist, shown as reckoned (as tied dates
+are shown now). So the map and the Timeline need no change to understand it: the map shows the marker
+across the window at the reduced strength already used for approximate dates.
 
 **Conflicts.** A conflict is a window that has closed: the earliest is later than the latest. P6 calls
-it negative float. The Conflicts panel names the two driving ties, so the choice is which of the two to
-correct. A tie that leads back to its own start with no room left is reported the same way.
-
-Limits never weld two other dates together. That removes the false "born = died" conflict.
+it negative float. The Conflicts panel names the governing tie at each end, so the choice is which of
+the two to correct. Ties on the ends never weld two other dates together, which removes the false
+"born = died" conflict.
 
 ## 5. The two cases, worked
 
-Typed: Abram born 2166 BC (anchor). Exact ties: Abram lived 175 years; Sarai is 10 years younger; Sarai
-lived 127 years; Abram left Haran aged 75.
+Typed: Abram born 2166 BC (anchor). Ties on dates: Abram lived 175 years; Sarai is 10 years younger;
+Sarai lived 127 years; Abram left Haran aged 75.
 
 **The marriage**
 
-| Ties on the marriage | Window | Earliest set by | Latest set by |
+| Ties on the marriage | Window | Earliest governed by | Latest governed by |
 |---|---|---|---|
-| after Abram born | after 2166 BC | Abram born | nothing |
-| + after Sarai born, before Abram died, before Sarai died | 2156 BC to 2029 BC | Sarai born | Sarai died |
-| + the journey below (they left Ur already married) | 2156 BC to 2091 BC | Sarai born | leaving Ur |
-| + "Sarai at least 13 years old" | 2143 BC to 2091 BC | Sarai at least 13 | leaving Ur |
-| a typed marriage date of 2200 BC | conflict | earliest 2156 BC (Sarai born) is after the typed 2200 BC | |
+| Earliest ← Abram born | after 2166 BC | Abram born | nothing |
+| + Earliest ← Sarai born; Latest ← Abram died; Latest ← Sarai died | 2156 BC to 2029 BC | Sarai born | Sarai died |
+| + the journey below | 2156 BC to 2091 BC | Sarai born | leaving Ur |
+| + Earliest ← Sarai born, 13 years after | 2143 BC to 2091 BC | Sarai born + 13 | leaving Ur |
+| a typed marriage date of 2200 BC | conflict | Sarai born, 2156 BC, is after the typed 2200 BC | |
 
-The first row is your observation: one tie leaves the window open on the far side. The second row is the
-answer to your question: a second tie does close it, once ties are limits. All four ties show as one
-line on the fact.
+The first row is what you saw: one tie leaves the far end open. The second row answers your question:
+ties on the other end close it. All four are entered in one dialog and show as one line on the fact.
 
 **Ur to Haran, Genesis 11:31**
 
 One fact with a from date (left Ur) and an until date (reached Haran).
 
-| Tie | Kind |
+| Tie | Entered as |
 |---|---|
-| left Ur, after the marriage | some time after |
-| reached Haran, after leaving Ur | built in |
-| reached Haran, before Abram left Haran | some time before |
+| They left Ur already married | from date: Earliest ← Abram · Married |
+| They reached Haran before Abram left it | until date: Latest ← Abram · left Haran |
+| They arrived after they set out | built in |
 
-Result: left Ur between 2156 BC and 2091 BC; reached Haran between 2156 BC and 2091 BC. Every later tie
-you find narrows both at once.
+Result: left Ur between 2156 BC and 2091 BC; reached Haran between 2156 BC and 2091 BC. The marriage's
+Latest drops to 2091 BC without anything more being entered, because the first tie works backwards too.
 
 ## 6. Screens
 
-**The tie dialog** (today's Time gap dialog, with the kind added)
+**The tie dialog: several ties at once, one source**
 
 ```
-Abram · Married Sarai   is
-  ( ) exactly    ( ) about    ( ) at least    ( ) at most    (•) some time
-  [    ] years [    ] months [    ] days          (hidden for "some time")
-  (•) after   ( ) before
-  the date of marker  [ Sarai            ]
-  which date          [ Born (2156 BC)   ]
-  Source [          ]  Verse [        ]  Note [                         ]
-  Confidence [      ]  Reason [                                         ]
+Ties for   Abram · Married Sarai
+
+  Part        Gap (blank = same)          Other marker    Which date
+  [Earliest]  [   ] y [  ] m [  ] d  [after ]  [Abram ]   [Born  2166 BC]   ✕
+  [Earliest]  [   ] y [  ] m [  ] d  [after ]  [Sarai ]   [Born  2156 BC]   ✕
+  [Latest  ]  [   ] y [  ] m [  ] d  [after ]  [Abram ]   [Died  1991 BC]   ✕
+  [Latest  ]  [   ] y [  ] m [  ] d  [after ]  [Sarai ]   [Died  2029 BC]   ✕
+  + Add another tie
+
+  For all of these:
+  Source [ Genesis        ]   Verse [        ]   Confidence [        ]
+  Note   [                                                          ]
+  Result: between 2156 BC and 2029 BC                 [ Save 4 ties ]  [ Cancel ]
 ```
 
-**The logic list on a fact** (in the editor, replacing the scattered gap lines)
+* The source, note and confidence are typed once and saved on every tie in the dialog.
+* Each row can take its own verse when it differs; left blank, it uses the shared one.
+* The other marker defaults to the fact's own marker, as now.
+* The result line updates as rows are added, before anything is saved.
+* The dialog opens from the chain button beside the date, the Earliest box or the Latest box. It starts
+  with one row for the part you opened it from.
+
+**In the editor**, the fact shows its three boxes with what feeds each:
 
 ```
-Married Sarai        between 2156 BC and 2091 BC        window 65 years
-  Must come after
-    Abram · Born           some time after      2166 BC
-    Sarai · Born           some time after      2156 BC     ◀ sets the earliest
-  Must come before
-    Abram · Died           some time before     1991 BC
-    Sarai · Died           some time before     2029 BC
-    Terah · Moved to Haran (from)   some time before   2091 BC   ◀ sets the latest
-  + Add a tie      + Not before a fixed date      + Not after a fixed date
+Married Sarai
+  Earliest  2156 BC  ⛓  Sarai · Born   (also: Abram · Born 2166 BC)
+  Date      (none)
+  Latest    2091 BC  ⛓  Terah · Moved to Haran, worked backwards   (also: Sarai · Died 2029 BC, Abram · Died 1991 BC)
+  window 65 years                                                       [ Ties… ]
 ```
 
-The information panel and the Timeline show the one consolidated line, "Married · between 2156 BC and
-2091 BC", with the driving ties in the hover text.
+The information panel and the Timeline show one line: "Married · between 2156 BC and 2091 BC".
 
-**Library → Time gaps** gains the kind as a column, and a filter for gaps of nothing, so earlier
-workarounds can be found and switched to "some time after" with one tap each.
+**Library → Time gaps** gains a Part column, and a filter for gaps of nothing on a date, so earlier
+workarounds can be found and moved to Earliest or Latest with one tap each.
 
 ## 7. People assigned to a fact (the journey)
 
@@ -173,36 +194,35 @@ Two optional detail boxes, "From" and "Bound for", record Ur and Canaan.
 
 ## 8. What happens to existing data
 
-* Every existing time gap is an "exactly" or "about" tie and gives the same dates as today.
-* Nothing moves until a new kind of tie is added.
-* Gaps of nothing that were entered as a workaround stay as they are until you change them.
-* Syncing is unaffected: a tie is the same record with one more field. Both devices need the new
-  version before new kinds of tie are entered.
+* Every existing time gap is a tie on the date and gives the same result as today.
+* An existing approximate gap (smallest and largest) keeps working. It is the same as a tie on each end.
+* Nothing moves until a tie is put on an Earliest or Latest.
+* Syncing is unaffected: a tie is the same record with one more field, the part. Both devices need the
+  new version before ties on ends are entered.
 
 ## 9. Build order, one commit each
 
 | Step | What | Depends on |
 |---|---|---|
-| A | The calculation: kinds of tie, forward and backward pass, windows, conflicts | |
-| B | The tie dialog and the logic list on each fact; consolidated line everywhere | A |
-| C | Fixed "not before" and "not after" dates on a fact | A |
-| D | Lifetime rule (decision 3) | A |
-| E | People assigned to a fact: "they go there too" | |
-| F | Bar layout in the Timeline tab (decision 5) | A |
+| A | The calculation: ties on Earliest and Latest, forward and backward pass, windows, conflicts | |
+| B | The tie dialog with several rows and one source; the three boxes showing what feeds them | A |
+| C | Lifetime rule (decision 2) | A |
+| D | People assigned to a fact: "they go there too" | |
+| E | Bar layout in the Timeline tab (decision 4) | A |
 
-A and B together answer the marriage question. E with A answers the journey.
+A and B together answer the marriage question. D with A answers the journey.
 
 ## 10. Decisions needed
 
 | # | Decision | My recommendation |
 |---|---|---|
-| 1 | Words on screen: P6's (FS, Early, Late, Total float) or plain ones | Plain words, with the P6 code shown small beside them |
-| 2 | A date with only a window: show the window, or also a date in the middle | The window only |
-| 3 | Lifetime rule: the app ties every fact on a person to that person's Born and Died by itself, and a Married or Had child fact to the other person's too | On, switchable per fact type, shown as reckoned, overridden by anything typed |
-| 4 | The journey: one shared fact with people assigned, as in section 7 | Yes |
-| 5 | Bar layout in the Timeline tab, like a P6 Gantt chart | Later, after A to E |
-| 6 | A date bounded on one side only: off the map, or shown from its earliest date | Off the map |
+| 1 | A date with only a window: show the window, or also a date in the middle | The window only |
+| 2 | Lifetime rule: the app ties every fact on a person to that person's Born and Died by itself, and a Married or Had child fact to the other person's too | On, switchable per fact type, shown as reckoned |
+| 3 | The journey: one shared fact with people assigned, as in section 7 | Yes |
+| 4 | Bar layout in the Timeline tab, like a P6 Gantt chart | Later, after A to D |
+| 5 | A date bounded on one end only: off the map, or shown from its earliest date | Off the map |
+| 6 | Verse in the tie dialog: one for all rows, or one per row | Shared, with an optional verse on each row |
 
-Decision 3 is the one with a cost either way. On: four fewer ties to type per marriage, and a child
+Decision 2 is the one with a cost either way. On: four fewer ties to type per marriage, and a child
 born after a mother's death is caught at once. Off: every limit on the page is one you entered
 yourself. The rule adds no markers and no ties between people; it only bounds dates.
