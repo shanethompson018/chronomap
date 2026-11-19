@@ -47,6 +47,12 @@ are the same.
 
 "After" and "before" only say which way the gap runs. There are no kinds to choose.
 
+**An approximation is an Earliest and a Latest.** Nothing separate is needed for it. Either end can be
+typed, as now, or tied, or one of each. The date in the middle stays optional: type or tie it when a
+most likely date is known, leave it empty when only the window is known. For the common case "about 40
+years after, give or take 5", a row on the date has a small "give or take" control that adds the
+Earliest and Latest rows for you, so it is typed once.
+
 **More than one tie on the same end.** The marriage must come after two births and before two deaths.
 An end may carry any number of ties. For Earliest the latest of them governs; for Latest the earliest
 of them governs. The one that governs is marked.
@@ -144,7 +150,7 @@ Latest drops to 2091 BC without anything more being entered, because the first t
 ```
 Ties for   Abram · Married Sarai
 
-  Part        Gap (blank = same)          Other marker    Which date
+  Part        How long (blank = same date) Other marker    Which date
   [Earliest]  [   ] y [  ] m [  ] d  [after ]  [Abram ]   [Born  2166 BC]   ✕
   [Earliest]  [   ] y [  ] m [  ] d  [after ]  [Sarai ]   [Born  2156 BC]   ✕
   [Latest  ]  [   ] y [  ] m [  ] d  [after ]  [Abram ]   [Died  1991 BC]   ✕
@@ -157,6 +163,10 @@ Ties for   Abram · Married Sarai
   Result: between 2156 BC and 2029 BC                 [ Save 4 ties ]  [ Cancel ]
 ```
 
+* "How long" is the time between the other date and this part, in years, months and days, as in "130
+  years after Adam was born". Left blank, the part is the same date as the other one, which is what
+  "not before Sarai was born" needs. The after / before box only matters once a length is typed, and is
+  greyed out until then.
 * The source, note and confidence are typed once and saved on every tie in the dialog.
 * Each row can take its own verse when it differs; left blank, it uses the shared one.
 * The other marker defaults to the fact's own marker, as now.
