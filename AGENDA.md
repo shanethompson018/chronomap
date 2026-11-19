@@ -503,3 +503,7 @@ Existing time gaps are untouched and give the same dates (checked). Not built, s
 rule (12.4 / design decision 2), people assigned to a fact (13.1 / 14.5), the bar layout (14.4).
 A one-sided window places the fact at its one end for ordering and on the map, as a one-sided typed
 approximation already did.
+
+Decision, 19 Nov 2026: the shared journey fact (13.1 / 14.5, "they go there too") is NOT to be built.
+Asked whether to build it next, the user answered: "No do not do that. I will be doing that myself."
+The journey is entered by the user with the tools that exist. Do not offer it again unless asked.
