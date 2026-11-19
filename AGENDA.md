@@ -442,3 +442,44 @@ Proposal:
 
 Questions for the user: one shared fact on Terah, or the journey as its own Event marker; whether the
 map should draw the journey as a line; build order (12 before 13).
+
+## 14. Dating logic modelled on Primavera P6 (suggested by the user 19 Nov 2026, under discussion, nothing built)
+
+The user suggested entering the logic the way Primavera P6 does. Assessment: it fits, and it replaces the
+"limits" idea of section 12 with a model the user already knows. How P6's parts map onto the app:
+
+| Primavera P6 | Chrono Map |
+|---|---|
+| Activity with a start and a finish | A fact with a date and an end date (a life, a reign, a stay, a journey) |
+| Milestone | A fact with one date (Born, Died, Married) |
+| Relationship FS / SS / FF / SF with lag | A time gap between any two dates: "no earlier than that date plus N" |
+| Constraint (Start On or After, Finish On or Before, Mandatory) | A typed earliest / latest date on a fact; an anchor (lock) is Mandatory |
+| Forward pass, Early dates | The earliest a date can be, from everything that must come before it |
+| Backward pass, Late dates | The latest a date can be, from everything that must come after it |
+| Total float | The width of the range the date can fall in |
+| Driving relationship | Which limit actually sets the earliest (or latest) date |
+| Negative float, loop report | A conflict |
+| Resources assigned to an activity | People named on a shared fact or event (section 13) |
+
+Differences to keep: P6 schedules everything at its early date, history must show the whole window
+(Early to Late) and invent no date; an "exactly" gap stays (Seth born = Adam born + 130 years is a tie
+with zero float); lags may themselves be ranges; dates may be year-only and BC; no calendars, no WBS.
+
+Worked through:
+* Abram and Sarai's marriage: Early = the later of the two births, Late = the earlier of the two deaths
+  (and the birth of Isaac once that tie is added). Shown as one line with that window; the driving tie on
+  each side is named.
+* Ur to Haran: one activity (a shared fact or an Event marker) with Terah, Abram, Sarai and Lot assigned;
+  predecessor "Abram married Sarai", successors "Terah died" and "Abram left Haran aged 75".
+
+- [ ] **14.1 Logic ties.** The time gap dialog offers: exactly N, at least N, at most N, or some time,
+      after or before another date. Any date to any date, which covers FS, SS, FF and SF.
+- [ ] **14.2 Forward and backward pass.** Every date gets an earliest and a latest; a date with no typed
+      value shows as that window. Conflicts are windows that close (negative float) and loops.
+- [ ] **14.3 Logic list on each fact.** Predecessors and successors with tie, lag, and which one drives.
+- [ ] **14.4 (optional) Bar layout in the Timeline tab.** Lives and stays as bars to scale, windows hatched,
+      like a P6 Gantt chart.
+- [ ] **14.5 Assigned people** = section 13.1.
+
+Questions for the user: P6's terms (FS, Early, Late, Total float) on screen, or plain words; whether the
+bar layout is wanted; whether the app should add lifetime ties by itself (12.4).
