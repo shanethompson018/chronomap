@@ -13,6 +13,10 @@ cross items off as they land. We go through it one item at a time.
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
+- Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
+  added in Library, Fact types (✏️ on the fact type, then + Add role).
+- Not asked for (mentioned 23 Nov 2026): markers placed on a route sit stacked at its middle; they do not
+  move along the line or spread apart.
 - None of the work since section 8 has been checked on the Boox itself.
 
 ## 1. Approximation
