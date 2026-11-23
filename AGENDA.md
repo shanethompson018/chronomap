@@ -554,3 +554,13 @@ and set up:
       the model menu, for small fixes. Claude says at the start when a cheaper model would do.
 - [x] **15.4 Sub-agents only for testing and review.** Not for building. A browser test run with bulky
       output, or an independent review of a large change before release.
+
+## 16. The PC kept syncing with the wrong Google account (reported and fixed 23 Nov 2026)
+
+- [x] **16.1** Reported: "The PC app keeps syncing to the wrong email." Cause: the app asked Google which
+      account was signed in only the first time ever. After Switch account it still remembered the old
+      address, showed it in Library, Sync, and handed it back to Google at the next hourly renewal, which
+      signed the device into the old account again. Fixed: the account is read from Google after every
+      new sign-in, Switch account forgets the old address first, and a renewal that comes back as a
+      different account says so on screen and in the problems log. Checked with a stand-in for Google
+      on the test copy; not checked against the real accounts, which only the user can do.

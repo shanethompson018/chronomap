@@ -52,6 +52,7 @@ window.Sync = (() => {
   function loadToken() {
     try { const t = JSON.parse(localStorage.getItem(TOKEN_KEY)); if (t && t.expiresAt > Date.now() + 60000) { token = t.token; expiresAt = t.expiresAt; } } catch (e) { /* ignore */ }
   }
+  let freshToken = false; // a sign-in was just granted: ask Google which account it is before anything is synced
   function saveToken() { try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, expiresAt })); } catch (e) { /* ignore */ } }
   function dropToken() { token = null; expiresAt = 0; try { localStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ } }
   const hasToken = () => !!token && expiresAt > Date.now() + 60000;
@@ -81,6 +82,7 @@ window.Sync = (() => {
         clearTimeout(timeout);
         if (!resp || resp.error) { reject(new Error((resp && (resp.error_description || resp.error)) || 'sign-in failed')); return; }
         token = resp.access_token; expiresAt = Date.now() + (Math.max(60, resp.expires_in || 3600) - 60) * 1000; saveToken();
+        freshToken = true;
         resolve(token);
       };
       tokenClient.error_callback = err => { clearTimeout(timeout); reject(new Error(err && err.type === 'popup_failed_to_open' ? 'the Google sign-in window was blocked; allow popups for this site and click Sync again' : (err && err.type === 'popup_closed' ? 'sign-in cancelled' : 'sign-in failed'))); };
@@ -92,6 +94,9 @@ window.Sync = (() => {
   async function signIn() {
     dropToken(); // Sign in / Switch account always asks Google afresh
     await getToken('choose');
+    // the account remembered from before is forgotten: the one just chosen is read from Google at the start of
+    // the sync below. (It used to be kept, so the next renewal went straight back to the old account.)
+    if (Store.settings().driveUser) Store.setSetting('driveUser', '');
     Store.setSetting('driveSync', true);
     return run({ interactive: true, reason: 'sign-in' });
   }
@@ -153,8 +158,15 @@ window.Sync = (() => {
     try {
       const j = await (await api('about?fields=user(emailAddress,displayName)')).json();
       const email = (j.user && j.user.emailAddress) || '';
-      if (email && email !== Store.settings().driveUser) Store.setSetting('driveUser', email);
-    } catch (e) { /* not essential */ }
+      const was = Store.settings().driveUser;
+      if (email && email !== was) {
+        Store.setSetting('driveUser', email);
+        Log.add('sync', 'Google account: ' + email + (was ? ' (was ' + was + ')' : ''));
+        // a renewal that came back as a different account (Google's own chooser was used): say so plainly
+        if (was) UI.toast(`This device now syncs with ${email}. Before, it was ${was}.`);
+      }
+      freshToken = false;
+    } catch (e) { /* not essential: asked again at the next sync */ }
   }
   function relatedBody(metadata, blob) {
     const boundary = 'chrono' + Math.random().toString(36).slice(2);
@@ -210,7 +222,7 @@ window.Sync = (() => {
     try {
       if (!navigator.onLine) throw new Error('offline');
       await getToken(interactive ? 'renew' : false);
-      if (!Store.settings().driveUser) await whoAmI();
+      if (freshToken || !Store.settings().driveUser) await whoAmI(); // every new sign-in, not only the first ever
       const { folderId, photosId, extraFolders } = await ensureFolders();
 
       // 1. the data file. Every copy the app can see (two devices may each have created one on their first

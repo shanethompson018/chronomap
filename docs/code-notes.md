@@ -135,6 +135,9 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - `run()` lists every data file the app can see, merges all, keeps the oldest, trashes extras.
 - `getToken(mode)`: `false` | 'renew' | 'choose'. **An automatic sync never opens Google's window**; it sets
   the status to sign-in and waits for his tap.
+- 'renew' passes `login_hint: settings.driveUser`, so `driveUser` must always be the account really in use:
+  `whoAmI()` runs after every new token (`freshToken`), and `signIn()` clears `driveUser` first. (Until 23 Nov
+  2026 it was asked once only, and every renewal went back to the first account ever used.)
 - Returning from the background syncs only after 5 minutes away, with a 4 second delay. `sharedKey()` skips
   replace and upload when nothing changed. A watchdog (`runStarted`, `runNo`) frees a stuck run.
 - When sync "works" but two devices differ, compare the "Google account:" line in Library → Sync first: two
