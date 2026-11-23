@@ -81,9 +81,13 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 
 - Layers are keyed `markerId|moveId` with a `primary` map. Presence and location weights fade approximate dates
   (50 / 75 / 100; 60 flat; two copies while windows overlap).
-- Pins inside an area (`geo.inside`): `insideLayout()` spaces the ring from the area's pixel size (`FAN_STEP`
-  18 down to `FAN_MIN` 9); below that `upsertGroup()` draws one counted pin (`group|areaId`), `expandGroup()`
-  zooms in; `refresh()` runs on `zoomend` while any such area is on screen. General clustering of nearby pins
+- Pins inside an area (`geo.inside`): `insideLayout()` spaces the rings from the room the outline gives:
+  `clearance()` = pixels from the pins' centre to the nearest edge of the outline (the extent when there is
+  one), less `PIN_R` 17, shared between the rings (`FAN_STEP` 36 down to `FAN_MIN` 18). Below that
+  `upsertGroup()` draws one counted pin (`group|areaId`); `expandGroup()` zooms in by `lay.grow`. When the
+  centre is outside the outline (a crescent) the bounding box is used instead. The fan offset is applied once,
+  through `iconAnchor` in `pinIcon`; do not add a transform as well (that doubled it until 23 Nov 2026).
+  The zoom-in animation does not run in the hidden test pane, so check `grow` by arithmetic. `refresh()` runs on `zoomend` while any such area is on screen. General clustering of nearby pins
   is not built.
 - Explicit edit modes: `editShape`, `movePoint` (`pick.type` 'edit' / 'move'). An area's `where` carries
   `extent`, `rough`, `extentRough`, drawn by `buildArea`.

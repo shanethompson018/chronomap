@@ -358,6 +358,14 @@ ratio. Not yet checked on the Boox itself: only at a tablet-sized window on the 
       share one counted pin whose bubble lists them and offers to zoom in. Applies to pins whose
       "where" is at / inside an area marker. Pins at separate typed coordinates that happen to be close
       together are not merged; say if that is wanted too.
+- [x] **10.2** Reported 23 Nov 2026 with a picture of fourteen pins hanging over the edge of their
+      area: "When the markers start spilling out of the area make them into one pin with the number of
+      people in it." Cause: each fanned pin was drawn twice as far from the centre as the layout had
+      planned (the offset was applied twice), and the room was measured from the area's bounding box,
+      not its outline. Built 23 Nov 2026: the offset is applied once (a fanned pin's bubble now points
+      at the pin as well), and the room is the distance from the pins' centre to the nearest edge of
+      the outline as drawn, less half a pin. The pins merge as soon as the outermost one would cross
+      the outline. Full spacing looks as it did. Names under the pins may still reach past the edge.
 
 ## 11. Boox: the app "crashes" when switching to the textbook and back (raised 19 Nov 2026, built 19 Nov 2026)
 

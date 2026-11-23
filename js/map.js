@@ -318,7 +318,21 @@ window.MapView = (() => {
   // Pins that sit "somewhere inside" an area are fanned out in rings around its centre. The rings are FAN_STEP
   // pixels apart while the area is large enough on screen to hold them; as you zoom out the rings tighten with
   // the area, and once they would be closer than FAN_MIN the pins merge into one pin showing how many there are.
-  const FAN_STEP = 18, FAN_MIN = 9;
+  // "Hold them" is measured against the outline as drawn: the outermost pin, with its dashed ring (PIN_R), must
+  // stay inside it. Pins never spill over the edge of their area; they merge instead.
+  const FAN_STEP = 36, FAN_MIN = 18, PIN_R = 17;
+  // How far point p is from the nearest edge of the polygon pts (pixels); 0 when p is outside it.
+  function clearance(p, pts) {
+    let inside = false, best = Infinity;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const a = pts[i], b = pts[j];
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+      const dx = b.x - a.x, dy = b.y - a.y, len = dx * dx + dy * dy;
+      const k = len ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len)) : 0;
+      best = Math.min(best, Math.hypot(p.x - (a.x + k * dx), p.y - (a.y + k * dy)));
+    }
+    return inside ? best : 0;
+  }
   let fanAreas = 0; // areas holding more than one pin at the last refresh (a zoom then needs a new layout)
   const fanRing = n => (n === 0 ? 0 : (Math.ceil((Math.sqrt(1 + (8 * n) / 6) - 1) / 2) || 1)); // 6 per ring, growing
   function insideLayout(areaId, n, tt) {
@@ -329,8 +343,18 @@ window.MapView = (() => {
     if (!geo || !geo.coords || !geo.coords.length) return open;
     const b = L.latLngBounds(geo.coords.map(c => [+c[0], +c[1]])), z = map.getZoom();
     const p1 = map.project(b.getNorthWest(), z), p2 = map.project(b.getSouthEast(), z);
-    const raw = 0.5 * Math.min(Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y)) / rings; // ring spacing that keeps the fan inside the area
-    return { step: Math.max(FAN_MIN, Math.min(FAN_STEP, raw)), raw, collapsed: raw < FAN_MIN, name: area.name, color: Store.displayColor(area) };
+    // ring spacing that keeps the fan inside the area: the room between the pins' centre and the nearest edge of
+    // the outline (the outer, lighter outline when the area has one), less half a pin, shared between the rings
+    const at = Store.resolveMove({ atMarkerId: areaId }, tt);
+    const shape = (geo.extent && geo.extent.length >= 3 ? geo.extent : geo.coords).map(c => map.project([+c[0], +c[1]], z));
+    const clear = at && shape.length >= 3 ? clearance(map.project([at.lat, at.lng], z), shape) : 0;
+    let raw, grow; // grow: how many times larger the area must be on screen for the pins to spread fully
+    if (clear > 0) { raw = (clear - PIN_R) / rings; grow = (FAN_STEP * rings + PIN_R) / clear; }
+    else { // the centre lies outside the outline (a crescent, a two-point shape): go by the area's overall size
+      const half = 0.5 * Math.min(Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y));
+      raw = (half - PIN_R) / rings; grow = half > 0 ? (FAN_STEP * rings + PIN_R) / half : Infinity;
+    }
+    return { step: Math.max(FAN_MIN, Math.min(FAN_STEP, raw)), raw, grow, collapsed: raw < FAN_MIN, name: area.name, color: Store.displayColor(area) };
   }
   // Pixel offset for the n-th pin fanned out around an area's centre, rings `step` pixels apart.
   function fanOffset(n, step = FAN_STEP) {
@@ -365,7 +389,7 @@ window.MapView = (() => {
     let g = layers.get(key);
     const fresh = !g;
     if (fresh) g = { key, kind: 'pin', isGroup: true, areaId, inside: areaId };
-    Object.assign(g, { ids, ll, raw: lay.raw, name: lay.name, color: lay.color, opacity: Math.max(...items.map(it => it.opacity)) });
+    Object.assign(g, { ids, ll, raw: lay.raw, grow: lay.grow, name: lay.name, color: lay.color, opacity: Math.max(...items.map(it => it.opacity)) });
     const sig = [ids.join(','), g.color, g.name, showLabels, g.opacity.toFixed(2)].join('|');
     if (fresh) {
       g.layer = L.marker(ll, { icon: groupIcon(g), riseOnHover: true });
@@ -385,7 +409,7 @@ window.MapView = (() => {
   // Zoom in on a shared pin until its markers have room to spread; openId then gets its own bubble.
   function expandGroup(g, openId) {
     const z = map.getZoom(), top = Math.min(18, isFinite(map.getMaxZoom()) ? map.getMaxZoom() : 18);
-    const need = g.raw > 0 ? Math.ceil(Math.log2(FAN_STEP / g.raw)) : Infinity;
+    const need = g.grow > 0 && isFinite(g.grow) ? Math.ceil(Math.log2(g.grow)) : Infinity;
     const target = Math.min(top, z + need);
     map.closePopup();
     if (!isFinite(need) || target <= z) { // as far in as the map goes: show the information without moving
@@ -410,7 +434,9 @@ window.MapView = (() => {
     const ring = opts.inside ? `<div class="pin-ring" style="border-color:${UI.esc(color)}"></div>` : '';
     const [dx, dy] = opts.fan || [0, 0];
     const badge = UI.gradeBadgeHTML(opts.confidence, opts.reason);
-    const html = `<div class="pin-wrap" style="opacity:${opts.opacity.toFixed(2)};transform:translate(${dx}px,${dy}px)">${ring}${dot}${badge}${label}</div>`;
+    // the fan offset is applied once, by the anchor below (it used to be applied here as well, which put every
+    // fanned pin twice as far out as the layout had allowed for, and its bubble a step away from it)
+    const html = `<div class="pin-wrap" style="opacity:${opts.opacity.toFixed(2)}">${ring}${dot}${badge}${label}</div>`;
     return L.divIcon({ className: 'pin-icon', html, iconSize: [28, 28], iconAnchor: [14 - dx, 14 - dy], popupAnchor: [dx, -12 + dy] });
   }
   function popupContent(id) {
