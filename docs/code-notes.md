@@ -153,6 +153,10 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   `.approx-rows` > `.row.approx-row` (label `.approx-label`, box, ⛓); `.row > *` is `flex: 1`, so every button
   wrapper beside a box needs the `.narrow` rule for its row or it takes as much width as the box (that was
   the squeeze). The From / Until pair sits in `.ed-row.date-row`, which wraps below about 600px.
+- "Where and when" (23.4): `UI.whereListHTML(m, t)` in `markerInfoHTML`, pins only. It walks
+  `Store.sortedMoves(m)` and words each with `mv.when` / `mv.whenEnd`; a move with no `dateEnd` ends at the next
+  dated move, else at `m.end`. `stayLength` is given only when both ends are known (`dateKnown`, `dateEndKnown`,
+  `m.startKnown`, `m.endKnown`).
 - The PC drawer ends above the map's time bar (23.2): `App.fitDrawer()` sets `--ed-bottom` to the bar's height
   while the Map tab shows (0 otherwise); called from `fitLayout`, `showTab`, the editor's `syncView` and a
   ResizeObserver on `.timebar` (which does not fire in the hidden test pane).

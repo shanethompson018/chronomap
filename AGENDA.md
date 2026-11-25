@@ -28,8 +28,8 @@ cross items off as they land. We go through it one item at a time.
   dialog), 22.5 (a chain that loses its anchor goes blank) and 22.6 (reading by verse) are proposed, not
   decided.
 - **Section 23:** the editor's date boxes, the editor and the time bar, and no made-up middle date. 23.1
-  to 23.3 built 25 Nov 2026; not checked on the Boox. 23.4 (a "Where and when" list in a marker's
-  information) is proposed, waiting for his answer.
+  to 23.4 built 25 Nov 2026 (23.4 is the "Where and when" list in a marker's information); not checked
+  on the Boox.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
@@ -974,7 +974,7 @@ working out; each rule has its own switch instead):
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
 on the Boox itself. Not tried on his real data: any entry it lists there is for him to judge.
 
-## 23. Reading and entering dates (asked 25 Nov 2026; 23.1 to 23.3 built 25 Nov 2026; 23.4 proposed)
+## 23. Reading and entering dates (asked 25 Nov 2026, built 25 Nov 2026)
 
 The user's words, with three screenshots of the Journey fact in the PC editor: "This is too scrunched up.
 It needs to change so it can be clearer to read and entered. Also the editor blocks me from scrolling the
@@ -997,7 +997,7 @@ they lived at Ur, and Haran if I am not looking at the map?"
       Until share one window it is said once. **Kept:** a most-likely date he typed, or one a time gap
       worked out, still shows with its range ("c. 2126 BC (2226 BC – 2026 BC)"). The map still uses the
       middle of a window to decide which place applies and how strongly to draw it; only the words changed.
-- [ ] **23.4 "Where and when" in a marker's information (proposed, his answer awaited).** His question
+- [x] **23.4 "Where and when" in a marker's information. Built 25 Nov 2026 ("Yes, build it").** His question
       "how do I know how long they lived at Ur, and Haran if I am not looking at the map?" has no good
       answer today: the information panel gives the location at the slider's date only, and the Journey
       line says "from Ur to Haran" with its window. Proposed: a short list under Location, in order, of
@@ -1006,5 +1006,20 @@ they lived at Ur, and Haran if I am not looking at the map?"
       length of each stay where both ends are known. The words needed are already worked out for 23.3
       (`when` / `whenEnd` on each derived location).
 
-23.1 to 23.3 are three commits. Tested on the test copy with throwaway markers at the PC size and the
+**23.4 as built.** A point marker's information has a list "Where and when", between its details and its
+facts: one line per place, in order. Each line gives the place (a link when it is a marker, "on the way"
+for a route), from, until, the length of the stay, which fact puts the marker there, and "here at the
+slider's date" on the line that applies. Rules:
+
+* A place lasts until its own Until, else until the next dated place, else until the marker ends ("until
+  died (…)"): the same rule the map draws by.
+* An undated place reads "from the beginning"; its length is counted from the marker's Begins when that
+  is a known date.
+* The length is given only when both ends are known dates (typed, or worked out by a time gap), with
+  "about" when either has a range. Where an end is only a window the line shows the window and no length:
+  nothing is made up.
+* Areas and routes have no list (their own places are outlines). A marker with one undated place and
+  nothing else has none either.
+
+23.1 to 23.3 are three commits; 23.4 is a fourth. Tested on the test copy with throwaway markers at the PC size and the
 tablet size (E-ink on); not checked on the Boox itself, and not looked at on his own PC window.

@@ -244,6 +244,8 @@ window.UI = (() => {
     if (rows.length) out += '<dl>' + rows.map(([k, v, depth]) => `<dt${depth ? ` style="padding-left:${depth * 12}px"` : ''}>${depth ? '↳ ' : ''}${esc(k)}</dt><dd>${v}</dd>`).join('') + '</dl>';
     if (m.tags && m.tags.length) out += '<div>' + m.tags.map(tg => `<span class="tag">${esc(tg)}</span>`).join('') + '</div>';
 
+    out += whereListHTML(m, t);
+
     // facts, in date order (undated last); mirrored facts from other markers (Son: Isaac, Husband: Abraham) sort in with them
     const own = (m.facts || []).map((f, i) => { const d = Facts.when(f).date; return { f, i, d: d ? Dates.toDays(d) : null }; }); // a fact known only by its window sorts at the middle of it
     const mirrored = (m.mirrors || []).map((mi, i) => ({ mi, i: own.length + i, d: mi.date ? Dates.toDays(mi.date) : null }));
@@ -289,6 +291,49 @@ window.UI = (() => {
     }
     return out + '</div>';
   }
+  // "Where and when" (23.4): every place a pin is, in order, with from and until in words and the length of the
+  // stay where both ends are known dates. It reads the derived moves, so a place given by a journey (its start,
+  // the way, a stop, its end) is listed like a place from the marker's own fact. A place lasts until its own
+  // until date, else until the next dated place, else until the marker ends: the rule the map draws by.
+  function stayLength(a, b, about) {
+    const d1 = Dates.toDays(a), d2 = Dates.toDays(b);
+    if (d1 == null || d2 == null || d2 < d1) return '';
+    const days = d2 - d1, y = Math.floor(days / 365.2425), rest = days - y * 365.2425, mo = Math.floor(rest / 30.44), d = Math.round(rest - mo * 30.44);
+    const n = (v, w) => (v ? `${v} ${w}${v === 1 ? '' : 's'}` : '');
+    const words = y >= 5 ? n(y, 'year') : y ? [n(y, 'year'), n(mo, 'month')].filter(Boolean).join(' ') : mo ? [n(mo, 'month'), n(d, 'day')].filter(Boolean).join(' ') : days ? n(days, 'day') : '';
+    return words ? (about ? 'about ' : '') + words : '';
+  }
+  function whereListHTML(m, t) {
+    if (m.kind !== 'pin') return '';
+    const moves = Store.sortedMoves(m).filter(Store.hasLocation);
+    if (!moves.length || (moves.length < 2 && !moves[0].date && !moves[0].dateEnd && !moves[0].journeyOf)) return ''; // one place with nothing to say about when
+    const now = t == null ? null : Store.positionAt(m, t);
+    const link = o => `<a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`;
+    const ranged = (a, b) => !!(a && b && a !== b);
+    const low = s => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+    const items = moves.map((mv, i) => {
+      const at = mv.atMarkerId && Store.marker(mv.atMarkerId), owner = mv.sharedFrom && Store.marker(mv.sharedFrom);
+      let place;
+      if (at) place = link(at);
+      else if (mv.coords && mv.coords.length) place = 'on the way' + (mv.label ? ` (${esc(mv.label)})` : owner ? ` (${link(owner)})` : '');
+      else place = mv.label ? esc(mv.label) : `${(+mv.lat).toFixed(2)}, ${(+mv.lng).toFixed(2)}`;
+      // from
+      let start = '', startKnown = false, about = false, from;
+      if (mv.date) { from = 'from ' + esc(mv.when || Dates.formatInput(mv.date)); start = mv.date; startKnown = mv.dateKnown !== false; about = ranged(mv.dateMin, mv.dateMax); }
+      else { from = 'from the beginning'; if (m.start) { start = m.start; startKnown = m.startKnown !== false; about = ranged(m.startMin, m.startMax); } }
+      // until: its own until date, else the next dated place, else the marker's end
+      const next = moves.slice(i + 1).find(x => x.date);
+      let until = '', end = '', endKnown = false;
+      if (mv.dateEnd) { until = 'until ' + esc(mv.whenEnd || Dates.formatInput(mv.dateEnd)); end = mv.dateEnd; endKnown = mv.dateEndKnown !== false; about = about || ranged(mv.dateEndMin, mv.dateEndMax); }
+      else if (next) { until = 'until ' + esc(next.when || Dates.formatInput(next.date)); end = next.date; endKnown = next.dateKnown !== false; about = about || ranged(next.dateMin, next.dateMax); }
+      else if (m.end) { until = `until ${esc(low(m.endLabel || 'the end'))} (${esc(m.endKnown === false && m.endWhen ? m.endWhen : Dates.formatInput(m.end))})`; end = m.end; endKnown = m.endKnown !== false; about = about || ranged(m.endMin, m.endMax); }
+      const len = start && end && startKnown && endKnown ? stayLength(start, end, about) : '';
+      const src = mv.journeyOf || owner ? `the ${esc(mv.factLabel)} fact${owner ? ' on ' + link(owner) : ''}` : esc(mv.factLabel || ''); // which fact puts them there
+      return `<li><strong>${place}</strong> · ${from}${until ? ' · ' + until : ''}${len ? ` · <strong>${esc(len)}</strong>` : ''}${src ? ` <span class="muted">· ${src}</span>` : ''}${now && now.id === mv.id ? ' <span class="muted">· here at the slider\'s date</span>' : ''}</li>`;
+    });
+    return `<h4>Where and when (${items.length})</h4><ul class="fact-list">${items.join('')}</ul>`;
+  }
+
   // One fact as a bubble line: "4004 BC · Born · Eden · Father: Adam, Mother: Eve – note 📖 source"
   function factWhenHTML(m, f) {
     const t = Store.factType(f.typeId);

@@ -466,6 +466,12 @@ Where dates carry wide ranges, the limits are also checked against the most like
 fails only there is listed as **The most likely dates are out of order**. The two rules are switched in
 Library → Time gaps (a setting of each device).
 
+**Where and when.** A point marker's information lists every place it is, in order: the place, from,
+until, how long (when both ends are known dates) and which fact puts it there, whether that is a fact of
+its own or a journey it travels on. The line that applies at the slider's date says so. This answers "how
+long did they live at Ur?" without looking at the map; where an end is only a window, the line shows the
+window and gives no length.
+
 **A window is shown as a window.** When a date is known only by its earliest and latest (or one of them),
 the app says "between X and Y", "after X" or "before Y". It never shows a date of its own making in the
 middle. A most-likely date you typed, or one a time gap worked out, is shown with its range as before.
