@@ -58,7 +58,7 @@ window.Timeline = (() => {
         const w = Facts.when(f);
         const date = w.date || '';
         // no date, only a window: placed at its middle (or its one end) and labelled as the window it is
-        out.push({ m, lane, f, date, d: date ? Dates.toDays(date) : null, order: i, win: !w.known && date ? Facts.whenText(false, '', '', '', w.lo, w.hi) : '' });
+        out.push({ m, lane, f, date, d: date ? Dates.toDays(date) : null, order: i, win: !date ? '' : !w.known ? Facts.whenText(false, '', '', '', w.lo, w.hi) : (w.min && w.max && w.min !== w.max ? Dates.formatRange(date, w.min, w.max) : '') /* a window, or a date with a range: its earliest and latest */ });
       });
       if (pref.mirrors) (m.mirrors || []).forEach((mi, i) => {
         // in one list, a fact whose own marker is also on the timeline is already there once

@@ -161,13 +161,20 @@ window.Dates = (() => {
   // Earlier / later of two stored dates (either may be blank).
   function minDate(a, b) { const da = toDays(a), db = toDays(b); if (da == null) return b || ''; if (db == null) return a || ''; return da <= db ? a : b; }
   function maxDate(a, b) { const da = toDays(a, true), db = toDays(b, true); if (da == null) return b || ''; if (db == null) return a || ''; return da >= db ? a : b; }
-  // "c. 1736 (1730 – 1744)" for a date with a range; plain date otherwise.
+  // "between 1730 and 1744" for a date with a range: its earliest and its latest. The most likely date between
+  // them is not shown (the owner's wish, 23.5); a plain date otherwise.
   function formatRange(date, min, max) {
     const hasRange = (min && max) && !(sameDate(min, max) && sameDate(min, date || min));
     if (!hasRange) return date ? formatInput(date) : (min || max ? formatInput(min || max) : '');
-    const core = date ? 'c. ' + formatInput(date) : 'between';
-    return `${core} (${formatInput(min)} – ${formatInput(max)})`;
+    return `between ${formatInput(min)} and ${formatInput(max)}`;
+  }
+  // "c. 1736 (1730 – 1744)": the most likely date as well, for the one place where a value is being chosen (the
+  // conflicts panel's "Use this").
+  function formatRangeFull(date, min, max) {
+    const hasRange = (min && max) && !(sameDate(min, max) && sameDate(min, date || min));
+    if (!hasRange) return date ? formatInput(date) : (min || max ? formatInput(min || max) : '');
+    return `${date ? 'c. ' + formatInput(date) : 'between'} (${formatInput(min)} – ${formatInput(max)})`;
   }
 
-  return { parse, toDays, format, formatInput, iso, today, isValid, civilFromDays, daysFromCivil, addMonths, yearLabel, toStore, addOffset, sameDate, formatOffset, midpoint, minDate, maxDate, formatRange };
+  return { parse, toDays, format, formatInput, iso, today, isValid, civilFromDays, daysFromCivil, addMonths, yearLabel, toStore, addOffset, sameDate, formatOffset, midpoint, minDate, maxDate, formatRange, formatRangeFull };
 })();

@@ -191,7 +191,7 @@ window.UI = (() => {
     const myRole = otherWord ? '' : (type ? (isFrom ? type.fromLabel : type.toLabel) : '');
     const otherRole = otherWord ? '' : (type ? (isFrom ? type.toLabel : type.fromLabel) : '');
     let dates = '';
-    if (link.start || link.end) dates = ` <span class="muted">(${esc(link.startKnown === false && link.startWhen ? link.startWhen : Dates.formatInput(link.start))}${link.end ? ' – ' + esc(link.endKnown === false && link.endWhen ? link.endWhen : Dates.formatInput(link.end)) : (link.start ? ' →' : '')})</span>`;
+    if (link.start || link.end) dates = ` <span class="muted">(${esc(link.startWhen || Dates.formatInput(link.start))}${link.end ? ' – ' + esc(link.endWhen || Dates.formatInput(link.end)) : (link.start ? ' →' : '')})</span>`;
     const label = link.label ? ` <span class="muted">· ${esc(link.label)}</span>` : '';
     const cite = link.sourceId ? ` ${citeHTML(link.sourceId, link.page)}` : '';
     const note = (link.note ? `<div class="muted" style="font-size:calc(11px * var(--fs))">${textToHTML(link.note)}${link.derived ? ' · follows from the Parent of ties' : ''}</div>` : '') + (cite ? `<div style="font-size:calc(11px * var(--fs))">${cite}</div>` : '');
@@ -225,7 +225,7 @@ window.UI = (() => {
     if (pos && Store.hasLocation(pos)) {
       let where = pos.label || (pos.atMarkerId ? (Store.marker(pos.atMarkerId) || {}).name : '') || (pos.coords ? `${pos.coords.length} points` : `${(+pos.lat).toFixed(3)}, ${(+pos.lng).toFixed(3)}`);
       if (pos.atMarkerId) where = 'at / in ' + where;
-      if (pos.date) where += ` <span class="muted">(${pos.dateKnown === false && pos.when ? 'from ' + esc(pos.when) : 'since ' + esc(Dates.formatInput(pos.date))})</span>`;
+      if (pos.date) where += ` <span class="muted">(${pos.when && (pos.dateKnown === false || (pos.dateMin && pos.dateMax && pos.dateMin !== pos.dateMax)) ? 'from ' + esc(pos.when) : 'since ' + esc(Dates.formatInput(pos.date))})</span>`;
       if (pos.journeyOf) { const o = pos.sharedFrom ? Store.marker(pos.sharedFrom) : null; where += ` <span class="muted">· ${pos.journeyEnd ? 'the end of' : pos.journeyStart ? 'the start of' : pos.journeyStop ? 'a stop in' : 'on the way in'} the ${esc(pos.factLabel)} fact${o ? ' on ' + esc(o.name) : ''}</span>`; }
       rows.push([t == null ? 'Latest location' : 'Location', where, 0]);
     } else if (m.moves.length && t != null) {
@@ -326,7 +326,7 @@ window.UI = (() => {
       let until = '', end = '', endKnown = false;
       if (mv.dateEnd) { until = 'until ' + esc(mv.whenEnd || Dates.formatInput(mv.dateEnd)); end = mv.dateEnd; endKnown = mv.dateEndKnown !== false; about = about || ranged(mv.dateEndMin, mv.dateEndMax); }
       else if (next) { until = 'until ' + esc(next.when || Dates.formatInput(next.date)); end = next.date; endKnown = next.dateKnown !== false; about = about || ranged(next.dateMin, next.dateMax); }
-      else if (m.end) { until = `until ${esc(low(m.endLabel || 'the end'))} (${esc(m.endKnown === false && m.endWhen ? m.endWhen : Dates.formatInput(m.end))})`; end = m.end; endKnown = m.endKnown !== false; about = about || ranged(m.endMin, m.endMax); }
+      else if (m.end) { until = `until ${esc(low(m.endLabel || 'the end'))} (${esc(m.endWhen || Dates.formatInput(m.end))})`; end = m.end; endKnown = m.endKnown !== false; about = about || ranged(m.endMin, m.endMax); }
       const len = start && end && startKnown && endKnown ? stayLength(start, end, about) : '';
       const src = mv.journeyOf || owner ? `the ${esc(mv.factLabel)} fact${owner ? ' on ' + link(owner) : ''}` : esc(mv.factLabel || ''); // which fact puts them there
       return `<li><strong>${place}</strong> · ${from}${until ? ' · ' + until : ''}${len ? ` · <strong>${esc(len)}</strong>` : ''}${src ? ` <span class="muted">· ${src}</span>` : ''}${now && now.id === mv.id ? ' <span class="muted">· here at the slider\'s date</span>' : ''}</li>`;

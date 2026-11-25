@@ -259,7 +259,8 @@ window.Family = (() => {
       }
       const sx = Facts.sexOf(m) === 'male' ? '♂' : Facts.sexOf(m) === 'female' ? '♀' : '';
       sel.append('text').attr('class', 'ft-name').attr('x', 52).attr('y', 25).text(trim(Store.nameAt(m, null), 15));
-      const dates = [yr(m.startKnown === false ? '' : m.start), yr(m.endKnown === false ? '' : m.end)] // a year known only as a window is not shown as a year
+      const one = (known, date, min, max) => (known === false || (min && max && min !== max) ? '' : date); // only a plain date fits the box: a window or a range is left out
+      const dates = [yr(one(m.startKnown, m.start, m.startMin, m.startMax)), yr(one(m.endKnown, m.end, m.endMin, m.endMax))]
        .filter(Boolean).join(' – ');
       sel.append('text').attr('class', 'ft-dates').attr('x', 52).attr('y', 44).text(trim(dates || Store.tagOf(m), 18));
       if (sx) sel.append('text').attr('class', 'ft-sex').attr('x', W - 8).attr('y', 14).attr('text-anchor', 'end').text(sx);
