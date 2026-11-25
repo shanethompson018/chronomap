@@ -550,6 +550,8 @@ body.eink .journey-stop { border-left-color: #000; }
 .journey-part .field { margin-bottom: 2px; }
 
 /* ---------- approximation ---------- */
+.where-ed { margin: 0; padding-left: 18px; font-size: calc(14px * var(--fs)); }
+.where-ed li { margin: 4px 0; }
 /* a date with its earliest / latest boxes: From and Until each take a full line when the card is narrow, and
    earliest and latest have a line each, so every box is wide enough to read and to type in */
 .date-row { flex-wrap: wrap; }

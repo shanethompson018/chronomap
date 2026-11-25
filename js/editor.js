@@ -373,6 +373,7 @@ window.Editor = (() => {
       section('Facts', { key: 'facts', count: m.facts.length + mirrorCount, hint: 'Everything that happened: when, where, with whom, and the source. Begins/Ends, locations and ties all follow from the facts. Click a line to open or close its card.' },
         h('div', { id: 'ed-facts' }, renderFacts()),
         renderAddFact()),
+      ...renderWhere23(m),
       section('Fields', { key: 'fields', count: filledFields, hint: 'Undated details (occupation, tribe, nationality…). Press ＋ beside a field for sub-fields, 📖 for its source.' },
         h('div', { id: 'ed-fields' }, renderFields()),
         h('button', { type: 'button', class: 'small', onclick: () => { const k = prompt('Field name:'); if (k && k.trim() && !(k.trim() in draft.fields)) { draft.fields[k.trim()] = ''; render(); } } }, '+ Add field'),
@@ -828,6 +829,19 @@ window.Editor = (() => {
           h('input', { type: 'text', 'data-bind': `citations.${i}.page`, value: c.page, placeholder: 'page / chapter / location', style: { flex: '0 0 36%' } }),
           h('button', { type: 'button', class: 'small narrow', title: 'Remove citation', onclick: () => { draft.citations.splice(i, 1); render(); } }, '✕')),
       row(h('input', { type: 'text', 'data-bind': `citations.${i}.note`, value: c.note, placeholder: 'what this source says / how reliable it is' }))));
+  }
+
+  // ---------- where and when ----------
+  // The same list as in the marker's information (UI.whereItems), so it can be read on any tab: every place a
+  // point marker is, in order, with from, until and how long. It is worked out from what is saved (this
+  // marker's facts and the journeys it travels on), so an edit shows here after Save.
+  function renderWhere23(m) {
+    if (m.kind !== 'pin') return [];
+    const saved = isNew ? null : Store.marker(id);
+    const items = saved ? UI.whereItems(saved, MapView.time(), { plain: true }) : [];
+    return [section('Where and when', { key: 'where', count: items.length, hint: 'Every place this marker is, in order: from, until and how long, whether it comes from a fact of its own or from a journey it travels on. Worked out from what is saved; press Save to see a change here.' },
+      items.length ? h('ul', { class: 'fact-list where-ed', html: items.join('') })
+        : h('p', { class: 'muted' }, isNew ? 'Save the marker first.' : 'No places with dates yet. Give this marker a Located at fact, or name it as a traveller on a journey.'))];
   }
 
   // ---------- time gaps ----------

@@ -28,8 +28,8 @@ cross items off as they land. We go through it one item at a time.
   dialog), 22.5 (a chain that loses its anchor goes blank) and 22.6 (reading by verse) are proposed, not
   decided.
 - **Section 23:** the editor's date boxes, the editor and the time bar, and no made-up middle date. 23.1
-  to 23.4 built 25 Nov 2026 (23.4 is the "Where and when" list in a marker's information); not checked
-  on the Boox.
+  to 23.7 built 25 Nov 2026 (23.4 is the "Where and when" list; 23.5 to 23.7 are his corrections to it
+  and to the wording of ranged dates); not checked on the Boox.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
@@ -1023,3 +1023,34 @@ slider's date" on the line that applies. Rules:
 
 23.1 to 23.3 are three commits; 23.4 is a fourth. Tested on the test copy with throwaway markers at the PC size and the
 tablet size (E-ink on); not checked on the Boox itself, and not looked at on his own PC window.
+
+**His reply, 25 Nov 2026**, with two screenshots of Terah: "It is still showing the mid point. There
+isn't a way to see Where and when outside the map tab. It should show in the editor. There is something
+wrong with the time gap logic … It is showing lived in Haran until 02/10/1821 BC when he is already dead
+in 02/10/1921 BC. Where is the disconnect?"
+
+- [x] **23.5 A date with a range reads "between X and Y". Built 25 Nov 2026.** This reverses the "Kept"
+      note of 23.3: he does not want the most-likely date shown between the earliest and the latest, typed
+      or worked out. Everywhere a ranged date is read (Span, fact lines, lines from other markers, Location,
+      tie dates, Where and when, Library, Markers, the Timeline tab's headings) it now reads "between 10 Feb
+      2226 BC and 10 Feb 2026 BC". The family tree leaves a ranged date out (its box cannot hold a range).
+      Kept on purpose: the date box in the editor still holds the most-likely date (it is what he typed or
+      what the time gap gives, and other dates are worked out from it), and the conflicts panel still names
+      it where he chooses which value to use.
+- [x] **23.6 "Where and when" in the marker editor. Built 25 Nov 2026.** A section of that name between
+      Facts and Fields, for point markers, so the list can be read on any tab. It shows what is saved: an
+      edit appears there after Save.
+- [x] **23.7 The place of an ending is said as what it is. Built 25 Nov 2026.** Terah's "Died" fact has a
+      place (Haran). The list showed it as a stay: "Haran, from [his death] until died". It now reads
+      "Haran · died here · [date]".
+
+**The "disconnect", as told to him.** There is no error in the time gaps. Terah's death is worked out as
+10 Feb 1921 BC, and like every date reckoned from the Flood it carries the Flood's range of 100 years
+either way, so its latest is 10 Feb 1821 BC. The line he saw was his Died fact's place, with the same
+death date printed two ways: once with its range ("from c. 1921 BC (2021 BC to 1821 BC)") and once
+without ("until died (1921 BC)"). 1821 BC was the latest his death can be, not a date after it. With 23.5
+and 23.7 both readings are gone. If he wants narrower dates everywhere, the range to change is the one on
+The Flood's "Took place" fact; that is his to decide.
+
+23.5 is one commit, 23.6 and 23.7 another. Tested on the test copy with throwaway markers at the PC size
+and the tablet size (E-ink on); not checked on the Boox itself.

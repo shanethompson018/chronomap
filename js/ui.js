@@ -303,12 +303,13 @@ window.UI = (() => {
     const words = y >= 5 ? n(y, 'year') : y ? [n(y, 'year'), n(mo, 'month')].filter(Boolean).join(' ') : mo ? [n(mo, 'month'), n(d, 'day')].filter(Boolean).join(' ') : days ? n(days, 'day') : '';
     return words ? (about ? 'about ' : '') + words : '';
   }
-  function whereListHTML(m, t) {
-    if (m.kind !== 'pin') return '';
+  // whereItems returns the lines (opts.plain: names as plain words, for the editor, where a tap must not leave the form).
+  function whereItems(m, t, opts = {}) {
+    if (!m || m.kind !== 'pin') return [];
     const moves = Store.sortedMoves(m).filter(Store.hasLocation);
-    if (!moves.length || (moves.length < 2 && !moves[0].date && !moves[0].dateEnd && !moves[0].journeyOf)) return ''; // one place with nothing to say about when
+    if (!moves.length || (moves.length < 2 && !moves[0].date && !moves[0].dateEnd && !moves[0].journeyOf)) return []; // one place with nothing to say about when
     const now = t == null ? null : Store.positionAt(m, t);
-    const link = o => `<a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`;
+    const link = o => (opts.plain ? `<strong>${esc(Store.displayName(o))}</strong>` : `<a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`);
     const ranged = (a, b) => !!(a && b && a !== b);
     const low = s => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
     const items = moves.map((mv, i) => {
@@ -317,6 +318,9 @@ window.UI = (() => {
       if (at) place = link(at);
       else if (mv.coords && mv.coords.length) place = 'on the way' + (mv.label ? ` (${esc(mv.label)})` : owner ? ` (${link(owner)})` : '');
       else place = mv.label ? esc(mv.label) : `${(+mv.lat).toFixed(2)}, ${(+mv.lng).toFixed(2)}`;
+      const src = mv.journeyOf || owner ? `the ${esc(mv.factLabel)} fact${owner ? ' on ' + link(owner) : ''}` : esc(mv.factLabel || ''); // which fact puts them there
+      // the place where the marker ends (died at Haran) is not a stay: it is said as what it is
+      if (mv.ends) return `<li><strong>${place}</strong> · ${esc(low(mv.factLabel || 'ended'))} here${mv.when ? ' · ' + esc(mv.when) : ''}</li>`;
       // from
       let start = '', startKnown = false, about = false, from;
       if (mv.date) { from = 'from ' + esc(mv.when || Dates.formatInput(mv.date)); start = mv.date; startKnown = mv.dateKnown !== false; about = ranged(mv.dateMin, mv.dateMax); }
@@ -328,10 +332,13 @@ window.UI = (() => {
       else if (next) { until = 'until ' + esc(next.when || Dates.formatInput(next.date)); end = next.date; endKnown = next.dateKnown !== false; about = about || ranged(next.dateMin, next.dateMax); }
       else if (m.end) { until = `until ${esc(low(m.endLabel || 'the end'))} (${esc(m.endWhen || Dates.formatInput(m.end))})`; end = m.end; endKnown = m.endKnown !== false; about = about || ranged(m.endMin, m.endMax); }
       const len = start && end && startKnown && endKnown ? stayLength(start, end, about) : '';
-      const src = mv.journeyOf || owner ? `the ${esc(mv.factLabel)} fact${owner ? ' on ' + link(owner) : ''}` : esc(mv.factLabel || ''); // which fact puts them there
       return `<li><strong>${place}</strong> · ${from}${until ? ' · ' + until : ''}${len ? ` · <strong>${esc(len)}</strong>` : ''}${src ? ` <span class="muted">· ${src}</span>` : ''}${now && now.id === mv.id ? ' <span class="muted">· here at the slider\'s date</span>' : ''}</li>`;
     });
-    return `<h4>Where and when (${items.length})</h4><ul class="fact-list">${items.join('')}</ul>`;
+    return items;
+  }
+  function whereListHTML(m, t) {
+    const items = whereItems(m, t);
+    return items.length ? `<h4>Where and when (${items.length})</h4><ul class="fact-list">${items.join('')}</ul>` : '';
   }
 
   // One fact as a bubble line: "4004 BC · Born · Eden · Father: Adam, Mother: Eve – note 📖 source"
@@ -515,6 +522,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, partText, journeyText, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, whereItems, partText, journeyText, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

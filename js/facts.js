@@ -265,7 +265,7 @@ window.Facts = (() => {
         if (!where && t && t.placeFrom) { const p = (f.participants || []).find(x => x.roleId === t.placeFrom); if (p) where = { kind: 'marker', markerId: p.markerId }; }
         if (!where) continue;
         const w = W.get(f.id);
-        const mv = { id: f.id, dateEndKnown: t && t.hasEnd ? w.knownEnd : true, dateKnown: w.known, when: said1(w), whenEnd: t && t.hasEnd ? said2(w) : '', date: w.date, dateMin: w.min, dateMax: w.max, dateEnd: t && t.hasEnd ? w.dateEnd : '', dateEndMin: t && t.hasEnd ? w.endMin : '', dateEndMax: t && t.hasEnd ? w.endMax : '',
+        const mv = { id: f.id, ends: !!(t && t.ends), dateEndKnown: t && t.hasEnd ? w.knownEnd : true, dateKnown: w.known, when: said1(w), whenEnd: t && t.hasEnd ? said2(w) : '', date: w.date, dateMin: w.min, dateMax: w.max, dateEnd: t && t.hasEnd ? w.dateEnd : '', dateEndMin: t && t.hasEnd ? w.endMin : '', dateEndMax: t && t.hasEnd ? w.endMax : '',
           lat: null, lng: null, coords: null, atMarkerId: null, label: f.placeLabel || '', note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f), confidence: f.confidence || '', reason: f.reason || '' };
         if (where.kind === 'point') { mv.lat = where.lat; mv.lng = where.lng; }
         else if (where.kind === 'area' || where.kind === 'route') { mv.coords = where.coords; mv.extent = where.extent || null; mv.rough = where.rough || []; mv.extentRough = where.extentRough || []; }

@@ -153,7 +153,11 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   `.approx-rows` > `.row.approx-row` (label `.approx-label`, box, ⛓); `.row > *` is `flex: 1`, so every button
   wrapper beside a box needs the `.narrow` rule for its row or it takes as much width as the box (that was
   the squeeze). The From / Until pair sits in `.ed-row.date-row`, which wraps below about 600px.
-- "Where and when" (23.4): `UI.whereListHTML(m, t)` in `markerInfoHTML`, pins only. It walks
+- `Dates.formatRange` words a ranged date as "between min and max" (23.5); `formatRangeFull` keeps the old
+  "c. date (min – max)" for the conflicts panel only. Print `startWhen` / `when` / `whenEnd`, not the bare date.
+- "Where and when" (23.4, 23.6, 23.7): `UI.whereItems(m, t, { plain })` gives the lines; `whereListHTML` wraps
+  them for `markerInfoHTML`, and the editor's `renderWhere23` shows them (plain names, from the saved marker)
+  as a section. A move from an `ends` fact (`mv.ends`) is worded "died here", not as a stay. Pins only. It walks
   `Store.sortedMoves(m)` and words each with `mv.when` / `mv.whenEnd`; a move with no `dateEnd` ends at the next
   dated move, else at `m.end`. `stayLength` is given only when both ends are known (`dateKnown`, `dateEndKnown`,
   `m.startKnown`, `m.endKnown`).
