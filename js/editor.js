@@ -476,7 +476,7 @@ window.Editor = (() => {
     return [h('p', { class: 'hint', style: { marginTop: '10px' } }, 'From other markers (edit them there):'),
       ...list.map(mi => {
         const o = Store.marker(mi.markerId); if (!o) return null;
-        const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
+        const when = mi.when ? mi.when + ' · ' : ''; // the date, or its window: never the middle of a window
         return h('div', { class: 'card fact-card mirror-card' },
           h('div', { class: 'row' },
             h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', UI.journeyText(mi) ? ' · ' + UI.journeyText(mi) : '', UI.partText(mi.stops, mi) ? ' · ' + UI.partText(mi.stops, mi) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : mi.covered ? '; the longer journey it is part of places this marker' : ''}`)),

@@ -259,7 +259,8 @@ window.Family = (() => {
       }
       const sx = Facts.sexOf(m) === 'male' ? '♂' : Facts.sexOf(m) === 'female' ? '♀' : '';
       sel.append('text').attr('class', 'ft-name').attr('x', 52).attr('y', 25).text(trim(Store.nameAt(m, null), 15));
-      const dates = [yr(m.start), yr(m.end)].filter(Boolean).join(' – ');
+      const dates = [yr(m.startKnown === false ? '' : m.start), yr(m.endKnown === false ? '' : m.end)] // a year known only as a window is not shown as a year
+       .filter(Boolean).join(' – ');
       sel.append('text').attr('class', 'ft-dates').attr('x', 52).attr('y', 44).text(trim(dates || Store.tagOf(m), 18));
       if (sx) sel.append('text').attr('class', 'ft-sex').attr('x', W - 8).attr('y', 14).attr('text-anchor', 'end').text(sx);
       sel.append('title').text(`${Store.nameLine(m, null)}${Store.tagOf(m) ? ' (' + Store.tagOf(m) + ')' : ''}${m.summary ? '\n' + m.summary : ''}\nClick for details · double-click to make this the root`);

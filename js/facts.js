@@ -224,10 +224,16 @@ window.Facts = (() => {
   function whenLabel(w, hasEnd) {
     const a = whenText(w.known, w.date, w.min, w.max, w.lo, w.hi);
     const b = hasEnd ? whenText(w.knownEnd, w.dateEnd, w.endMin, w.endMax, w.loEnd, w.hiEnd) : '';
+    if (b && b === a && !w.known && !w.knownEnd) return a; // from and until share one window: say it once
     return b ? (a || '?') + ' – ' + b : a;
   }
 
-  // Fill marker.start/startLabel/end/endLabel/moves and d.links from every marker's facts.
+  // One end of a fact's dates in words: the date, or its window when no date is known. Never a made-up middle.
+  const said1 = w => whenText(w.known, w.date, w.min, w.max, w.lo, w.hi);
+  const said2 = w => whenText(w.knownEnd, w.dateEnd, w.endMin, w.endMax, w.loEnd, w.hiEnd);
+  // Fill marker.start/startLabel/end/endLabel/moves and d.links from every marker's facts. Beside each date that
+  // may be only the middle of a window goes a "known" flag and the words to show for it (startKnown / startWhen
+  // on a marker, dateKnown / when / whenEnd on a move, startKnown / startWhen / endKnown / endWhen on a tie).
   function derive(d) {
     const links = [];
     const journeys = []; // facts of a journey type that name a start or an end place: { f, t, w, owner }
@@ -246,9 +252,11 @@ window.Facts = (() => {
       m.start = b ? (W.get(b.id).date || '') : '';
       m.startMin = b ? (W.get(b.id).min || '') : ''; m.startMax = b ? (W.get(b.id).max || '') : '';
       m.startLabel = b ? factLabel(d, b) : '';
+      m.startKnown = b ? W.get(b.id).known : true; m.startWhen = b ? said1(W.get(b.id)) : '';
       m.end = e ? (endVal(e) || '') : '';
       m.endMin = e ? (endRange(e).min || '') : ''; m.endMax = e ? (endRange(e).max || '') : '';
       m.endLabel = e ? factLabel(d, e) : '';
+      { const ew = e && W.get(e.id), eu = !!(e && (typeOf(d, e) || {}).hasEnd && ew.dateEnd); m.endKnown = e ? (eu ? ew.knownEnd : ew.known) : true; m.endWhen = e ? (eu ? said2(ew) : said1(ew)) : ''; }
       m.moves = [];
       for (const f of facts) {
         const t = typeOf(d, f);
@@ -257,7 +265,7 @@ window.Facts = (() => {
         if (!where && t && t.placeFrom) { const p = (f.participants || []).find(x => x.roleId === t.placeFrom); if (p) where = { kind: 'marker', markerId: p.markerId }; }
         if (!where) continue;
         const w = W.get(f.id);
-        const mv = { id: f.id, date: w.date, dateMin: w.min, dateMax: w.max, dateEnd: t && t.hasEnd ? w.dateEnd : '', dateEndMin: t && t.hasEnd ? w.endMin : '', dateEndMax: t && t.hasEnd ? w.endMax : '',
+        const mv = { id: f.id, dateKnown: w.known, when: said1(w), whenEnd: t && t.hasEnd ? said2(w) : '', date: w.date, dateMin: w.min, dateMax: w.max, dateEnd: t && t.hasEnd ? w.dateEnd : '', dateEndMin: t && t.hasEnd ? w.endMin : '', dateEndMax: t && t.hasEnd ? w.endMax : '',
           lat: null, lng: null, coords: null, atMarkerId: null, label: f.placeLabel || '', note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f), confidence: f.confidence || '', reason: f.reason || '' };
         if (where.kind === 'point') { mv.lat = where.lat; mv.lng = where.lng; }
         else if (where.kind === 'area' || where.kind === 'route') { mv.coords = where.coords; mv.extent = where.extent || null; mv.rough = where.rough || []; mv.extentRough = where.extentRough || []; }
@@ -281,7 +289,7 @@ window.Facts = (() => {
           const toOther = role.direction !== 'other-to-this';
           const w = W.get(f.id);
           links.push({ id: `${f.id}|${role.id}|${p.markerId}`, typeId: role.tieTypeId, fromId: toOther ? m.id : p.markerId, toId: toOther ? p.markerId : m.id,
-            label: f.label || '', start: w.date || '', startMin: w.min || '', startMax: w.max || '', end: t.hasEnd ? (w.dateEnd || '') : '', endMin: t.hasEnd ? (w.endMin || '') : '', endMax: t.hasEnd ? (w.endMax || '') : '',
+            startKnown: w.known, startWhen: said1(w), endKnown: w.knownEnd, endWhen: t.hasEnd ? said2(w) : '', label: f.label || '', start: w.date || '', startMin: w.min || '', startMax: w.max || '', end: t.hasEnd ? (w.dateEnd || '') : '', endMin: t.hasEnd ? (w.endMin || '') : '', endMax: t.hasEnd ? (w.endMax || '') : '',
             note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', factId: f.id, ownerId: m.id, roleName: role.name, confidence: f.confidence || '', reason: f.reason || '' });
         }
       }
@@ -334,10 +342,10 @@ window.Facts = (() => {
       }).filter(Boolean);
       // the part one traveller makes: jp = the stop they join at (-1 = the start), lp = the stop they leave at (Infinity = the end)
       j.span = T => { const p = j.part.get(T.id) || {}; return { jp: p.joinAt && j.pos.has(p.joinAt) ? j.pos.get(p.joinAt) : -1, lp: p.leaveAt && j.pos.has(p.leaveAt) ? j.pos.get(p.leaveAt) : Infinity }; };
-      j.arr = t.hasEnd && w.dateEnd ? { date: w.dateEnd, min: w.endMin, max: w.endMax } : { date: w.date, min: w.min, max: w.max };
+      j.arr = t.hasEnd && w.dateEnd ? { date: w.dateEnd, min: w.endMin, max: w.endMax, known: w.knownEnd, said: said2(w) } : { date: w.date, min: w.min, max: w.max, known: w.known, said: said1(w) };
       if (!(t.hasEnd && w.dateEnd) && j.stops.length) { // no Until to go by: they arrive when they leave the last stop
         const last = j.stops[j.stops.length - 1].sw;
-        j.arr = last.dateEnd ? { date: last.dateEnd, min: last.endMin, max: last.endMax } : { date: last.date, min: last.min, max: last.max };
+        j.arr = last.dateEnd ? { date: last.dateEnd, min: last.endMin, max: last.endMax, known: last.knownEnd, said: said2(last) } : { date: last.date, min: last.min, max: last.max, known: last.known, said: said1(last) };
       }
       j.arrDay = j.arr.date ? dayOf(j.arr.date) : null;
       j.base = { lat: null, lng: null, coords: null, note: '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f),
@@ -365,7 +373,7 @@ window.Facts = (() => {
     const give = (T, owner, mv) => { if (T.id !== owner.id) mv.sharedFrom = owner.id; T.moves.push(mv); touched.add(T); };
     // arrivals: judged against the places every marker has before any journey adds a start or an end
     const snap = new Map(d.markers.map(m => [m.id, m.moves.slice()]));
-    const span = (a, b) => ({ date: a ? a.date : '', dateMin: a ? a.min || a.date : '', dateMax: a ? a.max || a.date : '', dateEnd: b ? b.date : '', dateEndMin: b ? b.min || b.date : '', dateEndMax: b ? b.max || b.date : '' });
+    const span = (a, b) => ({ dateKnown: a ? a.known !== false : true, when: a ? a.said || '' : '', whenEnd: b ? b.said || '' : '', date: a ? a.date : '', dateMin: a ? a.min || a.date : '', dateMax: a ? a.max || a.date : '', dateEnd: b ? b.date : '', dateEndMin: b ? b.min || b.date : '', dateEndMax: b ? b.max || b.date : '' });
     for (const j of journeys) {
       const { f, w, owner } = j, end = f.endAt && byId.get(f.endAt);
       if (j.stops.length) { // places along the way
@@ -378,10 +386,10 @@ window.Facts = (() => {
           const rt = T.moves.find(mv => mv.id === f.id); // their copy of the fact's own place (the route), when it has one
           if (jp > lp) { if (rt) T.moves.splice(T.moves.indexOf(rt), 1); continue; } // "joins at" comes after "leaves at": the journey places them nowhere
           const seq = [];
-          let cur = { date: w.date, min: w.min, max: w.max }, n = 0; // where the party last set out: the journey's From, then each stop's Left
+          let cur = { date: w.date, min: w.min, max: w.max, known: w.known, said: said1(w) }, n = 0; // where the party last set out: the journey's From, then each stop's Left
           for (const st of j.stops) {
-            const arr = { date: st.sw.date, min: st.sw.min, max: st.sw.max };
-            const lft = st.sw.dateEnd ? { date: st.sw.dateEnd, min: st.sw.endMin, max: st.sw.endMax } : null;
+            const arr = { date: st.sw.date, min: st.sw.min, max: st.sw.max, known: st.sw.known, said: said1(st.sw) };
+            const lft = st.sw.dateEnd ? { date: st.sw.dateEnd, min: st.sw.endMin, max: st.sw.endMax, known: st.sw.knownEnd, said: said2(st.sw) } : null;
             // the leg into this stop is theirs if they joined before it and have not left; the stay is theirs from the
             // stop they join at to the stop they leave at, where it has no end (they stay until their own next location)
             if (rt && cur && st.pos > jp && st.pos <= lp) seq.push(Object.assign({}, rt, span(cur, arr), { id: f.id + '~leg' + n++, journeyOf: f.id, journeyLeg: true }));
@@ -389,17 +397,17 @@ window.Facts = (() => {
               st.o ? { atMarkerId: st.o.id, label: st.o.name } : { lat: st.s.at.lat, lng: st.s.at.lng, label: st.s.label || '' }));
             cur = lft;
           }
-          if (rt && cur && lp === Infinity) seq.push(Object.assign({}, rt, span(cur, rt.dateEnd ? { date: rt.dateEnd, min: rt.dateEndMin, max: rt.dateEndMax } : null), { id: f.id + '~leg' + n++, journeyOf: f.id, journeyLeg: true }));
+          if (rt && cur && lp === Infinity) seq.push(Object.assign({}, rt, span(cur, rt.dateEnd ? { date: rt.dateEnd, min: rt.dateEndMin, max: rt.dateEndMax, said: rt.whenEnd } : null), { id: f.id + '~leg' + n++, journeyOf: f.id, journeyLeg: true }));
           let list = seq;
           if (left) { // they left the party: nothing of the journey after their own place begins
             const cut = dayOfMove(left);
             list = seq.filter(mv => { const x = dayOfMove(mv); return x == null || x < cut; });
-            for (const mv of list) if (mv.dateEnd && dayOf(mv.dateEnd) > cut) { mv.dateEnd = left.date; mv.dateEndMin = left.dateMin || left.date; mv.dateEndMax = left.dateMax || left.date; }
+            for (const mv of list) if (mv.dateEnd && dayOf(mv.dateEnd) > cut) { mv.dateEnd = left.date; mv.whenEnd = left.when || ''; mv.dateEndMin = left.dateMin || left.date; mv.dateEndMax = left.dateMax || left.date; }
           }
           if (rt) T.moves.splice(T.moves.indexOf(rt), 1); // the legs stand in for the whole route
           for (const mv of list) give(T, owner, mv);
           if (left || !end || T.id === end.id || j.arrDay == null || lp !== Infinity) continue;
-          give(T, owner, Object.assign({}, j.base, { id: f.id + '~end', date: j.arr.date, dateMin: j.arr.min || j.arr.date, dateMax: j.arr.max || j.arr.date,
+          give(T, owner, Object.assign({}, j.base, { id: f.id + '~end', dateKnown: j.arr.known !== false, when: j.arr.said || '', date: j.arr.date, dateMin: j.arr.min || j.arr.date, dateMax: j.arr.max || j.arr.date,
             dateEnd: '', dateEndMin: '', dateEndMax: '', atMarkerId: end.id, label: end.name, journeyEnd: true }));
         }
         continue;
@@ -411,10 +419,10 @@ window.Facts = (() => {
           .sort((a, b) => dayOfMove(a) - dayOfMove(b))[0];
         if (left) { // they left the party: the stay on the route stops when their own place begins
           const rt = T.moves.find(mv => mv.id === f.id);
-          if (rt && rt.dateEnd && dayOfMove(left) < dayOf(rt.dateEnd)) { rt.dateEnd = left.date; rt.dateEndMin = left.dateMin || left.date; rt.dateEndMax = left.dateMax || left.date; }
+          if (rt && rt.dateEnd && dayOfMove(left) < dayOf(rt.dateEnd)) { rt.dateEnd = left.date; rt.whenEnd = left.when || ''; rt.dateEndMin = left.dateMin || left.date; rt.dateEndMax = left.dateMax || left.date; }
           continue;
         }
-        give(T, owner, Object.assign({}, j.base, { id: f.id + '~end', date: j.arr.date, dateMin: j.arr.min || j.arr.date, dateMax: j.arr.max || j.arr.date,
+        give(T, owner, Object.assign({}, j.base, { id: f.id + '~end', dateKnown: j.arr.known !== false, when: j.arr.said || '', date: j.arr.date, dateMin: j.arr.min || j.arr.date, dateMax: j.arr.max || j.arr.date,
           dateEnd: '', dateEndMin: '', dateEndMax: '', atMarkerId: end.id, label: end.name, journeyEnd: true }));
       }
     }
@@ -529,7 +537,7 @@ window.Facts = (() => {
       if (!births.length) continue;
       const b = births[0];
       m.start = b.date; m.startMin = b.dateMin || b.date; m.startMax = b.dateMax || b.date;
-      m.startLabel = 'Born'; m.startFrom = b.markerId;
+      m.startLabel = 'Born'; m.startFrom = b.markerId; m.startKnown = b.known !== false; m.startWhen = b.when || '';
     }
   }
 

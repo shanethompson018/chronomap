@@ -191,7 +191,7 @@ window.UI = (() => {
     const myRole = otherWord ? '' : (type ? (isFrom ? type.fromLabel : type.toLabel) : '');
     const otherRole = otherWord ? '' : (type ? (isFrom ? type.toLabel : type.fromLabel) : '');
     let dates = '';
-    if (link.start || link.end) dates = ` <span class="muted">(${esc(Dates.formatInput(link.start))}${link.end ? ' – ' + esc(Dates.formatInput(link.end)) : (link.start ? ' →' : '')})</span>`;
+    if (link.start || link.end) dates = ` <span class="muted">(${esc(link.startKnown === false && link.startWhen ? link.startWhen : Dates.formatInput(link.start))}${link.end ? ' – ' + esc(link.endKnown === false && link.endWhen ? link.endWhen : Dates.formatInput(link.end)) : (link.start ? ' →' : '')})</span>`;
     const label = link.label ? ` <span class="muted">· ${esc(link.label)}</span>` : '';
     const cite = link.sourceId ? ` ${citeHTML(link.sourceId, link.page)}` : '';
     const note = (link.note ? `<div class="muted" style="font-size:calc(11px * var(--fs))">${textToHTML(link.note)}${link.derived ? ' · follows from the Parent of ties' : ''}</div>` : '') + (cite ? `<div style="font-size:calc(11px * var(--fs))">${cite}</div>` : '');
@@ -218,14 +218,14 @@ window.UI = (() => {
 
     const rows = []; // [label, html, depth]
     const span = [];
-    if (m.start) span.push(`${esc(m.startLabel || 'Begins')} ${esc(Dates.formatRange(m.start, m.startMin, m.startMax))}`);
-    if (m.end) span.push(`${esc(m.endLabel || 'Ends')} ${esc(Dates.formatRange(m.end, m.endMin, m.endMax))}`);
+    if (m.start) span.push(`${esc(m.startLabel || 'Begins')} ${esc(m.startKnown === false && m.startWhen ? m.startWhen : Dates.formatRange(m.start, m.startMin, m.startMax))}`);
+    if (m.end) span.push(`${esc(m.endLabel || 'Ends')} ${esc(m.endKnown === false && m.endWhen ? m.endWhen : Dates.formatRange(m.end, m.endMin, m.endMax))}`);
     if (span.length) rows.push(['Span', span.join(' · '), 0]);
     const pos = Store.positionAt(m, t);
     if (pos && Store.hasLocation(pos)) {
       let where = pos.label || (pos.atMarkerId ? (Store.marker(pos.atMarkerId) || {}).name : '') || (pos.coords ? `${pos.coords.length} points` : `${(+pos.lat).toFixed(3)}, ${(+pos.lng).toFixed(3)}`);
       if (pos.atMarkerId) where = 'at / in ' + where;
-      if (pos.date) where += ` <span class="muted">(since ${esc(Dates.formatInput(pos.date))})</span>`;
+      if (pos.date) where += ` <span class="muted">(${pos.dateKnown === false && pos.when ? 'from ' + esc(pos.when) : 'since ' + esc(Dates.formatInput(pos.date))})</span>`;
       if (pos.journeyOf) { const o = pos.sharedFrom ? Store.marker(pos.sharedFrom) : null; where += ` <span class="muted">· ${pos.journeyEnd ? 'the end of' : pos.journeyStart ? 'the start of' : pos.journeyStop ? 'a stop in' : 'on the way in'} the ${esc(pos.factLabel)} fact${o ? ' on ' + esc(o.name) : ''}</span>`; }
       rows.push([t == null ? 'Latest location' : 'Location', where, 0]);
     } else if (m.moves.length && t != null) {
