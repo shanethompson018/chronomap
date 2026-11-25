@@ -550,8 +550,18 @@ body.eink .journey-stop { border-left-color: #000; }
 .journey-part .field { margin-bottom: 2px; }
 
 /* ---------- approximation ---------- */
-.approx-row { margin-top: 3px; }
-.approx-row input { font-size: calc(12px * var(--fs)); padding: 3px 6px; }
+/* a date with its earliest / latest boxes: From and Until each take a full line when the card is narrow, and
+   earliest and latest have a line each, so every box is wide enough to read and to type in */
+.date-row { flex-wrap: wrap; }
+.fact-where > .ed-row { flex-wrap: wrap; } /* the place row's buttons go to a second line rather than off the edge */
+.date-row > .field { flex: 1 1 calc(300px * var(--fs)); }
+.date-main > .narrow, .approx-row > .narrow { flex: 0 0 auto; }
+.approx-tick { display: flex; align-items: center; gap: 4px; font-size: calc(12px * var(--fs)); color: var(--muted); cursor: pointer; }
+.approx-rows { margin-top: 2px; }
+.approx-row { margin-top: 4px; gap: 6px; }
+.approx-label { flex: 0 0 calc(58px * var(--fs)); font-size: calc(12px * var(--fs)); color: var(--muted); }
+.approx-row input { font-size: calc(13px * var(--fs)); padding: 4px 8px; }
+body.eink .approx-tick, body.eink .approx-label { color: #000; }
 .rel-approx { margin: 4px 0 8px 10px; padding: 6px 8px; background: rgba(255,255,255,.03); border-radius: 6px; }
 
 /* ---------- pins inside an area, fading copies ---------- */

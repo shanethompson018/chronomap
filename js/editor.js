@@ -275,13 +275,13 @@ window.Editor = (() => {
     let approxRow = null, approxTick = null;
     if (approx && !undet) {
       approxTick = h('input', { type: 'checkbox', checked: open, title: hasWin ? 'The earliest and latest boxes stay open while an end is tied to another date' : 'Approximate: give the earliest and latest it could be', disabled: reckoned || hasWin, onchange: e => { if (e.target.checked) approxOpen.add(slot); else { approxOpen.delete(slot); const f = approx.obj || draft.facts[approx.i]; if (approx.end) { f.dateEndMin = ''; f.dateEndMax = ''; } else { f.dateMin = ''; f.dateMax = ''; } } render(); } });
-      if (open) approxRow = h('div', { class: 'row approx-row', style: { gap: '4px' } },
-        h('span', { class: 'muted', style: { flex: 'none', fontSize: 'calc(11px * var(--fs))' } }, 'earliest'),
+      if (open) approxRow = h('div', { class: 'approx-rows' }, h('div', { class: 'row approx-row' }, // earliest and latest each on a line of their own
+        h('span', { class: 'approx-label' }, 'earliest'),
         h('input', { type: 'text', 'data-bind': approx.minBind, value: approx.min || '', placeholder: tiedHint(win && win.E, win && win.eBy), readonly: reckoned, class: reckoned ? 'derived-input' : '', title: 'The earliest it can be. Type a date, or tie this end to another date with ⛓.' }),
-        h('div', { class: 'narrow' }, endChain('min')),
-        h('span', { class: 'muted', style: { flex: 'none', fontSize: 'calc(11px * var(--fs))' } }, 'latest'),
+        h('div', { class: 'narrow' }, endChain('min'))), h('div', { class: 'row approx-row' },
+        h('span', { class: 'approx-label' }, 'latest'),
         h('input', { type: 'text', 'data-bind': approx.maxBind, value: approx.max || '', placeholder: tiedHint(win && win.L, win && win.lBy), readonly: reckoned, class: reckoned ? 'derived-input' : '', title: 'The latest it can be. Type a date, or tie this end to another date with ⛓.' }),
-        h('div', { class: 'narrow' }, endChain('max')));
+        h('div', { class: 'narrow' }, endChain('max'))));
     }
     const chain = h('button', { type: 'button', class: 'small icon', disabled: !inStore, title: !inStore ? 'Save the marker first, then you can tie this date to another date' : 'Ties: place this date from another date ("130 years after Adam was born"), or limit it ("not before…", "not after…")',
       onclick: () => Relations.pick(ref, { onDone: () => syncDraftFromStore(true) }) }, '⛓');
@@ -308,7 +308,7 @@ window.Editor = (() => {
     else if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
     if (undet) caption = h('div', { class: 'rel-caption' }, 'Marked undeterminable: not placed on the timeline.');
     return h('label', { class: 'field' }, label,
-      h('div', { class: 'row', style: { gap: '4px' } }, input, approxTick ? h('div', { class: 'narrow', title: 'approximate' }, approxTick) : null, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),
+      h('div', { class: 'row date-main', style: { gap: '4px' } }, input, approxTick ? h('div', { class: 'narrow approx-tick', title: approxTick.title }, approxTick, h('span', { onclick: e => { e.preventDefault(); if (!approxTick.disabled) approxTick.click(); } }, 'range')) : null, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),
       approxRow, winCaption, caption);
   }
 
@@ -499,7 +499,7 @@ window.Editor = (() => {
       const dates = [dateField(t.hasEnd ? 'From' : 'When', `facts.${i}.date`, 'fact:' + f.id, f.date, 'YYYY-MM-DD, 1776, 44 BC', { i, end: false, min: f.dateMin, max: f.dateMax, minBind: `facts.${i}.dateMin`, maxBind: `facts.${i}.dateMax` })];
       if (t.hasEnd) dates.push(dateField('Until', `facts.${i}.dateEnd`, 'fact:' + f.id + ':end', f.dateEnd, 'optional', { i, end: true, min: f.dateEndMin, max: f.dateEndMax, minBind: `facts.${i}.dateEndMin`, maxBind: `facts.${i}.dateEndMax` }));
       const copyBtn = h('button', { type: 'button', class: 'small', title: 'Use the date shown on the map time slider', onclick: () => { const tt = MapView.time(); if (tt != null) { draft.facts[i].date = Dates.iso(tt); render(); } } }, '⏱');
-      card.append(row(...dates, h('div', { class: 'narrow', style: { alignSelf: 'flex-end', paddingBottom: '2px' } }, copyBtn)));
+      card.append(h('div', { class: 'ed-row date-row' }, ...dates, h('div', { class: 'narrow', style: { alignSelf: 'flex-end', paddingBottom: '2px' } }, copyBtn)));
     }
     // where
     if (t.place !== 'none') card.append(renderWhere(i, t));
@@ -663,7 +663,7 @@ window.Editor = (() => {
         s.at.kind === 'point' ? btn('🎯', 'Move the map to this point', () => { peekMap(); MapView.showPosition({ lat: s.at.lat, lng: s.at.lng }, 'pin'); }) : null,
         btn('↑', 'Earlier on the way', () => shift(k, -1), k === 0), btn('↓', 'Later on the way', () => shift(k, 1), k === stops.length - 1),
         btn('✕', 'Remove this place from the journey', () => { const list = stops.slice(); list.splice(k, 1); setStops(list); }));
-      const dates = s.kind !== 'stop' ? null : row(
+      const dates = s.kind !== 'stop' ? null : h('div', { class: 'ed-row date-row' },
         dateField('Arrived', `facts.${i}.stops.${k}.date`, 'fact:' + s.id, s.date, 'YYYY-MM-DD, 1776, 44 BC', { obj: s, end: false, min: s.dateMin, max: s.dateMax, minBind: `facts.${i}.stops.${k}.dateMin`, maxBind: `facts.${i}.stops.${k}.dateMax` }),
         dateField('Left', `facts.${i}.stops.${k}.dateEnd`, 'fact:' + s.id + ':end', s.dateEnd, 'optional', { obj: s, end: true, min: s.dateEndMin, max: s.dateEndMax, minBind: `facts.${i}.stops.${k}.dateEndMin`, maxBind: `facts.${i}.stops.${k}.dateEndMax` }));
       return h('div', { class: 'journey-stop' }, head, dates);

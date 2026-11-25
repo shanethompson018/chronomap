@@ -466,6 +466,10 @@ Where dates carry wide ranges, the limits are also checked against the most like
 fails only there is listed as **The most likely dates are out of order**. The two rules are switched in
 Library → Time gaps (a setting of each device).
 
+**A window is shown as a window.** When a date is known only by its earliest and latest (or one of them),
+the app says "between X and Y", "after X" or "before Y". It never shows a date of its own making in the
+middle. A most-likely date you typed, or one a time gap worked out, is shown with its range as before.
+
 **Editing a time gap.** Every time gap has an **✏️ Edit** button, in the marker editor's Time gaps list
 and in Library → Time gaps. It opens the tie dialog filled in: change the date it belongs to, the part it
 sets, on / after / before, the length, give or take, the other date, the source, verse and note, then

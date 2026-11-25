@@ -27,6 +27,9 @@ cross items off as they land. We go through it one item at a time.
   a child not before its parent) built 25 Nov 2026; not checked on the Boox. 22.4 ("during" in the tie
   dialog), 22.5 (a chain that loses its anchor goes blank) and 22.6 (reading by verse) are proposed, not
   decided.
+- **Section 23:** the editor's date boxes, the editor and the time bar, and no made-up middle date. 23.1
+  to 23.3 built 25 Nov 2026; not checked on the Boox. 23.4 (a "Where and when" list in a marker's
+  information) is proposed, waiting for his answer.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
@@ -970,3 +973,38 @@ working out; each rule has its own switch instead):
 
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
 on the Boox itself. Not tried on his real data: any entry it lists there is for him to judge.
+
+## 23. Reading and entering dates (asked 25 Nov 2026; 23.1 to 23.3 built 25 Nov 2026; 23.4 proposed)
+
+The user's words, with three screenshots of the Journey fact in the PC editor: "This is too scrunched up.
+It needs to change so it can be clearer to read and entered. Also the editor blocks me from scrolling the
+timeline bar all the way make the editor stop above it. Also stop showing the mid point in the
+approximation it muddies things up just show the earliest and latest dates. Also how do I know how long
+they lived at Ur, and Haran if I am not looking at the map?"
+
+- [x] **23.1 Room for the date boxes. Built 25 Nov 2026.** From and Until each take a full line when the
+      editor is narrow (they stay side by side on the tablet, where there is room). "earliest" and
+      "latest" have a line each with a wide box and their ⛓ button. The tick that opens them is labelled
+      "range". The cause of the squeeze was that every button beside a box took as much width as the box.
+      The place row's buttons now wrap instead of running off the edge.
+- [x] **23.2 The PC editor ends above the time bar. Built 25 Nov 2026.** Only while the Map tab is
+      showing; on the other tabs it runs to the bottom as before. The tablet's full-screen editor is
+      unchanged.
+- [x] **23.3 No made-up middle date. Built 25 Nov 2026.** Where a date is known only as a window, the app
+      says "between X and Y", "after X" or "before Y" and never "c. middle (X – Y)". Changed: the lines
+      "from other markers" in the editor (his screenshot), a marker's Span and Location lines, tie dates,
+      Library, Markers, and the family tree (which now shows no year for such a date). When From and
+      Until share one window it is said once. **Kept:** a most-likely date he typed, or one a time gap
+      worked out, still shows with its range ("c. 2126 BC (2226 BC – 2026 BC)"). The map still uses the
+      middle of a window to decide which place applies and how strongly to draw it; only the words changed.
+- [ ] **23.4 "Where and when" in a marker's information (proposed, his answer awaited).** His question
+      "how do I know how long they lived at Ur, and Haran if I am not looking at the map?" has no good
+      answer today: the information panel gives the location at the slider's date only, and the Journey
+      line says "from Ur to Haran" with its window. Proposed: a short list under Location, in order, of
+      every place the marker is and from when to when, whether it comes from its own fact or from a
+      journey ("Ur: until between … and …", "On the way: …", "Haran: from … until died …"), with the
+      length of each stay where both ends are known. The words needed are already worked out for 23.3
+      (`when` / `whenEnd` on each derived location).
+
+23.1 to 23.3 are three commits. Tested on the test copy with throwaway markers at the PC size and the
+tablet size (E-ink on); not checked on the Boox itself, and not looked at on his own PC window.

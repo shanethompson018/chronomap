@@ -91,6 +91,12 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   "left the party". `deriveJourneys` returns `covered` (`<factId>|<markerId>`) for the mirrors (`mi.covered`,
   `mi.partOf`). `Facts.partLinks(fS, tS, fL, tL)` matches places by marker in order and returns which slots
   are the same moment (`same`) or only inside (`dir`); it stores nothing.
+- Words for a date (23.3): `said1(w)` / `said2(w)` give one end as text (the date, or its window). `derive` puts
+  them beside every date that may be only a window's middle: `m.startKnown` / `m.startWhen` / `m.endKnown` /
+  `m.endWhen`; `dateKnown` / `when` / `whenEnd` on each move (journey legs, stops and arrivals included, through
+  `span(a, b)` and `j.arr.said`); `startKnown` / `startWhen` / `endKnown` / `endWhen` on each tie. Anything that
+  prints `m.start`, `mv.date` or `link.start` must check the flag first. `whenLabel` says a window once when
+  From and Until share it.
 - `when(f)` merges typed ends with calculated ends and returns `{ date, min, max, lo, hi, known, knownEnd, … }`.
   With no date, `date` is the middle of the window (or its one end) for ordering only. `whenText` / `whenLabel`
   word a date or its window ("between X and Y", "after X", "before X").
@@ -143,7 +149,13 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - Sections fold (`chronomap.editorSections`); facts show as summary lines until opened. Save keeps the editor
   open (a snapshot decides "unsaved"); the `calc…` fields are left out of that snapshot and kept on save.
 - `dateField`: Earliest / the date / Latest, a ⛓ button beside each, "(tied)" placeholders, lines naming the
-  governing tie and the window's width.
+  governing tie and the window's width. Layout (23.1): the main row is `.row.date-main`, the two ends are
+  `.approx-rows` > `.row.approx-row` (label `.approx-label`, box, ⛓); `.row > *` is `flex: 1`, so every button
+  wrapper beside a box needs the `.narrow` rule for its row or it takes as much width as the box (that was
+  the squeeze). The From / Until pair sits in `.ed-row.date-row`, which wraps below about 600px.
+- The PC drawer ends above the map's time bar (23.2): `App.fitDrawer()` sets `--ed-bottom` to the bar's height
+  while the Map tab shows (0 otherwise); called from `fitLayout`, `showTab`, the editor's `syncView` and a
+  ResizeObserver on `.timebar` (which does not fire in the hidden test pane).
 - On the tablet the editor is a full-screen view: `Editor.park()` hides it with the work kept while the map is
   needed, `unpark()` and the `#editor-pill` bring it back. Under `body.ed-side` (PC) `park()` does nothing.
 - Draft autosave: `chronomap.draft`, `persistDraft`, `Editor.resume()`.
