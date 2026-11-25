@@ -167,6 +167,7 @@ window.Editor = (() => {
     draft.facts.forEach(f => {
       const t = Store.factType(f.typeId), title = f.label || (t ? t.name : 'fact');
       for (const k of ['date', 'dateMin', 'dateMax', 'dateEnd', 'dateEndMin', 'dateEndMax']) if (!Dates.isValid(f[k])) bad.push(`${title}: "${f[k]}" is not a date I understand`);
+      for (const s of Store.stopsOf(f)) for (const k of ['date', 'dateMin', 'dateMax', 'dateEnd', 'dateEndMin', 'dateEndMax']) if (!Dates.isValid(s[k])) bad.push(`${title}, stop at ${Store.stopName(s)}: "${s[k]}" is not a date I understand`);
       if ((f.dateMin && !f.dateMax) || (!f.dateMin && f.dateMax)) { /* one-sided limit: allowed */ }
     });
     if (bad.length) { UI.toast(bad[0], 'error'); return; }
@@ -175,7 +176,10 @@ window.Editor = (() => {
     const wasNew = isNew, data = draft;
     draft = null; isNew = false; // the store event must not be taken for an outside change
     const cur = wasNew ? null : Store.marker(data.id);
-    data.facts.forEach(f => { const sf = cur && cur.facts.find(x => x.id === f.id); CALC.forEach(k => { if (sf && sf[k]) f[k] = sf[k]; else delete f[k]; }); });
+    data.facts.forEach(f => {
+      const sf = cur && cur.facts.find(x => x.id === f.id); CALC.forEach(k => { if (sf && sf[k]) f[k] = sf[k]; else delete f[k]; });
+      (f.stops || []).forEach(s => { const ss = sf && (sf.stops || []).find(x => x.id === s.id); CALC.forEach(k => { if (ss && ss[k]) s[k] = ss[k]; else delete s[k]; }); });
+    });
     const saved = wasNew ? Store.addMarker(data) : Store.updateMarker(data.id, data);
     UI.toast('Saved');
     // stay open on the saved marker: derived dates, mirrored lines and time gaps refresh in place
@@ -234,6 +238,12 @@ window.Editor = (() => {
       if (reckoned('fact:' + f.id)) f.date = sf.date;
       if (reckoned('fact:' + f.id + ':end')) f.dateEnd = sf.dateEnd;
       CALC.forEach(k => { if (sf[k]) f[k] = sf[k]; else delete f[k]; });
+      (f.stops || []).forEach(s => { // the stops of a journey have dates of their own
+        const ss = (sf.stops || []).find(x => x.id === s.id); if (!ss) return;
+        if (reckoned('fact:' + s.id)) s.date = ss.date;
+        if (reckoned('fact:' + s.id + ':end')) s.dateEnd = ss.dateEnd;
+        CALC.forEach(k => { if (ss[k]) s[k] = ss[k]; else delete s[k]; });
+      });
     });
     if (rerender) render();
   }
@@ -250,7 +260,7 @@ window.Editor = (() => {
     const hasRange = approx && !!(approx.min || approx.max);
     // limits on the ends of this date: what its ties work out, and which tie governs each end
     const win = inStore && approx ? Relations.windowOf(ref) : null;
-    const hasWin = !!(win && (win.minTies.length || win.maxTies.length));
+    const hasWin = !!(win && (win.minTies.length || win.maxTies.length || win.auto)); // ties on an end, or the order of a journey's stops
     const open = hasRange || approxOpen.has(slot) || hasWin;
     const endChain = part => h('button', { type: 'button', class: 'small icon', disabled: !inStore,
       title: !inStore ? 'Save the marker first, then this end can be tied to another date' : (part === 'min' ? 'Tie the earliest end to another date: "not before…"' : 'Tie the latest end to another date: "not after…"'),
@@ -260,7 +270,7 @@ window.Editor = (() => {
       readonly: reckoned || undet, class: reckoned ? 'derived-input' : '', title: reckoned ? 'Reckoned from a time gap. Anchor it (🔒) to type a date here.' : '' });
     let approxRow = null, approxTick = null;
     if (approx && !undet) {
-      approxTick = h('input', { type: 'checkbox', checked: open, title: hasWin ? 'The earliest and latest boxes stay open while an end is tied to another date' : 'Approximate: give the earliest and latest it could be', disabled: reckoned || hasWin, onchange: e => { if (e.target.checked) approxOpen.add(slot); else { approxOpen.delete(slot); const f = draft.facts[approx.i]; if (approx.end) { f.dateEndMin = ''; f.dateEndMax = ''; } else { f.dateMin = ''; f.dateMax = ''; } } render(); } });
+      approxTick = h('input', { type: 'checkbox', checked: open, title: hasWin ? 'The earliest and latest boxes stay open while an end is tied to another date' : 'Approximate: give the earliest and latest it could be', disabled: reckoned || hasWin, onchange: e => { if (e.target.checked) approxOpen.add(slot); else { approxOpen.delete(slot); const f = approx.obj || draft.facts[approx.i]; if (approx.end) { f.dateEndMin = ''; f.dateEndMax = ''; } else { f.dateMin = ''; f.dateMax = ''; } } render(); } });
       if (open) approxRow = h('div', { class: 'row approx-row', style: { gap: '4px' } },
         h('span', { class: 'muted', style: { flex: 'none', fontSize: 'calc(11px * var(--fs))' } }, 'earliest'),
         h('input', { type: 'text', 'data-bind': approx.minBind, value: approx.min || '', placeholder: tiedHint(win && win.E, win && win.eBy), readonly: reckoned, class: reckoned ? 'derived-input' : '', title: 'The earliest it can be. Type a date, or tie this end to another date with ⛓.' }),
@@ -446,7 +456,7 @@ window.Editor = (() => {
     if (!place && f.where && f.where.kind === 'marker') place = (Store.marker(f.where.markerId) || {}).name || '';
     else if (!place && f.where && f.where.kind === 'point') place = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
     else if (!place && f.where && f.where.coords) place = `${f.where.coords.length}-point ${f.where.kind}`;
-    const trip = t && t.journey ? UI.journeyText(f.startAt, f.endAt) : '';
+    const trip = t && t.journey ? UI.journeyText(f) : '';
     const line = h('div', { class: 'fact-line', title: 'Open this fact', onclick: () => { openFacts.add(f.id); render(); } },
       h('span', { class: 'ed-arrow' }, '▸'),
       bits.length ? h('span', { class: 'muted' }, bits.join(' ') + ' · ') : null,
@@ -466,7 +476,7 @@ window.Editor = (() => {
         const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
         return h('div', { class: 'card fact-card mirror-card' },
           h('div', { class: 'row' },
-            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', mi.startAt || mi.endAt ? ' · ' + UI.journeyText(mi.startAt, mi.endAt) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
+            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', UI.journeyText(mi) ? ' · ' + UI.journeyText(mi) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
             h('button', { type: 'button', class: 'small narrow', title: `Open ${o.name} to edit that fact`, onclick: () => open(o.id) }, '✏️ ' + o.name)));
       }).filter(Boolean)];
   }
@@ -625,14 +635,45 @@ window.Editor = (() => {
   // "Starts at" / "Ends at" on a fact whose type is ticked "a journey" (Library, Fact types). Whoever travels
   // (this marker when it is a pin, and everyone in a role ticked "they go there too") is at the start place
   // before the fact's dates and at the end place after them: Facts.deriveJourneys works that out.
+  // Between the two boxes: the places along the way, in the order travelled (f.stops). Each row is a marker or a
+  // point picked on the map, and is either a stop (Arrived and Left dates, with limits and ties like any date) or
+  // a place passed (no dates). Travellers are at a stop between its two dates and on the route between stops.
   function renderJourney(i) {
     const f = draft.facts[i], w = Facts.when(f);
     const box = (label, key, ph) => h('div', { class: 'field' }, label,
       UI.markerSelect({ value: f[key] || null, exclude: [id], placeholder: ph, onChange: v => { if (v) draft.facts[i][key] = v; else delete draft.facts[i][key]; } }));
+    const stops = f.stops || [];
+    const setStops = list => { if (list.length) draft.facts[i].stops = list; else delete draft.facts[i].stops; render(); };
+    const blankStop = at => ({ id: Store.uid(), kind: 'stop', at, label: '', date: '', dateMin: '', dateMax: '', dateEnd: '', dateEndMin: '', dateEndMax: '' });
+    const shift = (k, by) => { const list = stops.slice(); const [x] = list.splice(k, 1); list.splice(k + by, 0, x); setStops(list); };
+    const point = ll => ({ kind: 'point', lat: +ll.lat.toFixed(5), lng: +ll.lng.toFixed(5) });
+    const rows = stops.map((s, k) => {
+      const here = s.at.kind === 'marker'
+        ? UI.markerSelect({ value: s.at.markerId, exclude: [id], placeholder: 'which place…', onChange: v => { if (v) { draft.facts[i].stops[k].at = { kind: 'marker', markerId: v }; render(); } } })
+        : h('input', { type: 'text', 'data-bind': `facts.${i}.stops.${k}.label`, value: s.label || '', placeholder: `name of this point (${(+s.at.lat).toFixed(2)}, ${(+s.at.lng).toFixed(2)})`, title: 'A point picked on the map. Give it a name if it has one.' });
+      const kindSel = UI.select([['stop', 'a stop'], ['pass', 'a place passed']], s.kind, { title: 'A stop has Arrived and Left dates and the travellers stay there. A place passed is only on the way: no dates, no stay.' });
+      kindSel.addEventListener('change', () => { draft.facts[i].stops[k].kind = kindSel.value; render(); });
+      const btn = (label, title, fn, off) => h('button', { type: 'button', class: 'small narrow', title, disabled: !!off, onclick: fn }, label);
+      const head = row(h('span', { class: 'narrow muted journey-n' }, `${k + 1}.`), here, h('div', { class: 'narrow' }, kindSel),
+        s.at.kind === 'point' ? btn('✥', 'Move this point: drag it or click the map, then press Done', () => { App.showTab('map'); MapView.movePoint({ lat: s.at.lat, lng: s.at.lng }, ll => { if (!draft) return; draft.facts[i].stops[k].at = point(ll); render(); UI.toast('Point moved in the editor. Press Save to keep it.'); }, 'Drag the point to its new place (or click the map), then press Done'); }) : null,
+        s.at.kind === 'point' ? btn('🎯', 'Move the map to this point', () => { peekMap(); MapView.showPosition({ lat: s.at.lat, lng: s.at.lng }, 'pin'); }) : null,
+        btn('↑', 'Earlier on the way', () => shift(k, -1), k === 0), btn('↓', 'Later on the way', () => shift(k, 1), k === stops.length - 1),
+        btn('✕', 'Remove this place from the journey', () => { const list = stops.slice(); list.splice(k, 1); setStops(list); }));
+      const dates = s.kind !== 'stop' ? null : row(
+        dateField('Arrived', `facts.${i}.stops.${k}.date`, 'fact:' + s.id, s.date, 'YYYY-MM-DD, 1776, 44 BC', { obj: s, end: false, min: s.dateMin, max: s.dateMax, minBind: `facts.${i}.stops.${k}.dateMin`, maxBind: `facts.${i}.stops.${k}.dateMax` }),
+        dateField('Left', `facts.${i}.stops.${k}.dateEnd`, 'fact:' + s.id + ':end', s.dateEnd, 'optional', { obj: s, end: true, min: s.dateEndMin, max: s.dateEndMax, minBind: `facts.${i}.stops.${k}.dateEndMin`, maxBind: `facts.${i}.stops.${k}.dateEndMax` }));
+      return h('div', { class: 'journey-stop' }, head, dates);
+    });
+    const adder = UI.markerSelect({ exclude: [id], placeholder: stops.length ? '+ another place: a marker…' : '+ a place on the way: a marker…', onChange: v => { if (v) setStops(stops.concat([blankStop({ kind: 'marker', markerId: v })])); } });
+    const addPoint = h('button', { type: 'button', class: 'small', title: 'A place that has no marker: click it on the map', onclick: () => { App.showTab('map'); MapView.pickPoint(ll => { if (!draft) return; const fx = draft.facts[i]; fx.stops = (fx.stops || []).concat([blankStop(point(ll))]); render(); }, 'Click on the map where the journey stops or passes'); } }, '📍 or a point on the map');
     return h('div', { class: 'fact-where fact-journey' },
-      row(box('Starts at', 'startAt', 'where they set out from…'), box('Ends at', 'endAt', 'where they arrive…')),
-      h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))' } }, w.date || w.dateEnd
-        ? 'Whoever travels is at the start place before the journey and stays at the end place after it, with no fact or tie of their own. A dated place of their own during the journey means they left the party.'
+      box('Starts at', 'startAt', 'where they set out from…'),
+      h('div', { class: 'journey-places' },
+        h('div', { class: 'journey-title' }, 'Places along the way', stops.length ? ', in the order they were reached' : ' (optional)'),
+        ...rows, row(adder, h('div', { class: 'narrow' }, addPoint))),
+      box('Ends at', 'endAt', 'where they arrive…'),
+      h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))' } }, w.date || w.dateEnd || stops.length
+        ? 'Whoever travels is at the start place before the journey, at each stop between its Arrived and Left dates, on the route between them, and stays at the end place afterwards, with no fact or tie of their own. A place passed has no dates and is recorded in the wording only. A dated place of their own during the journey means they left the party.'
         : 'Give the journey a date or limits first: until then nobody is placed at its start or its end.'));
   }
   function renderRole(i, role) {

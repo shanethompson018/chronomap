@@ -226,7 +226,7 @@ window.UI = (() => {
       let where = pos.label || (pos.atMarkerId ? (Store.marker(pos.atMarkerId) || {}).name : '') || (pos.coords ? `${pos.coords.length} points` : `${(+pos.lat).toFixed(3)}, ${(+pos.lng).toFixed(3)}`);
       if (pos.atMarkerId) where = 'at / in ' + where;
       if (pos.date) where += ` <span class="muted">(since ${esc(Dates.formatInput(pos.date))})</span>`;
-      if (pos.journeyOf) { const o = pos.sharedFrom ? Store.marker(pos.sharedFrom) : null; where += ` <span class="muted">· the ${pos.journeyEnd ? 'end' : 'start'} of the ${esc(pos.factLabel)} fact${o ? ' on ' + esc(o.name) : ''}</span>`; }
+      if (pos.journeyOf) { const o = pos.sharedFrom ? Store.marker(pos.sharedFrom) : null; where += ` <span class="muted">· ${pos.journeyEnd ? 'the end of' : pos.journeyStart ? 'the start of' : pos.journeyStop ? 'a stop in' : 'on the way in'} the ${esc(pos.factLabel)} fact${o ? ' on ' + esc(o.name) : ''}</span>`; }
       rows.push([t == null ? 'Latest location' : 'Location', where, 0]);
     } else if (m.moves.length && t != null) {
       rows.push(['Location', '<span class="muted">not on the map at this time</span>', 0]);
@@ -253,7 +253,7 @@ window.UI = (() => {
     const mentions = Store.mentionsOf(m.id).filter(x => !mirroredFacts.has(x.fact.id));
     if (mentions.length) {
       out += `<h4>Mentioned in (${mentions.length})</h4><ul class="fact-list">` + mentions.map(x => {
-        const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : x.asPlace ? 'as the place' : x.asStart ? 'as where it starts' : 'as where it ends';
+        const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : x.asPlace ? 'as the place' : x.asStart ? 'as where it starts' : x.asEnd ? 'as where it ends' : x.asStop ? 'as a stop on the way' : 'as a place it passes';
         return `<li><a class="mlink" data-action="goto-marker" data-id="${esc(x.marker.id)}">${esc(x.marker.name)}</a> · ${esc(Store.factTitle(x.fact))}${x.fact.date ? ` <span class="muted">${esc(Dates.formatInput(x.fact.date))}</span>` : ''} <span class="muted">(${how})</span></li>`;
       }).join('') + '</ul>';
     }
@@ -315,7 +315,7 @@ window.UI = (() => {
     if (when) bits.push(when + b); else if (b) bits.push(b);
     bits.push(title);
     if (where) bits.push(where);
-    const trip = t && t.journey ? journeyText(f.startAt, f.endAt, true) : '';
+    const trip = t && t.journey ? journeyText(f, true) : '';
     if (trip) bits.push(trip);
     if (who) bits.push(who);
     if (details) bits.push(`<span class="muted">${details}</span>`);
@@ -327,11 +327,23 @@ window.UI = (() => {
     return opts.bare ? line : `<li>${line}</li>`;
   }
 
-  // "from Ur to Haran": the Starts at / Ends at of a journey fact, as plain words or (html) with links.
-  function journeyText(startAt, endAt, html) {
-    const nm = id => { const o = id && Store.marker(id); if (!o) return ''; return html ? `<a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>` : Store.displayName(o); };
-    const a = nm(startAt), b = nm(endAt);
-    return [a ? 'from ' + a : '', b ? 'to ' + b : ''].filter(Boolean).join(' ');
+  // "from Ur to Haran": the Starts at / Ends at of a journey fact, as plain words or (html) with links. With places
+  // along the way: "from Ur, by way of Carchemish, stopping at Haran (1921 BC – 1920 BC), to Shechem". `j` is the
+  // fact or its mirror: { startAt, endAt, stops }.
+  function journeyText(j, html) {
+    const link = o => (html ? `<a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>` : Store.displayName(o));
+    const nm = id => { const o = id && Store.marker(id); return o ? link(o) : ''; };
+    const e = s => (html ? esc(s) : s);
+    const a = nm(j.startAt), b = nm(j.endAt);
+    const mid = (j.stops || []).map(s => {
+      const o = s.at.kind === 'marker' ? Store.marker(s.at.markerId) : null;
+      const name = o ? link(o) : s.at.kind === 'point' ? e(Store.stopName(s)) : '';
+      if (!name) return '';
+      if (s.kind === 'pass') return 'by way of ' + name;
+      const w = Facts.whenLabel(Facts.when(s), true);
+      return 'stopping at ' + name + (w ? ` (${e(w)})` : '');
+    }).filter(Boolean);
+    return [a ? 'from ' + a : '', ...mid, b ? 'to ' + b : ''].filter(Boolean).join(mid.length ? ', ' : ' ');
   }
 
   // One mirrored fact: "1 Jan 1901 BC · Born · Son: Isaac · Beersheba · from Isaac's Born fact".
@@ -342,7 +354,7 @@ window.UI = (() => {
     bits.push(`<strong>${esc(mi.factTitle)}</strong>`);
     bits.push(`<strong>${esc(mi.word)}</strong>: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`);
     if (mi.place) bits.push(esc(mi.place));
-    const trip = journeyText(mi.startAt, mi.endAt, true);
+    const trip = journeyText(mi, true);
     if (trip) bits.push(trip);
     const details = Object.entries(mi.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
     if (details) bits.push(`<span class="muted">${details}</span>`);

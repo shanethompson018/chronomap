@@ -533,6 +533,14 @@ body.eink .graph-empty { color: #000; }
 .fact-details { margin: 4px 0 6px; }
 .fact-list li { margin: 3px 0; }
 body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px solid #ccc; }
+/* the places along a journey: one block per stop or place passed, between Starts at and Ends at */
+.journey-places { margin: 2px 0 8px; }
+.journey-title { font-size: calc(12px * var(--fs)); color: var(--muted); margin-bottom: 4px; }
+.journey-stop { margin: 0 0 6px; padding: 6px 0 2px 8px; border-left: 2px solid var(--muted); }
+.journey-stop .ed-row { align-items: flex-start; }
+.journey-stop .ed-row > .journey-n { align-self: center; font-size: calc(13px * var(--fs)); }
+.journey-stop .ed-row > button.narrow { align-self: center; }
+body.eink .journey-stop { border-left-color: #000; }
 
 /* ---------- approximation ---------- */
 .approx-row { margin-top: 3px; }

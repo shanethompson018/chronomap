@@ -14,8 +14,10 @@ cross items off as they land. We go through it one item at a time.
   later. With no place on the fact, travellers stay at the start until the arrival date.
 - **Section 18:** markers stacked on one spot share one numbered pin; clicking it lists them. Built
   25 Nov 2026; not checked on the Boox.
-- **Section 19:** routes with stops on the way, and a short route that is part of a longer one. His
-  answers are recorded (25 Nov 2026); steps 19.1 to 19.3 proposed; waiting for his go-ahead to build.
+- **Section 19:** routes with stops on the way, and a short route that is part of a longer one. He said
+  to build it ("19: stops first", 25 Nov 2026). 19.1 (places along a journey) built 25 Nov 2026; not
+  checked on the Boox. 19.2 (who makes which part) and 19.3 ("Part of" a longer journey) are next. A
+  place passed is recorded in the wording only until 17.3 draws a line through the places.
 - **Section 20:** markers inside a marker (an army, a country, a company), with exclusions. His answers
   are recorded (25 Nov 2026); steps 20.1 and 20.2 proposed; waiting for his go-ahead to build.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
@@ -658,7 +660,7 @@ colour and, with labels on, reads "Haran +2"; otherwise "3 markers". Pins inside
 and counted pin of section 10. Tested on the test copy at the PC size and the tablet size with E-ink on;
 not checked on the Boox itself.
 
-## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, under discussion)
+## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, 19.1 built 25 Nov 2026; 19.2 and 19.3 to build)
 
 The user's words: "Routes that stop at multiple locations before reaching their final destination. We need
 a way to mark those down. Also we need to consider possibly one source notes a marker moving a small route
@@ -687,12 +689,12 @@ First thoughts (not put to him yet, nothing decided):
   The link is made from the short one, so the order of entry does not matter and the long one is not
   re-entered.
 
-Proposed steps (put to him 25 Nov, awaiting his go-ahead):
+Steps (put to him 25 Nov; he said to build them the same day: "19: stops first"):
 
-- [ ] **19.1 Places along a journey.** A list on the journey fact between "Starts at" and "Ends at". Each
-      row is a marker or a point picked on the map, and is either a stop (arrived and left dates, each
-      with limits and ties like any other date) or a place passed. Travellers are at a stop between its
-      two dates and on the route between stops.
+- [x] **19.1 Places along a journey. Built 25 Nov 2026.** A list on the journey fact between "Starts at"
+      and "Ends at". Each row is a marker or a point picked on the map, and is either a stop (arrived and
+      left dates, each with limits and ties like any other date) or a place passed. Travellers are at a
+      stop between its two dates and on the route between stops.
 - [ ] **19.2 Who makes which part.** Each traveller can have "joins at" and "leaves at" (the start, a
       stop, or the end). Someone who leaves at a stop stays there until their own next location.
 - [ ] **19.3 "Part of" a longer journey.** The short journey's dates become limits on the long one (and
@@ -700,6 +702,36 @@ Proposed steps (put to him 25 Nov, awaiting his go-ahead):
       that disagree are reported as a conflict, as closed windows are now; the app does not pick a side.
 
 Still to ask: nothing blocking. The conflict rule in 19.3 was put to him as a recommendation.
+
+**19.1 as built, 25 Nov 2026.** In the marker editor, a fact whose type is ticked "a journey" now reads
+Starts at, then **Places along the way**, then Ends at. A place is added by choosing a marker or with
+"📍 or a point on the map" (a point can be given a name); ↑ ↓ change the order, ✕ removes it. Each place
+is "a stop" (Arrived and Left boxes, each with earliest / latest and the ⛓ tie buttons) or "a place
+passed" (no dates). Rules settled while building:
+
+* The order is the order of the list, not of the dates. Like activities in sequence in P6, the app holds
+  that each date is not before the one before it: From, each stop's Arrived and Left in turn, Until. So a
+  stop with no date shows the window its neighbours leave it ("between … and …"), a journey with no dates
+  of its own takes them from its stops, and a date out of order is listed under ⚠ Conflicts as "The order
+  of the journey: …". These limits are the app's own: they cannot be overruled, only the date or the order
+  corrected.
+* Travellers are at a stop from Arrived to Left and on the route between stops. A stop with no Arrived
+  date and no window places nobody. A stop with no Left date lasts until the next dated place.
+* With no route drawn on the fact, they stay at each place until they reach the next (as 17.1 does
+  between the start and the end).
+* A traveller's own dated place during the journey still means they left the party: nothing of the
+  journey is given to them after that date.
+* A place passed changes nothing on the map. It is in the fact's wording ("by way of …") and under that
+  place's "Mentioned in". It will matter when 17.3 draws a line through the places.
+* A stop's dates can be tied from any other date: in the tie dialog they are listed under the journey's
+  marker as "… · stop at Haran (arrived)" and "(left)".
+* Journeys with no places along the way are placed exactly as before.
+* In the conflicts list, when several dates along one chain are squeezed by the same disagreement, only
+  the date where the two sides really meet is listed now (before, every date between them was).
+
+Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
+on the Boox itself. For his Genesis 12 reading: Haran, Shechem, Bethel and Egypt are entered as stops on
+one journey, or as separate journeys, as the text is read; that choice is his.
 
 ## 20. Markers inside a marker: an army and its people (raised 25 Nov 2026, under discussion)
 

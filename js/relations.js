@@ -154,8 +154,31 @@ window.Relations = (() => {
     }
     return out;
   }
+  // A journey with stops is a chain in order: it sets out (From), arrives at and leaves each stop in turn, and
+  // arrives (Until). Each of those dates is not before the one before it, the way activities in sequence are in
+  // P6. These limits are the journey's own, like a fact's from / until pair, but they always count, so a stop
+  // with no date shows the window its neighbours leave it. Ids are 'seq|<markerId>|<slot>|<next slot>'.
+  function seqRels() {
+    const out = [];
+    for (const m of Store.markers()) for (const f of m.facts || []) {
+      const t = Store.factType(f.typeId), stops = Store.stopsOf(f);
+      if (!t || !t.journey || t.hasDate === false || !stops.length) continue;
+      const chain = ['fact:' + f.id];
+      for (const s of stops) chain.push('fact:' + s.id, 'fact:' + s.id + ':end');
+      if (t.hasEnd) chain.push('fact:' + f.id + ':end');
+      for (let i = 1; i < chain.length; i++) out.push({ id: 'seq|' + m.id + '|' + chain[i - 1] + '|' + chain[i], from: { kind: 'marker', id: m.id, slot: chain[i - 1] }, to: { kind: 'marker', id: m.id, slot: chain[i] }, part: 'min', years: 0, months: 0, days: 0 });
+    }
+    return out;
+  }
+  const isAuto = id => /^seq\|/.test(String(id)); // a limit the app keeps by itself (not a tie the user made, so it cannot be overruled)
+  // "arriving at Haran is not before the journey's From"
+  function autoText(id) {
+    const [, mid, a, b] = String(id).split('|');
+    return `${Store.slotShort({ kind: 'marker', id: mid, slot: b })} is not before ${Store.slotShort({ kind: 'marker', id: mid, slot: a })}`;
+  }
   function windows(given) {
-    const rels = given.concat(ownRels(given));
+    const auto = seqRels();
+    const rels = given.concat(ownRels(given), auto);
     const W = new Map();
     const node = k => { if (!W.has(k)) { const b = baseOf(k); W.set(k, { E: b.min || '', L: b.max || '', eBy: null, lBy: null }); } return W.get(k); };
     const raise = (n, cand, by) => { if (cand && (!n.E || D(cand) > D(n.E))) { n.E = cand; n.eBy = by; return true; } return false; };
@@ -177,15 +200,15 @@ window.Relations = (() => {
       if (!moved) break;
       if (pass > cap) { looping = true; break; } // limits that chase each other round a loop and never settle
     }
-    return { W, looping };
+    return { W, looping, auto };
   }
   let winInfo = new Map();
   const closed = n => !!(n.E && n.L && D(n.E) > D(n.L, 1) && !Dates.sameDate(n.E, n.L));
   function solveWindows() {
     const rels = limitRels();
-    const { W, looping } = windows(rels);
+    const { W, looping, auto } = windows(rels);
     winInfo = W;
-    const tied = new Set(rels.flatMap(r => [key(r.from), key(r.to)])); // dates that a tie really touches
+    const tied = new Set(rels.concat(auto).flatMap(r => [key(r.from), key(r.to)])); // dates that a tie really touches, and the dates of a journey with stops
     const out = new Map(), shut = [];
     for (const [k, n] of W) {
       if (closed(n)) { n.conflict = true; shut.push([k, n]); continue; }
@@ -195,8 +218,11 @@ window.Relations = (() => {
     // One broken limit closes the window of every date along its path. The dates where a tie arrives head-on are
     // the ones to show; the others (reached by working backwards) only repeat them.
     const headOn = shut.filter(([, n]) => (n.eBy && !n.eBy.back) || (n.lBy && !n.lBy.back));
+    // …and of those, a date neither of whose ends was reached by working backwards is where the limits really
+    // meet (along a journey's chain of stops every date between the two that disagree would otherwise be listed)
+    const meet = headOn.filter(([, n]) => !(n.eBy && n.eBy.back) && !(n.lBy && n.lBy.back));
     const bad = new Map();
-    for (const [k, n] of (headOn.length ? headOn : shut)) { // one entry per pair of governing ties
+    for (const [k, n] of (meet.length ? meet : headOn.length ? headOn : shut)) { // one entry per pair of governing ties
       const ids = [n.eBy && n.eBy.rel, n.lBy && n.lBy.rel].filter(Boolean).sort();
       const ck = ids.join('+') || k;
       if (!bad.has(ck)) bad.set(ck, { key: 'win:' + ck, window: true, rels: ids, slots: [] });
@@ -211,6 +237,7 @@ window.Relations = (() => {
     const n = winInfo.get(key(ref));
     const ties = Store.relationsOfRef(ref).filter(r => r.status === 'active' && isLimit(r));
     return { E: n ? n.E : '', L: n ? n.L : '', eBy: n ? n.eBy : null, lBy: n ? n.lBy : null, conflict: !!(n && n.conflict),
+      auto: !!(n && ((n.eBy && isAuto(n.eBy.rel)) || (n.lBy && isAuto(n.lBy.rel)))), // an end is set by the order of a journey's stops
       minTies: ties.filter(r => (r.part === 'min') === Store.sameRef(r.to, ref)), maxTies: ties.filter(r => (r.part === 'max') === Store.sameRef(r.to, ref)) };
   }
   const lenWords = o => [[o.years, 'year'], [o.months, 'month'], [o.days, 'day']].filter(([n]) => n).map(([n, w]) => `${Math.abs(n)} ${w}${Math.abs(n) === 1 ? '' : 's'}`).join(' ');
@@ -223,6 +250,10 @@ window.Relations = (() => {
   // The tie that governs an end, said from that date's side.
   function governText(by) {
     if (by && String(by.rel).startsWith('own|')) return by.back ? 'its own until date' : 'its own from date';
+    if (by && isAuto(by.rel)) { // the order of a journey's stops
+      const [, mid, a, b] = String(by.rel).split('|');
+      return `not ${by.back ? 'after' : 'before'} ${Store.slotShort({ kind: 'marker', id: mid, slot: by.back ? b : a })} (the order of the journey)`;
+    }
     const r = by && Store.relation(by.rel);
     if (!r) return '';
     return by.back ? `${describeRelation(r)} (worked backwards)` : limitText(r.part, offOf(r), Store.slotLabel(r.from));
@@ -431,10 +462,14 @@ window.Relations = (() => {
           for (const x of c.slots) card.append(h('div', { class: 'rel-cand' },
             h('div', { class: 'grow' }, h('strong', {}, Store.slotLabel(x.ref)), ' ', h('span', { class: 'muted' }, `would have to be not before ${Dates.formatInput(x.E)}${x.eOwn ? ' (its own date)' : ''} and not after ${Dates.formatInput(x.L)}${x.lOwn ? ' (its own date)' : ''}`)),
             h('button', { class: 'small', onclick: () => Editor.open(x.ref.id) }, 'Open marker')));
-          for (const rid of c.rels) { const r = Store.relation(rid); if (!r) continue;
+          for (const rid of c.rels) {
+            if (isAuto(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), 'The order of the journey: ' + autoText(rid)))); continue; }
+            const r = Store.relation(rid); if (!r) continue;
             card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), describeRelation(r), r.sourceId && Store.source(r.sourceId) ? h('span', { class: 'muted' }, ` · ${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}`) : null),
               h('button', { class: 'small', title: 'Keep the record but leave it out of the reckoning', onclick: () => { Store.updateRelation(rid, { status: 'overruled' }); render(); } }, 'Overrule this tie'))); }
-          card.append(h('p', { class: 'hint' }, c.rels.length ? 'Either a date here is wrong, or one of these ties is. Correct the date in its marker, or overrule the tie that does not hold.' : 'One of these dates was typed outside its own earliest or latest box.'));
+          card.append(h('p', { class: 'hint' }, !c.rels.length ? 'One of these dates was typed outside its own earliest or latest box.'
+            : c.rels.every(isAuto) ? 'A journey\'s dates run in order: From, then each stop\'s Arrived and Left, then Until. One of these dates is out of that order. Correct it in the marker, or put the places in the order they were reached.'
+            : 'Either a date here is wrong, or one of these ties is. Correct the date in its marker, or overrule the tie that does not hold.'));
           body.append(card);
           continue;
         }

@@ -252,7 +252,7 @@ window.Facts = (() => {
       m.moves = [];
       for (const f of facts) {
         const t = typeOf(d, f);
-        if (t && t.journey && (f.startAt || f.endAt)) journeys.push({ f, t, w: W.get(f.id), owner: m });
+        if (t && t.journey && (f.startAt || f.endAt || (f.stops && f.stops.length))) journeys.push({ f, t, w: W.get(f.id), owner: m });
         let where = f.where;
         if (!where && t && t.placeFrom) { const p = (f.participants || []).find(x => x.roleId === t.placeFrom); if (p) where = { kind: 'marker', markerId: p.markerId }; }
         if (!where) continue;
@@ -309,6 +309,11 @@ window.Facts = (() => {
   //    route stops there and they get no arrival from the journey.
   //  * The start place is given only to a traveller whom nothing else places before From.
   //  * A journey with no date and no window places nobody at its start or end.
+  // Places along the way (f.stops, section 19): at a stop the travellers are there from its arrived date to its left
+  // date ("<factId>~at~<stopId>") and on the route between stops. For that, a traveller's copy of the route is
+  // cut into legs ("<factId>~leg0", "~leg1", …); the route marker's own move stays whole, so the line is drawn
+  // for the whole journey. A stop with no arrived date or window places nobody; a stop with no left date lasts
+  // until the next dated place. With no route drawn they stay at each place until they reach the next.
   function deriveJourneys(d, journeys) {
     const byId = new Map(d.markers.map(x => [x.id, x]));
     const dayOfMove = mv => (mv.date ? dayOf(mv.date) : null);
@@ -319,7 +324,16 @@ window.Facts = (() => {
       for (const p of f.participants || []) { const r = t.roles.find(x => x.id === p.roleId); if (r && r.goes && p.markerId) ids.add(p.markerId); }
       j.travellers = [...ids].map(x => byId.get(x)).filter(Boolean);
       j.from = w.date ? dayOf(w.date) : null;
+      // the stops that have an arrival to go by, in the order entered
+      j.stops = (f.stops || []).filter(s => s.kind === 'stop').map(s => {
+        const sw = when(s), o = s.at.kind === 'marker' ? byId.get(s.at.markerId) : null;
+        return sw.date && dayOf(sw.date) != null && (o || s.at.kind === 'point') ? { s, sw, o } : null;
+      }).filter(Boolean);
       j.arr = t.hasEnd && w.dateEnd ? { date: w.dateEnd, min: w.endMin, max: w.endMax } : { date: w.date, min: w.min, max: w.max };
+      if (!(t.hasEnd && w.dateEnd) && j.stops.length) { // no Until to go by: they arrive when they leave the last stop
+        const last = j.stops[j.stops.length - 1].sw;
+        j.arr = last.dateEnd ? { date: last.dateEnd, min: last.endMin, max: last.endMax } : { date: last.date, min: last.min, max: last.max };
+      }
       j.arrDay = j.arr.date ? dayOf(j.arr.date) : null;
       j.base = { lat: null, lng: null, coords: null, note: '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f),
         confidence: f.confidence || '', reason: f.reason || '', journeyOf: f.id };
@@ -328,8 +342,39 @@ window.Facts = (() => {
     const give = (T, owner, mv) => { if (T.id !== owner.id) mv.sharedFrom = owner.id; T.moves.push(mv); touched.add(T); };
     // arrivals: judged against the places every marker has before any journey adds a start or an end
     const snap = new Map(d.markers.map(m => [m.id, m.moves.slice()]));
+    const span = (a, b) => ({ date: a ? a.date : '', dateMin: a ? a.min || a.date : '', dateMax: a ? a.max || a.date : '', dateEnd: b ? b.date : '', dateEndMin: b ? b.min || b.date : '', dateEndMax: b ? b.max || b.date : '' });
     for (const j of journeys) {
-      const { f, owner } = j, end = f.endAt && byId.get(f.endAt);
+      const { f, w, owner } = j, end = f.endAt && byId.get(f.endAt);
+      if (j.stops.length) { // places along the way
+        for (const T of j.travellers) {
+          const left = j.arrDay == null ? null : snap.get(T.id).filter(mv => { if (mv.id === f.id) return false; const x = dayOfMove(mv); return x != null && x <= j.arrDay && (x === j.arrDay || (j.from != null && x > j.from)); })
+            .sort((a, b) => dayOfMove(a) - dayOfMove(b))[0];
+          const rt = T.moves.find(mv => mv.id === f.id); // their copy of the fact's own place (the route), when it has one
+          const seq = [];
+          let cur = { date: w.date, min: w.min, max: w.max }, n = 0; // where the party last set out: the journey's From, then each stop's Left
+          for (const st of j.stops) {
+            const arr = { date: st.sw.date, min: st.sw.min, max: st.sw.max };
+            const lft = st.sw.dateEnd ? { date: st.sw.dateEnd, min: st.sw.endMin, max: st.sw.endMax } : null;
+            if (rt && cur) seq.push(Object.assign({}, rt, span(cur, arr), { id: f.id + '~leg' + n++, journeyOf: f.id, journeyLeg: true }));
+            if (!st.o || st.o.id !== T.id) seq.push(Object.assign({}, j.base, span(arr, rt ? lft : null), { id: f.id + '~at~' + st.s.id, journeyStop: st.s.id },
+              st.o ? { atMarkerId: st.o.id, label: st.o.name } : { lat: st.s.at.lat, lng: st.s.at.lng, label: st.s.label || '' }));
+            cur = lft;
+          }
+          if (rt && cur) seq.push(Object.assign({}, rt, span(cur, rt.dateEnd ? { date: rt.dateEnd, min: rt.dateEndMin, max: rt.dateEndMax } : null), { id: f.id + '~leg' + n++, journeyOf: f.id, journeyLeg: true }));
+          let list = seq;
+          if (left) { // they left the party: nothing of the journey after their own place begins
+            const cut = dayOfMove(left);
+            list = seq.filter(mv => { const x = dayOfMove(mv); return x == null || x < cut; });
+            for (const mv of list) if (mv.dateEnd && dayOf(mv.dateEnd) > cut) { mv.dateEnd = left.date; mv.dateEndMin = left.dateMin || left.date; mv.dateEndMax = left.dateMax || left.date; }
+          }
+          if (rt) T.moves.splice(T.moves.indexOf(rt), 1); // the legs stand in for the whole route
+          for (const mv of list) give(T, owner, mv);
+          if (left || !end || T.id === end.id || j.arrDay == null) continue;
+          give(T, owner, Object.assign({}, j.base, { id: f.id + '~end', date: j.arr.date, dateMin: j.arr.min || j.arr.date, dateMax: j.arr.max || j.arr.date,
+            dateEnd: '', dateEndMin: '', dateEndMax: '', atMarkerId: end.id, label: end.name, journeyEnd: true }));
+        }
+        continue;
+      }
       if (!end || j.arrDay == null) continue;
       for (const T of j.travellers) {
         if (T.id === end.id) continue;
@@ -400,7 +445,8 @@ window.Facts = (() => {
             date: w.date || '', dateMin: w.min || '', dateMax: w.max || '', dateEnd: t.hasEnd ? (w.dateEnd || '') : '', dateEndMin: t.hasEnd ? (w.endMin || '') : '', dateEndMax: t.hasEnd ? (w.endMax || '') : '',
             when: whenLabel(w, !!t.hasEnd), known: w.known, // the date in words (a window when no date is known)
             startAt: t.journey ? f.startAt || null : null, endAt: t.journey ? f.endAt || null : null, // a journey's start and end place
-            placed: !!(r.goes && (f.where || t.placeFrom || (t.journey && (f.startAt || f.endAt)))),   // the fact also puts this marker at its place
+            stops: t.journey && f.stops ? f.stops : null,                                              // and the places along its way
+            placed: !!(r.goes && (f.where || t.placeFrom || (t.journey && (f.startAt || f.endAt || (f.stops || []).some(s => s.kind === 'stop'))))),   // the fact also puts this marker at its place
             place, details: Object.assign({}, f.details || {}), note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
         }
       }

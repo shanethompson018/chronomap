@@ -89,8 +89,32 @@ window.Store = (() => {
     o.participants = (o.participants || []).filter(p => p && p.roleId && p.markerId).map(p => ({ roleId: p.roleId, markerId: p.markerId }));
     o.details = o.details || {};
     if (!o.startAt) delete o.startAt; if (!o.endAt) delete o.endAt; // a journey's start and end place (marker ids); absent when not set
+    if (Array.isArray(o.stops)) o.stops = o.stops.map(normStop).filter(Boolean); // the places along a journey, in order
+    if (!o.stops || !o.stops.length) delete o.stops;
     return o;
   }
+  // A place along a journey (fact.stops, in the order travelled). `at` is a marker or a point picked on the map.
+  // kind 'stop': the party arrives (date) and leaves (dateEnd); it has the same six date boxes as a fact, and the
+  // same calculated ends, so everything that works on a fact's dates works on a stop's. kind 'pass': a place the
+  // journey goes by, with no dates and no stay.
+  const DATE_KEYS = ['date', 'dateMin', 'dateMax', 'dateEnd', 'dateEndMin', 'dateEndMax'];
+  const CALC_KEYS = ['calcMin', 'calcMax', 'calcEndMin', 'calcEndMax'];
+  function normStop(s) {
+    if (!s || !s.at) return null;
+    const num = v => v != null && v !== '' && !isNaN(+v);
+    let at = null;
+    if (s.at.kind === 'marker' && s.at.markerId) at = { kind: 'marker', markerId: s.at.markerId };
+    else if (s.at.kind === 'point' && num(s.at.lat) && num(s.at.lng)) at = { kind: 'point', lat: +s.at.lat, lng: +s.at.lng };
+    if (!at) return null;
+    const o = { id: s.id || uid(), kind: s.kind === 'pass' ? 'pass' : 'stop', at, label: s.label || '' };
+    if (o.kind === 'stop') {
+      for (const k of DATE_KEYS) o[k] = s[k] || '';
+      ['date', 'dateEnd'].forEach(k => { if (o[k + 'Min'] && o[k + 'Max'] && Dates.toDays(o[k + 'Min']) != null && Dates.toDays(o[k + 'Max']) != null && Dates.toDays(o[k + 'Min']) > Dates.toDays(o[k + 'Max'])) { const t = o[k + 'Min']; o[k + 'Min'] = o[k + 'Max']; o[k + 'Max'] = t; } });
+      for (const k of CALC_KEYS) if (s[k]) o[k] = s[k];
+    }
+    return o;
+  }
+  const stopsOf = f => (f.stops || []).filter(s => s.kind === 'stop'); // the places with dates
   function normLink(l) {
     const o = Object.assign({ id: uid(), typeId: null, fromId: null, toId: null, label: '', start: '', end: '', note: '', sourceId: null, page: '', pinned: [], undetermined: [], derived: {} }, l || {});
     o.pinned = (o.pinned || []).filter(Boolean); o.undetermined = (o.undetermined || []).filter(Boolean); o.derived = o.derived || {};
@@ -161,8 +185,9 @@ window.Store = (() => {
         f.participants = f.participants.filter(p => has('markers', p.markerId) && p.markerId !== m.id);
         if (f.where && f.where.kind === 'marker' && (!has('markers', f.where.markerId) || f.where.markerId === m.id)) f.where = null;
         for (const k of ['startAt', 'endAt']) if (f[k] && (!has('markers', f[k]) || f[k] === m.id)) delete f[k];
+        if (f.stops) { f.stops = f.stops.filter(s => s.at.kind !== 'marker' || (has('markers', s.at.markerId) && s.at.markerId !== m.id)); if (!f.stops.length) delete f.stops; }
       });
-      const factIds = new Set((m.facts || []).map(f => f.id));
+      const factIds = new Set((m.facts || []).flatMap(f => [f.id, ...stopsOf(f).map(s => s.id)])); // a stop's dates are slots too
       const slotOk = s => { if (!s.startsWith('fact:')) return false; const id = s.slice(5).replace(/:end$/, ''); return factIds.has(id); };
       m.pinned = (m.pinned || []).filter(slotOk); m.undetermined = (m.undetermined || []).filter(slotOk);
       for (const k of Object.keys(m.derived || {})) if (!slotOk(k)) delete m.derived[k];
@@ -171,8 +196,7 @@ window.Store = (() => {
     const refOk = ref => {
       if (!ref || ref.kind !== 'marker' || !ref.slot.startsWith('fact:')) return false;
       const m = d.markers.find(x => x.id === ref.id); if (!m) return false;
-      const id = ref.slot.slice(5).replace(/:end$/, '');
-      return m.facts.some(f => f.id === id);
+      return !!slotFact(m, ref.slot);
     };
     d.relations = d.relations.filter(r => refOk(r.from) && refOk(r.to) && !(r.from.id === r.to.id && r.from.slot === r.to.slot));
     d.relations.forEach(r => { if (!has('sources', r.sourceId)) r.sourceId = null; });
@@ -393,10 +417,31 @@ window.Store = (() => {
   const refKey = ref => `${ref.kind}:${ref.id}:${ref.slot}`;
   function parseRefKey(k) { const i = k.indexOf(':'), j = k.indexOf(':', i + 1); return { kind: k.slice(0, i), id: k.slice(i + 1, j), slot: k.slice(j + 1) }; }
   const sameRef = (a, b) => !!a && !!b && a.kind === b.kind && a.id === b.id && a.slot === b.slot;
-  // Slots are a marker's fact dates: 'fact:<factId>' (the date) and 'fact:<factId>:end' (the end date).
+  // Slots are a marker's fact dates: 'fact:<factId>' (the date) and 'fact:<factId>:end' (the end date). A stop
+  // along a journey is named the same way by its own id: 'fact:<stopId>' (arrived) and 'fact:<stopId>:end' (left).
   function slotOwner(ref) { return !ref || ref.kind !== 'marker' ? null : marker(ref.id); }
   function slotParts(slot) { const isEnd = slot.endsWith(':end'); return { factId: slot.slice(5).replace(/:end$/, ''), isEnd }; }
-  function slotFact(o, slot) { if (!o || !slot.startsWith('fact:')) return null; const { factId } = slotParts(slot); return (o.facts || []).find(f => f.id === factId) || null; }
+  // The journey fact and the stop a slot names, when it names a stop: { f, s }.
+  function slotStop(o, slot) {
+    if (!o || !slot.startsWith('fact:')) return null;
+    const { factId } = slotParts(slot);
+    for (const f of o.facts || []) for (const s of f.stops || []) if (s.kind === 'stop' && s.id === factId) return { f, s };
+    return null;
+  }
+  // The thing that holds a slot's date boxes: the fact, or the stop of a journey fact.
+  function slotFact(o, slot) {
+    if (!o || !slot.startsWith('fact:')) return null;
+    const { factId } = slotParts(slot);
+    const f = (o.facts || []).find(x => x.id === factId);
+    if (f) return f;
+    const st = slotStop(o, slot);
+    return st ? st.s : null;
+  }
+  // What a place along a journey is called: the marker's name, or the name typed for a point, or its position.
+  function stopName(s) {
+    if (s.at.kind === 'marker') { const o = marker(s.at.markerId); return o ? displayName(o) : '(missing)'; }
+    return s.label || `${(+s.at.lat).toFixed(2)}, ${(+s.at.lng).toFixed(2)}`;
+  }
   function refExists(ref) { const o = slotOwner(ref); return !!(o && slotFact(o, ref.slot)); }
   // The slot's most-likely date (typed, or the midpoint of its range when only earliest/latest were given).
   function slotValue(ref) {
@@ -461,7 +506,16 @@ window.Store = (() => {
   function slotLabel(ref) {
     const o = slotOwner(ref); if (!o) return '(missing)';
     const f = slotFact(o, ref.slot); if (!f) return `${o.name} · (missing)`;
+    const st = slotStop(o, ref.slot);
+    if (st) return `${o.name} · ${factTitle(st.f)} · stop at ${stopName(st.s)}${slotParts(ref.slot).isEnd ? ' (left)' : ' (arrived)'}`;
     return `${o.name} · ${factTitle(f)}${slotParts(ref.slot).isEnd ? ' (until)' : ''}`;
+  }
+  // The same date said shortly, for a line that already names the journey: "the journey's From", "arriving at Haran".
+  function slotShort(ref) {
+    const o = slotOwner(ref); if (!o) return '(missing)';
+    const st = slotStop(o, ref.slot), isEnd = slotParts(ref.slot).isEnd;
+    if (st) return `${isEnd ? 'leaving' : 'arriving at'} ${stopName(st.s)}`;
+    return isEnd ? 'the journey\'s Until' : 'the journey\'s From';
   }
   // Every date slot of a marker: each dated fact, and the end date of facts that have one.
   function slotsOfMarker(markerId) {
@@ -472,6 +526,10 @@ window.Store = (() => {
       if (t && t.hasDate === false) continue;
       out.push({ ref: factRef(m.id, f.id, false), label: factTitle(f) + (t && t.hasEnd ? ' (from)' : '') });
       if (t && t.hasEnd) out.push({ ref: factRef(m.id, f.id, true), label: factTitle(f) + ' (until)' });
+      if (t && t.journey) for (const s of stopsOf(f)) { // each stop along a journey: when they arrived and when they left
+        out.push({ ref: factRef(m.id, s.id, false), label: `${factTitle(f)} · stop at ${stopName(s)} (arrived)` });
+        out.push({ ref: factRef(m.id, s.id, true), label: `${factTitle(f)} · stop at ${stopName(s)} (left)` });
+      }
     }
     return out;
   }
@@ -485,7 +543,9 @@ window.Store = (() => {
         const roles = (f.participants || []).filter(p => p.markerId === markerId).map(p => { const t = factType(f.typeId); const r = t && t.roles.find(x => x.id === p.roleId); return r ? r.name : 'participant'; });
         const asPlace = f.where && f.where.kind === 'marker' && f.where.markerId === markerId;
         const asStart = f.startAt === markerId, asEnd = f.endAt === markerId; // a journey sets out from here / arrives here
-        if (roles.length || asPlace || asStart || asEnd) out.push({ marker: m, fact: f, roles, asPlace, asStart, asEnd });
+        const along = (f.stops || []).find(s => s.at.kind === 'marker' && s.at.markerId === markerId); // or stops here / passes here
+        const asStop = !!along && along.kind === 'stop', asPass = !!along && along.kind === 'pass';
+        if (roles.length || asPlace || asStart || asEnd || along) out.push({ marker: m, fact: f, roles, asPlace, asStart, asEnd, asStop, asPass });
       }
     }
     return out;
@@ -533,6 +593,7 @@ window.Store = (() => {
       f.participants = f.participants.filter(p => p.markerId !== id);
       if (f.where && f.where.kind === 'marker' && f.where.markerId === id) { f.where = null; touch(m); }
       for (const k of ['startAt', 'endAt']) if (f[k] === id) { delete f[k]; touch(m); }
+      if (f.stops && f.stops.some(s => s.at.kind === 'marker' && s.at.markerId === id)) { f.stops = f.stops.filter(s => !(s.at.kind === 'marker' && s.at.markerId === id)); if (!f.stops.length) delete f.stops; touch(m); }
       if (f.participants.length !== before) touch(m);
     }));
     dropRelationsOf('marker', id);
@@ -653,7 +714,7 @@ window.Store = (() => {
     let changed = false;
     for (const o of S.markers) {
       let touched = false;
-      for (const f of o.facts || []) {
+      for (const fact of o.facts || []) for (const f of [fact, ...stopsOf(fact)]) { // a fact's dates, then each of its stops'
         for (const isEnd of [false, true]) {
           const w = map.get(refKey(factRef(o.id, f.id, isEnd))) || { min: '', max: '' };
           const kMin = isEnd ? 'calcEndMin' : 'calcMin', kMax = isEnd ? 'calcEndMax' : 'calcMax';
@@ -746,7 +807,7 @@ window.Store = (() => {
     markers, categories, linkTypes, factTypes, links, sources, photos, relations, settings, marker, category, linkType, factType, link, source, photo, relation, linksOf, displayColor, displayIcon,
     setSettings, sourceLabel, markerSourceIds, sourceUseCount, photoUsers, addPhoto, updatePhoto, deletePhoto,
     refKey, parseRefKey, sameRef, factRef, slotOwner, refExists, slotValue, slotRange, isPinned, isUndetermined, derivedInfo, setPinned, setUndetermined, pinValue,
-    slotLabel, slotsOfMarker, factTitle, mentionsOf, relationsFor, relationsOfRef, addRelation, addRelations, updateRelation, deleteRelation, applySolved, applyWindows, slotTyped,
+    slotLabel, slotShort, slotsOfMarker, stopsOf, stopName, factTitle, mentionsOf, relationsFor, relationsOfRef, addRelation, addRelations, updateRelation, deleteRelation, applySolved, applyWindows, slotTyped,
     addFactType, updateFactType, deleteFactType,
     sortedMoves, hasLocation, positionAt, visibleAt, linkActiveAt, firstDay, timeRange,
     addMarker, updateMarker, deleteMarker, resolveMove,

@@ -33,6 +33,15 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   what the user typed for a slot.
 - `setSetting` skips an unchanged value; `setSettings(obj)` changes several in one commit.
 - Sync pieces: `exportSyncDoc`, `replaceSyncDoc`; merge is per record, newest wins, with tombstones.
+- Places along a journey: `fact.stops` (absent when empty), each `{ id, kind: 'stop'|'pass', at: { kind:
+  'marker', markerId } | { kind: 'point', lat, lng }, label }`; a stop also has the six date boxes of a fact and
+  the four `calc…` ends, **under the same names**, so every function that works on a fact's dates works on a
+  stop. A stop's dates are slots named by the stop's own id: `fact:<stopId>` (arrived) and `fact:<stopId>:end`
+  (left). `slotFact(o, slot)` returns the fact or the stop; `slotStop` returns `{ f, s }` for a stop slot.
+  `normStop` drops a row with no place and strips the dates of a place passed. `cleanReferences` keeps stop
+  slots (`factIds` includes stop ids) and drops a row whose marker is gone; `applyWindows` writes the `calc…`
+  ends of stops too. `slotLabel` says "… · stop at Haran (arrived)"; `slotShort` says "arriving at Haran",
+  "the journey's From". `stopsOf(f)` = the rows with dates; `stopName(s)`.
 - Grading: `source.reliability` (high | reliable | questionable | unreliable); `confidence` + `reason` on facts,
   field grades and relations (high | reasonable | low | none). `UI.gradeBadgeHTML` draws the badge.
 
@@ -55,8 +64,16 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   after the arrivals are in, so a second journey does not add a start where the first one's arrival already
   places the traveller. A traveller's own dated move after From and up to the arrival = left the party: no
   arrival, and their copy of the route move gets that date as its `dateEnd`. Move ids must not contain `|`
-  (map layers are keyed `markerId|moveId` and split on it). Section 19 (stops) is meant to add a list
-  between `startAt` and `endAt`.
+  (map layers are keyed `markerId|moveId` and split on it).
+- Stops (19.1): when a journey has stops with an arrival to go by (`j.stops`; `when(stop)` gives the date or the
+  middle of its window), each traveller's copy of the route move (id = the fact id) is **removed** and replaced
+  by legs `<factId>~leg0…` (`journeyLeg`), with a move `<factId>~at~<stopId>` (`journeyStop`) between them; the
+  route marker's own move stays whole so the line is drawn throughout. A leg runs from the last Left (first:
+  From) to the next Arrived (last: Until). No route on the fact: no legs, and the stop moves carry no `dateEnd`,
+  so each lasts until the next dated move. A stop with no Left has no `dateEnd` and no leg after it. "Left the
+  party" drops every journey move from that day on and cuts the one in progress. A journey with no stops takes
+  the old code path untouched. `derive` runs before the solver has written a new stop's window, so the stop is
+  placed on the second pass (the commit `applyWindows` makes).
 - `when(f)` merges typed ends with calculated ends and returns `{ date, min, max, lo, hi, known, knownEnd, … }`.
   With no date, `date` is the middle of the window (or its one end) for ordering only. `whenText` / `whenLabel`
   word a date or its window ("between X and Y", "after X", "before X").
@@ -70,7 +87,13 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   after). Every tie is used both ways. A fact with an until date has an implicit limit of its own (until is not
   before from, ids `own|…`). Windows are written only for dates a real tie touches.
 - Conflicts: `Relations.conflicts()`; a closed window is `{ window: true, rels, slots }`, reported once on the
-  nodes where two limits meet head-on.
+  nodes where two limits meet head-on (and, when there are any, only on nodes neither of whose ends was reached
+  by working backwards: `meet`).
+- Limits the app keeps by itself (`seqRels`, ids `seq|<markerId>|<slot>|<next slot>`): a journey with stops is a
+  chain From ≤ Arrived ≤ Left ≤ … ≤ Until. They are added inside `windows()` on every run, their dates count as
+  `tied` (so windows are written for them), `windowOf().auto` says an end is set by one, `governText` and the
+  conflicts panel word them ("the order of the journey") and offer no Overrule. `isAuto(id)` is the test; 19.3
+  is meant to add its own kind here.
 - `windowOf(ref)` → `{ E, L, eBy, lBy, conflict, minTies, maxTies }`; `governText(by)`; `limitText`.
 - The tie dialog: `Relations.pick(thisRef, { part, onDone })`, rows of `{ part, where: 'on'|'after'|'before',
   y, m, d, markerId, slotKey, verse, approx, lo, hi }` with one shared source, a "Reads as" line per row and a
@@ -86,9 +109,13 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - On the tablet the editor is a full-screen view: `Editor.park()` hides it with the work kept while the map is
   needed, `unpark()` and the `#editor-pill` bring it back. Under `body.ed-side` (PC) `park()` does nothing.
 - Draft autosave: `chronomap.draft`, `persistDraft`, `Editor.resume()`.
-- `renderJourney(i)`: the "Starts at" / "Ends at" boxes, shown only when the fact's type has `journey`. Clearing
-  a box deletes the key from the draft fact. `UI.journeyText(startAt, endAt, html)` words it ("from Ur to
-  Haran") for the fact line, the mirror line and the information panel.
+- `renderJourney(i)`: the "Starts at" / "Ends at" boxes and, between them, the places along the way, shown only
+  when the fact's type has `journey`. Clearing a box deletes the key from the draft fact. A stop's two dates are
+  ordinary `dateField`s bound to `facts.<i>.stops.<k>.date…` with slot `fact:<stopId>`; `approx.obj` tells
+  `dateField` which object holds the boxes (a fact passes `approx.i`). Save, `syncDraftFromStore` and the
+  date check all walk `f.stops` as well. `UI.journeyText(j, html)` (`j` = the fact or its mirror) words it
+  ("from Ur, by way of Carchemish, stopping at Haran (dates), to Shechem") for the fact line, the mirror line
+  and the information panel. A marker row has two ✕: the chooser's own (clears the box, ignored) and the row's.
 
 ## js/map.js
 

@@ -344,7 +344,7 @@ window.DataTab = (() => {
       h('label', { class: 'field' }, 'Place', place),
       h('label', { class: 'field' }, 'Or take the place from a role', placeFrom),
       h('div', { class: 'ed-row' }, h('label', { title: 'A fact of this type gets two more boxes, "Starts at" and "Ends at", each choosing a marker. Whoever travels (the marker the fact is on when it is a pin, and everyone in a role ticked "they go there too") is then at the start place before the fact, at the place of the fact during it, and stays at the end place after it. No arrival fact and no tie are needed.' },
-        journey, ' a journey: has a start place and an end place ("Starts at" and "Ends at" boxes on the fact)')),
+        journey, ' a journey: has a start place, an end place and places along the way ("Starts at", "Places along the way" and "Ends at" on the fact)')),
       h('div', { class: 'field' }, 'Roles (who else is involved; each makes a tie)', rolesHost),
       h('label', { class: 'field' }, 'Detail fields (comma separated)', details),
       h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'primary', onclick: save }, existing ? 'Save' : 'Create'), h('button', { onclick: () => { m.close(); cb && cb(null); } }, 'Cancel')));

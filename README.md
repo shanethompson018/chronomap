@@ -323,6 +323,21 @@ manuscripts have no ISBN and are typed by hand as before.
     no Until, they arrive on the From date.
   * A journey with no date and no limits places nobody at its start or end; the fact card says so.
   * The traveller's information says the location is "the start" or "the end" of that journey fact.
+* **Places along a journey.** Between "Starts at" and "Ends at" a journey fact has a list, **Places along
+  the way**, kept in the order the places were reached (↑ ↓ change the order). A place is a marker, or a
+  point picked on the map that can be given a name. Each place is one of two things:
+  * **a stop:** it has **Arrived** and **Left** dates, each with earliest / latest boxes and the ⛓ tie
+    buttons like any other date. The travellers are at the stop between the two dates and on the route
+    between stops.
+  * **a place passed:** no dates and no stay. It is recorded in the fact's wording ("by way of …") and
+    under that place's "Mentioned in"; it changes nothing on the map.
+
+  The app keeps the dates in order by itself, the way activities in sequence are kept in Primavera P6:
+  From, then each stop's Arrived and Left in turn, then Until, each not before the one before it. So a
+  stop with no date shows the window its neighbours leave it, and a date typed out of order is listed
+  under ⚠ Conflicts as "The order of the journey". A stop with no Arrived date and no window places
+  nobody; a stop with no Left date lasts until the next dated place. With no route drawn, the travellers
+  stay at each place until they reach the next.
 * **Rough borders.** An area outline can carry a second, lighter dashed outline: the **largest possible
   extent** ("Draw extent"). Each edge of either outline can be marked **firm** (solid: a coast, a
   river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the
