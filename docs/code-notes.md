@@ -100,8 +100,14 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   `upsertGroup()` draws one counted pin (`group|areaId`); `expandGroup()` zooms in by `lay.grow`. When the
   centre is outside the outline (a crescent) the bounding box is used instead. The fan offset is applied once,
   through `iconAnchor` in `pinIcon`; do not add a transform as well (that doubled it until 23 Nov 2026).
-  The zoom-in animation does not run in the hidden test pane, so check `grow` by arithmetic. `refresh()` runs on `zoomend` while any such area is on screen. General clustering of nearby pins
-  is not built.
+  The zoom-in animation does not run in the hidden test pane, so check `grow` by arithmetic. `refresh()` runs on `zoomend` while any such area is on screen, or more than one loose pin.
+- Pins on one spot: `stackPins()` groups the loose pins (not `geo.inside`) whose centres are within `STACK_PX`
+  8 pixels at the current zoom; `upsertStack()` draws one numbered pin (`stack|markerId|moveId` of its first
+  member, or of the host: the member the others are located at). A stack is a group record like the area's
+  (`isGroup`, plus `stack: true`), so `primary`, ties, the left list, `locate` and `expandGroup` treat both
+  alike. `same` = every member at the identical point: zooming cannot part them, so the bubble has no zoom
+  button and `expandGroup` opens the marker's information instead. `spread` is the pixel distance used to
+  work out how far to zoom. Clustering over a wider radius is not built.
 - Explicit edit modes: `editShape`, `movePoint` (`pick.type` 'edit' / 'move'). An area's `where` carries
   `extent`, `rough`, `extentRough`, drawn by `buildArea`.
 - `banner` / `hideBanner` park and unpark the editor. The banner has a box for typing coordinates

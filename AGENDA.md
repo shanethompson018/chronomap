@@ -12,8 +12,8 @@ cross items off as they land. We go through it one item at a time.
 - **Section 17:** an automatic journey ("Starts at" / "Ends at"). 17.1 built 25 Nov 2026; not checked on
   the Boox. 17.2 (pins moving along the line) and 17.3 (a straight line when no route is drawn) are for
   later. With no place on the fact, travellers stay at the start until the arrival date.
-- **Section 18 (asked 25 Nov 2026):** markers stacked on one spot share one numbered pin; clicking it lists
-  them. To be built straight after 17.1.
+- **Section 18:** markers stacked on one spot share one numbered pin; clicking it lists them. Built
+  25 Nov 2026; not checked on the Boox.
 - **Section 19 (under discussion):** routes with stops on the way, and a short route that is part of a
   longer one. Nothing decided.
 - **Section 20 (under discussion):** markers inside a marker (an army and its people), with exclusions.
@@ -641,14 +641,22 @@ as before.
 
 Declined on 23 Nov and not to be offered again: a "+ Role" button on the fact in the marker editor.
 
-## 18. Markers stacked on one spot share a numbered pin (asked 25 Nov 2026)
+## 18. Markers stacked on one spot share a numbered pin (asked 25 Nov 2026, built 25 Nov 2026)
 
 The user's words: "Where point markers stack on each other on the map please make them numbered, and when
 you click the number pin you see all the markers similar to when zooming out."
 
-- [ ] **18.1** Pins that land on the same spot of the screen (travellers on a route, people at the same
-      town marker) are drawn as one pin showing how many there are. Clicking it lists them, as the counted
-      pin inside an area does (section 10); a name in the list opens that marker's information.
+- [x] **18.1 Built 25 Nov 2026.** Pins that land on the same spot of the screen (travellers on a route,
+      people at the same town marker) are drawn as one pin showing how many there are. Clicking it lists
+      them, as the counted pin inside an area does (section 10); a name in the list opens that marker's
+      information.
+
+As built: "the same spot" means pin centres within 8 screen pixels, so two places very close together
+also share a pin when zoomed far out and part again when zoomed in (the bubble then offers "Zoom in to
+spread them out"). When the others are located at one of the markers (a town), the pin takes the town's
+colour and, with labels on, reads "Haran +2"; otherwise "3 markers". Pins inside an area keep the fan
+and counted pin of section 10. Tested on the test copy at the PC size and the tablet size with E-ink on;
+not checked on the Boox itself.
 
 ## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, under discussion)
 

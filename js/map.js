@@ -29,7 +29,7 @@ window.MapView = (() => {
     };
     tieLayer = L.layerGroup().addTo(map);
     map.on('click', onMapClick);
-    map.on('zoomend', () => { if (fanAreas) refresh(); }); // pins inside an area tighten, merge or spread with the zoom
+    map.on('zoomend', () => { if (fanAreas || loosePins > 1) refresh(); }); // pins inside an area tighten, merge or spread with the zoom; pins on one spot stack or part
     // a bubble opened after the Size setting changed takes the new size, within the map
     map.on('popupopen', e => {
       const fs = App.size(), room = Math.max(220, map.getSize().x - 40), o = e.popup.options;
@@ -284,7 +284,13 @@ window.MapView = (() => {
     for (const it of wanted) if (it.geo.inside) insideTotal.set(it.geo.inside, (insideTotal.get(it.geo.inside) || 0) + 1);
     const layout = new Map([...insideTotal].map(([areaId, n]) => [areaId, insideLayout(areaId, n, tt)]));
     fanAreas = [...insideTotal.values()].filter(n => n > 1).length;
+    // pins that land on one spot of the screen would hide each other: they share one numbered pin
+    const loose = wanted.filter(it => it.m.kind === 'pin' && !it.geo.inside);
+    loosePins = loose.length;
+    const stacks = stackPins(loose), inStack = new Set();
+    for (const s of stacks) for (const it of s.items) inStack.add(it);
     for (const it of wanted) {
+      if (inStack.has(it)) continue;
       const lay = it.geo.inside ? layout.get(it.geo.inside) : null;
       if (lay && lay.collapsed) { // no room to tell them apart at this zoom: they share one counted pin
         if (!groups.has(it.geo.inside)) groups.set(it.geo.inside, []);
@@ -303,6 +309,16 @@ window.MapView = (() => {
       const g = upsertGroup(areaId, items, layout.get(areaId));
       keepKeys.add(g.key);
       for (const it of items) {
+        keep.add(it.m.id);
+        // each member still counts as on the map: its ties and "locate" go to the shared pin
+        const cur = primary.get(it.m.id);
+        if (!cur || it.weight > cur.weight) primary.set(it.m.id, { key: it.m.id + '|' + it.mv.id, markerId: it.m.id, kind: 'pin', layer: g.layer, group: g, weight: it.weight });
+      }
+    }
+    for (const s of stacks) {
+      const g = upsertStack(s);
+      keepKeys.add(g.key);
+      for (const it of s.items) {
         keep.add(it.m.id);
         // each member still counts as on the map: its ties and "locate" go to the shared pin
         const cur = primary.get(it.m.id);
@@ -333,6 +349,7 @@ window.MapView = (() => {
     }
     return inside ? best : 0;
   }
+  let loosePins = 0; // pins outside any area at the last refresh (a zoom may stack or part them)
   let fanAreas = 0; // areas holding more than one pin at the last refresh (a zoom then needs a new layout)
   const fanRing = n => (n === 0 ? 0 : (Math.ceil((Math.sqrt(1 + (8 * n) / 6) - 1) / 2) || 1)); // 6 per ring, growing
   function insideLayout(areaId, n, tt) {
@@ -367,20 +384,29 @@ window.MapView = (() => {
   }
   // The one pin that stands for every pin inside an area while the map is zoomed too far out to tell them apart.
   function groupIcon(g) {
-    const label = showLabels ? `<div class="pin-label">${UI.esc(`${g.ids.length} in ${g.name}`)}</div>` : '';
-    const html = `<div class="pin-wrap" style="opacity:${g.opacity.toFixed(2)}"><div class="pin-ring" style="border-color:${UI.esc(g.color)}"></div><div class="pin-dot pin-group" style="background:${UI.esc(g.color)}">${g.ids.length}</div>${label}</div>`;
+    const text = g.stack ? (g.name ? `${g.name} +${g.ids.length - 1}` : `${g.ids.length} markers`) : `${g.ids.length} in ${g.name}`;
+    const label = showLabels ? `<div class="pin-label">${UI.esc(text)}</div>` : '';
+    const ring = g.stack ? '' : `<div class="pin-ring" style="border-color:${UI.esc(g.color)}"></div>`; // the dashed ring means "somewhere inside the area"
+    const html = `<div class="pin-wrap" style="opacity:${g.opacity.toFixed(2)}">${ring}<div class="pin-dot pin-group" style="background:${UI.esc(g.color)}">${g.ids.length}</div>${label}</div>`;
     return L.divIcon({ className: 'pin-icon', html, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -12] });
   }
   function groupPopup(g) {
+    const host = g.stack && g.hostId ? Store.marker(g.hostId) : null;
+    const canZoom = !g.stack || !g.same; // markers at the very same place cannot be parted by zooming
+    const title = g.stack ? `${g.ids.length} markers on this spot` : `${g.ids.length} markers in ${g.name}`;
+    const why = !g.stack ? 'They share one pin at this zoom. Zoom in and they spread out inside the area.'
+      : canZoom ? 'They are too close to tell apart at this zoom, so they share one pin. Zoom in and they part.'
+      : host ? `${host.name} and the markers located at it share one pin. Tap a name for its information.`
+      : 'They are at the same place, so they share one pin. Tap a name for its information.';
     return UI.h('div', { class: 'info' },
-      UI.h('div', { class: 'info-name' }, `${g.ids.length} markers in ${g.name}`),
-      UI.h('div', { class: 'info-cat' }, 'They share one pin at this zoom. Zoom in and they spread out inside the area.'),
+      UI.h('div', { class: 'info-name' }, title),
+      UI.h('div', { class: 'info-cat' }, why),
       UI.h('ul', { class: 'fact-list group-list' }, ...g.ids.map(id => {
         const m = Store.marker(id);
         return m ? UI.h('li', {}, UI.h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m)), ' ',
-          UI.h('a', { class: 'mlink', 'data-action': 'goto-marker', 'data-id': id, title: 'Zoom in to this marker and open its information' }, Store.displayName(m))) : null;
+          UI.h('a', { class: 'mlink', 'data-action': 'goto-marker', 'data-id': id, title: canZoom ? 'Zoom in to this marker and open its information' : 'Open its information' }, Store.displayName(m))) : null;
       })),
-      UI.h('div', { class: 'info-actions' }, UI.h('button', { onclick: () => expandGroup(g) }, '🔍 Zoom in to spread them out')));
+      !canZoom ? null : UI.h('div', { class: 'info-actions' }, UI.h('button', { onclick: () => expandGroup(g) }, '🔍 Zoom in to spread them out')));
   }
   function upsertGroup(areaId, items, lay) {
     const key = 'group|' + areaId;
@@ -406,13 +432,58 @@ window.MapView = (() => {
     g.sig = sig;
     return g;
   }
+  // ---------- pins on one spot ----------
+  // Pins whose centres are within STACK_PX pixels of each other would hide one another (people located at the same
+  // town marker, travellers on a route), so they share one numbered pin whose bubble lists them. Pins inside an
+  // area are left out: they have their own fan and counted pin above. A stack is a group like the area's
+  // (`isGroup`, with `stack: true`), so ties, the left list and "locate" treat both alike.
+  const STACK_PX = 8;
+  const pinLL = geo => { if (geo.lat != null) return [+geo.lat, +geo.lng]; const c = geo.coords.reduce((a, p) => [a[0] + +p[0], a[1] + +p[1]], [0, 0]); return [c[0] / geo.coords.length, c[1] / geo.coords.length]; };
+  function stackPins(items) {
+    const z = map.getZoom(), cells = [];
+    for (const it of items) {
+      const ll = pinLL(it.geo), p = map.project(ll, z);
+      let s = cells.find(c => Math.hypot(c.p.x - p.x, c.p.y - p.y) <= STACK_PX);
+      if (!s) { s = { p, ll, items: [], spread: 0, same: true }; cells.push(s); }
+      else { s.spread = Math.max(s.spread, Math.hypot(s.p.x - p.x, s.p.y - p.y)); if (Math.abs(ll[0] - s.ll[0]) > 1e-9 || Math.abs(ll[1] - s.ll[1]) > 1e-9) s.same = false; }
+      s.items.push(it);
+    }
+    return cells.filter(s => new Set(s.items.map(it => it.m.id)).size > 1);
+  }
+  function upsertStack(s) {
+    // the marker the others are located at (a town with the people in it) gives the pin its name and colour
+    const hostIt = s.items.find(it => s.items.some(o => o.mv.atMarkerId === it.m.id)) || null;
+    const first = hostIt || s.items[0];
+    const ids = [...new Set([first.m.id, ...s.items.map(it => it.m.id)])];
+    const key = 'stack|' + first.m.id + '|' + first.mv.id;
+    let g = layers.get(key);
+    const fresh = !g;
+    if (fresh) g = { key, kind: 'pin', isGroup: true, stack: true };
+    Object.assign(g, { ids, ll: pinLL(first.geo), spread: s.spread, same: s.same, hostId: hostIt ? hostIt.m.id : null, name: hostIt ? Store.nameAt(hostIt.m, ignoreTime ? null : t) : '',
+      color: hostIt ? Store.displayColor(hostIt.m) : '#5b6472', opacity: Math.max(...s.items.map(it => it.opacity)) });
+    const sig = [ids.join(','), g.color, g.name, showLabels, g.opacity.toFixed(2)].join('|');
+    if (fresh) {
+      g.layer = L.marker(g.ll, { icon: groupIcon(g), riseOnHover: true });
+      const fs = App.size(), room = Math.max(220, map.getSize().x - 40);
+      g.layer.bindPopup(() => groupPopup(g), { maxWidth: Math.min(room, Math.round(360 * fs)), minWidth: Math.min(room, Math.round(260 * fs)), maxHeight: Math.max(200, Math.min(map.getSize().y - 80, Math.round(340 * fs))), className: 'cm-popup' });
+      g.layer.addTo(map);
+      layers.set(key, g);
+    } else {
+      g.layer.setLatLng(g.ll);
+      if (g.sig !== sig) g.layer.setIcon(groupIcon(g));
+    }
+    g.sig = sig;
+    return g;
+  }
   // Zoom in on a shared pin until its markers have room to spread; openId then gets its own bubble.
   function expandGroup(g, openId) {
     const z = map.getZoom(), top = Math.min(18, isFinite(map.getMaxZoom()) ? map.getMaxZoom() : 18);
-    const need = g.grow > 0 && isFinite(g.grow) ? Math.ceil(Math.log2(g.grow)) : Infinity;
+    const grow = g.stack ? (g.same ? Infinity : (STACK_PX * 2.5) / Math.max(g.spread, 1e-6)) : g.grow; // a stack parts once its pins are more than STACK_PX apart
+    const need = grow > 0 && isFinite(grow) ? Math.ceil(Math.log2(grow)) : Infinity;
     const target = Math.min(top, z + need);
     map.closePopup();
     if (!isFinite(need) || target <= z) { // as far in as the map goes: show the information without moving
+      if (g.stack && !map.getBounds().contains(g.ll)) map.panTo(g.ll, { animate: false }); // a stack found from the list: bring its pin into view
       if (openId) UI.markerCard(openId); else UI.toast('The map cannot zoom in far enough to spread these out. Tap a name in the list for its information.');
       return;
     }

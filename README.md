@@ -293,6 +293,13 @@ manuscripts have no ISBN and are typed by hand as before.
   that pin for the list of names: a name zooms in until the pins have room and opens that marker's
   bubble, and *Zoom in to spread them out* does the same without opening one. Zooming in by hand
   separates them again. Ties to a marker under a shared pin are drawn to that pin.
+* **Markers on the same spot.** Pins that would cover each other (people located at the same town
+  marker, travellers on a route, places too close to tell apart at this zoom) are drawn as **one pin
+  showing how many there are**. With labels on it reads "Haran +2" when the others are located at
+  Haran, otherwise "3 markers". Tap it for the list of names; a name opens that marker's information.
+  When zooming in can part them the bubble says so and offers *Zoom in to spread them out*; markers at
+  the very same place stay under the one pin at every zoom. Pins inside an area keep their own fan
+  and counted pin, described above.
 * **A party that travels together.** In Library → Fact types, each role has a tick **they go there too**.
   A fact of that type that has a place then puts everyone named in the role at that place as well, over
   the fact's dates. So a journey is entered once: a fact type such as "Moved to" with a role "Took with
