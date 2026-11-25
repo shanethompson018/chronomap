@@ -21,6 +21,8 @@ cross items off as they land. We go through it one item at a time.
   through the places.
 - **Section 20:** markers inside a marker (an army, a country, a company), with exclusions. His answers
   are recorded (25 Nov 2026); steps 20.1 and 20.2 proposed; waiting for his go-ahead to build.
+- **Section 21:** editing a time gap after it is saved. Built 25 Nov 2026 (an Edit button on every time
+  gap); not checked on the Boox.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
@@ -833,3 +835,48 @@ Proposed steps (put to him 25 Nov, awaiting his go-ahead):
       member but the exceptions.
 
 The "3 things" in his message of 25 Nov was a typo: there were two.
+
+## 21. Editing a time gap (asked 25 Nov 2026, built 25 Nov 2026)
+
+The user's words: "I need to be able to edit time gaps".
+
+**What the app does today.** Once a time gap (a tie between two dates) is saved, only its note, its
+confidence and the reason can be changed, and only in Library, Time gaps. It can be overruled, restored
+or deleted. Its length (years, months, days), "after" or "before", "give or take", which other date it
+points to, which part of the date it sets (earliest, the date, latest), its source and its verse cannot be
+changed: he has to delete it and enter it again. The pencil button in Library, Time gaps opens the marker,
+not the time gap.
+
+Step (put to him 25 Nov; he said "Build it" the same day, with two changes, below):
+
+- [x] **21.1 An Edit button on every time gap. Built 25 Nov 2026.** In the marker editor's Time gaps list and in Library,
+      Time gaps. It opens the same dialog used to add a tie, filled in with that time gap: Earliest / The
+      date / Latest, on / after / before, the length, give or take (at least, at most), the other marker
+      and which of its dates, the source, the verse, the note, the confidence and its reason. Save changes
+      that one time gap in place and the dates are worked out again. It stays overruled if it was.
+
+**His answer, 25 Nov 2026:** "Do not do 1. I need to be able to change the date incase I make an error. I
+don't want to have to redo the whole time gap. Do not do 3. I should be able to edit it how I see fit.
+Build it". So, of the four recommendations put to him:
+
+* (1, refused) The date the time gap belongs to **can** be changed in the dialog: a marker and one of its
+  dates, at the top.
+* (2, kept) In Library, Time gaps the "✏️ Edit" button edits the time gap, and a separate "Marker" button
+  opens the marker.
+* (3, refused) "+ Add another tie" **is** offered while editing. The first row is the time gap being
+  edited; a row he adds is saved as a new tie on the same date.
+* (4, kept) The limits the app keeps by itself (the order of a journey's stops, "Part of") are not time
+  gaps and are not editable.
+
+**As built, 25 Nov 2026.** "✏️ Edit" is on each row of the marker editor's Time gaps list and of Library,
+Time gaps. The dialog opens filled in; Save changes alters that one time gap in place (it stays overruled
+if it was) and the dates are worked out again. Settled while building:
+
+* When the time gap is moved off a date it had reckoned, that date is emptied again (it was only ever
+  worked out from the time gap).
+* A date he has typed at a newly chosen end becomes an anchor, as it does when a tie is first made, so the
+  reckoning never overwrites a typed date; if the two then disagree it is listed under Conflicts.
+* The row being edited has no remove button in the dialog: a time gap is deleted from its list, as before.
+
+Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
+on the Boox itself.

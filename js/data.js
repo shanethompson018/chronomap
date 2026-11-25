@@ -116,7 +116,8 @@ window.DataTab = (() => {
         h('td', { class: 'narrow' }, over ? 'overruled' : 'active'),
         h('td', { class: 'narrow' },
           h('button', { class: 'small', onclick: () => Store.updateRelation(r.id, { status: over ? 'active' : 'overruled' }) }, over ? 'Restore' : 'Overrule'), ' ',
-          h('button', { class: 'small', onclick: () => { const ref = r.to.kind === 'marker' ? r.to : r.from; Editor.open(ref.kind === 'marker' ? ref.id : (Store.link(ref.id) || {}).fromId); } }, '✏️'), ' ',
+          h('button', { class: 'small', title: 'Edit this time gap: its length, after or before, the dates it joins, its source and note', onclick: () => Relations.pick(r.to, { edit: r.id }) }, '✏️ Edit'), ' ',
+          h('button', { class: 'small', title: 'Open the marker this time gap belongs to', onclick: () => { const ref = r.to.kind === 'marker' ? r.to : r.from; Editor.open(ref.kind === 'marker' ? ref.id : (Store.link(ref.id) || {}).fromId); } }, 'Marker'), ' ',
           h('button', { class: 'small danger', onclick: () => { if (confirm('Delete this time gap?')) Store.deleteRelation(r.id); } }, '✕'))));
     }
     if (!rels.length) tb.append(h('tr', {}, h('td', { colspan: 7, class: 'muted' }, 'No ties between dates yet. Open a marker and press ⛓ beside one of its dates.')));

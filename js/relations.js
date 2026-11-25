@@ -375,8 +375,19 @@ window.Relations = (() => {
     }
     return rel;
   }
-  // What the rows would give, worked out before anything is saved.
-  function preview(thisRef, rows) {
+  // The dialog row a saved tie came from, to edit it: the reverse of rowRelation.
+  function rowOf(r) {
+    const abs = o => [Math.abs(o.years) || '', Math.abs(o.months) || '', Math.abs(o.days) || ''];
+    const sgnOf = o => { const n = o ? toDays(o) : 0; return n < 0 ? -1 : n > 0 ? 1 : 0; };
+    const o = offOf(r), range = !isLimit(r) && !!(r.min || r.max);
+    const sgn = sgnOf(o) || sgnOf(r.max) || sgnOf(r.min);
+    const a = abs(o);
+    const row = { part: r.part, where: sgn < 0 ? 'before' : (sgn > 0 || range) ? 'after' : 'on', y: a[0], m: a[1], d: a[2], markerId: r.from.id, slotKey: key(r.from), verse: '', approx: range, lo: ['', '', ''], hi: ['', '', ''] };
+    if (range) { const lo = sgn < 0 ? r.max : r.min, hi = sgn < 0 ? r.min : r.max; if (lo) row.lo = abs(lo); if (hi) row.hi = abs(hi); } // "before": the larger length is the earlier date
+    return row;
+  }
+  // What the rows would give, worked out before anything is saved. `skipId`: the tie being edited, left out as it stands.
+  function preview(thisRef, rows, skipId) {
     const ready = rows.filter(r => r.slotKey);
     const bits = [];
     const dateRow = ready.find(r => r.part === 'date');
@@ -387,7 +398,7 @@ window.Relations = (() => {
     }
     const extra = ready.filter(r => r.part !== 'date').map((r, i) => Object.assign(rowRelation(thisRef, r, {}), { id: 'new' + i }));
     if (extra.length || !dateRow) {
-      const n = windows(limitRels().concat(extra)).W.get(key(thisRef));
+      const n = windows(limitRels().filter(r => r.id !== skipId).concat(extra)).W.get(key(thisRef));
       if (n && closed(n)) bits.push(`no room: not before ${Dates.formatInput(n.E)} yet not after ${Dates.formatInput(n.L)}`);
       else if (n && !dateRow) bits.push(Facts.whenText(false, '', '', '', n.E, n.L) || 'no limit yet (the other date is not known)');
       else if (n && (n.E || n.L)) bits.push('within ' + Facts.whenText(false, '', '', '', n.E, n.L));
@@ -396,19 +407,42 @@ window.Relations = (() => {
     return bits.join(' · ');
   }
   // Open the dialog for one date. `part` is the part the first row starts on ('date', 'min' or 'max').
-  function pick(thisRef, { onDone, part = 'date' } = {}) {
-    const ownerId = thisRef.id;
-    const newRow = p => ({ part: p, where: p === 'date' ? 'after' : 'on', y: '', m: '', d: '', markerId: ownerId, slotKey: '', verse: '', approx: false, lo: ['', '', ''], hi: ['', '', ''] });
-    const rows = [newRow(part)];
-    const shared = { sourceId: null, page: '', note: '', confidence: '', reason: '' };
+  // `edit` (a time gap's id) opens it filled in with that time gap instead: the first row is the saved tie, the
+  // date it belongs to can be changed at the top, and rows added with "+ Add another tie" are saved as new ties.
+  function pick(thisRef, { onDone, part = 'date', edit = null } = {}) {
+    const editing = edit ? Store.relation(edit) : null;
+    if (edit && !(editing && editing.from && editing.to)) { UI.toast('That time gap is no longer there', 'error'); return; }
+    if (editing) thisRef = editing.to;
+    const newRow = p => ({ part: p, where: p === 'date' ? 'after' : 'on', y: '', m: '', d: '', markerId: thisRef.id, slotKey: '', verse: '', approx: false, lo: ['', '', ''], hi: ['', '', ''] });
+    const rows = [editing ? rowOf(editing) : newRow(part)];
+    const shared = editing ? { sourceId: editing.sourceId || null, page: editing.page || '', note: editing.note || '', confidence: editing.confidence || '', reason: editing.reason || '' }
+      : { sourceId: null, page: '', note: '', confidence: '', reason: '' };
     const list = h('div', { class: 'tie-rows' }), result = h('div', { class: 'tie-result' });
     const saveBtn = h('button', { class: 'primary', onclick: () => save() }, 'Save tie');
+    // editing: which date the time gap belongs to (a marker and one of its dates), in case the wrong one was chosen
+    const thisBox = h('div', { class: 'tie-this' });
+    function drawThis() {
+      thisBox.innerHTML = '';
+      if (!editing) return;
+      const slots = Store.slotsOfMarker(thisRef.id);
+      const slotSel = h('select', { title: 'Which of that marker\'s dates this time gap sets' }, ...slots.map(x => h('option', { value: Store.refKey(x.ref) }, `${x.label}${Store.slotValue(x.ref) ? ' · ' + Dates.formatInput(Store.slotValue(x.ref)) : ''}`)));
+      slotSel.value = Store.refKey(thisRef);
+      slotSel.addEventListener('change', () => { thisRef = Store.parseRefKey(slotSel.value); draw(); });
+      const markerSel = UI.markerSelect({ value: thisRef.id, placeholder: 'Which marker…', onChange: v => {
+        if (!v) return;
+        const first = Store.slotsOfMarker(v)[0];
+        if (!first) { UI.toast('That marker has no dated fact to attach a time gap to', 'error'); drawThis(); return; }
+        thisRef = first.ref; drawThis(); draw();
+      } });
+      thisBox.append(h('div', { class: 'side-title' }, 'The date this time gap belongs to'),
+        h('div', { class: 'ed-row' }, h('div', { class: 'field' }, 'Marker', markerSel), h('label', { class: 'field' }, 'Which of its dates', slotSel)));
+    }
     const slotsFor = row => (row.markerId ? Store.slotsOfMarker(row.markerId).filter(x => !Store.sameRef(x.ref, thisRef)) : []);
     // the words beside each row and the result line follow the typing, without rebuilding the boxes being typed in
     function refresh() {
       rows.forEach((row, i) => { const el = list.querySelector(`[data-reads="${i}"]`); if (el) el.textContent = 'Reads as: ' + readsAs(row); });
-      result.textContent = 'Result: ' + preview(thisRef, rows);
-      saveBtn.textContent = rows.length > 1 ? `Save ${rows.length} ties` : 'Save tie';
+      result.textContent = 'Result: ' + preview(thisRef, rows, editing ? editing.id : null);
+      saveBtn.textContent = editing ? (rows.length > 1 ? `Save changes and ${rows.length - 1} new tie${rows.length > 2 ? 's' : ''}` : 'Save changes') : rows.length > 1 ? `Save ${rows.length} ties` : 'Save tie';
     }
     const num = (get, set, label) => { const el = h('input', { type: 'number', min: 0, inputmode: 'numeric', class: 'tie-num', value: get(), 'aria-label': label, title: label }); el.addEventListener('input', () => { set(el.value); refresh(); }); return el; };
     const lenBoxes = (get, set) => h('span', { class: 'tie-len' },
@@ -431,7 +465,7 @@ window.Relations = (() => {
         const len = row.where === 'on' ? null : lenBoxes(k => row['ymd'[k]], (k, v) => { row['ymd'[k]] = v; });
         const verse = h('input', { type: 'text', class: 'tie-verse', value: row.verse, placeholder: 'verse, if different', title: 'This row\'s own page or verse. Left blank, the one below is used.' });
         verse.addEventListener('input', () => { row.verse = verse.value; });
-        const del = rows.length > 1 ? h('button', { type: 'button', class: 'small icon', title: 'Remove this row', onclick: () => { rows.splice(i, 1); draw(); } }, '✕') : null;
+        const del = rows.length > 1 && !(editing && i === 0) ? h('button', { type: 'button', class: 'small icon', title: 'Remove this row', onclick: () => { rows.splice(i, 1); draw(); } }, '✕') : null; // the time gap being edited is deleted from its list, not here
         let give = null, giveRow = null;
         if (row.part === 'date' && row.where !== 'on') {
           const tick = h('input', { type: 'checkbox', checked: row.approx });
@@ -451,28 +485,39 @@ window.Relations = (() => {
     }
     function save() {
       if (rows.some(r => !r.slotKey)) { UI.toast('Pick the other date on every row, or remove the row', 'error'); return; }
+      if (editing) { // the first row is the saved time gap, changed in place (it keeps its id and stays overruled if it was)
+        Store.updateRelation(editing.id, rowRelation(thisRef, rows[0], shared));
+        const more = rows.length > 1 ? Store.addRelations(rows.slice(1).map(r => rowRelation(thisRef, r, shared))) : [];
+        m.close();
+        onDone && onDone();
+        UI.toast(more.length ? `Time gap changed, ${more.length} new tie${more.length > 1 ? 's' : ''} saved` : 'Time gap changed');
+        return;
+      }
       const saved = Store.addRelations(rows.map(r => rowRelation(thisRef, r, shared)));
       m.close();
       onDone && onDone();
       UI.toast(saved.length === 1 ? 'Tie saved' : `${saved.length} ties saved`);
     }
-    const page = h('input', { type: 'text', placeholder: 'page / verse' });
+    const page = h('input', { type: 'text', placeholder: 'page / verse', value: shared.page });
     page.addEventListener('input', () => { shared.page = page.value; });
-    const note = h('input', { type: 'text', placeholder: 'e.g. "When Adam had lived 130 years, he fathered Seth"' });
+    const note = h('input', { type: 'text', placeholder: 'e.g. "When Adam had lived 130 years, he fathered Seth"', value: shared.note });
     note.addEventListener('input', () => { shared.note = note.value; });
-    const reason = h('input', { type: 'text', placeholder: 'why this grade' });
+    const reason = h('input', { type: 'text', placeholder: 'why this grade', value: shared.reason });
     reason.addEventListener('input', () => { shared.reason = reason.value; });
     const body = h('div', { class: 'rel-form' },
-      h('p', { class: 'hint' }, 'Each row ties one part of this date to another date. Earliest means "not before", Latest means "not after", and The date places it exactly. Choose "on" for the other date itself, or "after" / "before" to give a length of time.'),
+      thisBox,
+      h('p', { class: 'hint' }, editing ? 'Change whatever is wrong and press Save changes: the date this time gap belongs to (above), the part it sets, on / after / before, the length, the other date, the source and the note. The first row is the time gap you are editing; a row you add is saved as a new tie.'
+        : 'Each row ties one part of this date to another date. Earliest means "not before", Latest means "not after", and The date places it exactly. Choose "on" for the other date itself, or "after" / "before" to give a length of time.'),
       list,
       h('div', { class: 'row', style: { margin: '2px 0 12px' } }, h('button', { type: 'button', class: 'small', style: { flex: 'none' }, onclick: () => { rows.push(newRow(rows[rows.length - 1].part)); draw(); } }, '+ Add another tie'), h('span', { class: 'spacer' })),
       h('div', { class: 'side-title' }, 'For all of these'),
-      h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Source', UI.sourceSelect({ onChange: v => { shared.sourceId = v; } })), h('label', { class: 'field' }, 'Page / verse', page)),
+      h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Source', UI.sourceSelect({ value: shared.sourceId, onChange: v => { shared.sourceId = v; } })), h('label', { class: 'field' }, 'Page / verse', page)),
       h('label', { class: 'field' }, 'Note (the wording you are relying on)', note),
-      h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Confidence (your grade)', UI.confidenceSelect('', v => { shared.confidence = v; })), h('label', { class: 'field' }, 'Reason', reason)),
+      h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Confidence (your grade)', UI.confidenceSelect(shared.confidence, v => { shared.confidence = v; })), h('label', { class: 'field' }, 'Reason', reason)),
       result,
       h('div', { class: 'row' }, saveBtn, h('button', { onclick: () => m.close() }, 'Cancel')));
-    const m = UI.modal({ title: `Ties for ${Store.slotLabel(thisRef)}`, body, width: '820px' });
+    const m = UI.modal({ title: editing ? 'Edit time gap' : `Ties for ${Store.slotLabel(thisRef)}`, body, width: '820px' });
+    drawThis();
     draw();
   }
   // Turn a tie on a date into a limit on an end (for a gap of nothing that was meant as "some time after").

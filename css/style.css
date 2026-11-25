@@ -404,6 +404,8 @@ button.icon { padding: 4px 7px; }
 /* the tie dialog: one row per tie */
 .tie-row { padding: 8px; }
 .tie-row-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tie-this:empty { display: none; }
+.tie-this { margin-bottom: 10px; }
 .tie-row-top select { width: auto; flex: 0 0 auto; }
 .tie-row-top .mselect { flex: 1 1 calc(150px * var(--fs)); min-width: calc(120px * var(--fs)); }
 .tie-row-top .tie-slot { flex: 1 1 calc(170px * var(--fs)); min-width: 0; }

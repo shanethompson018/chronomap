@@ -118,6 +118,11 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - The tie dialog: `Relations.pick(thisRef, { part, onDone })`, rows of `{ part, where: 'on'|'after'|'before',
   y, m, d, markerId, slotKey, verse, approx, lo, hi }` with one shared source, a "Reads as" line per row and a
   result preview. `convert(relId, part)` turns a zero gap into a limit (Library → Time gaps).
+- Editing a tie (21.1): `Relations.pick(null, { edit: relId })` opens the same dialog filled in. `rowOf(r)` is the
+  reverse of `rowRelation`. The first row is the saved tie (`Store.updateRelation`, id and status kept); rows
+  added are new ties. `thisRef` can be changed in the `.tie-this` box. `preview` leaves the edited tie out as it
+  stands (`skipId`). In store.js `updateRelation` runs `anchorEnds` when the patch names `from` / `to`, and
+  `applySolved` empties a reckoned date whose tie no longer touches it.
 - Not built: the lifetime rule (design step C) and the Timeline bar layout (step E).
 
 ## js/editor.js

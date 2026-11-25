@@ -680,7 +680,14 @@ window.Store = (() => {
     if (out.length) commit({ type: 'relation', id: out[out.length - 1].id });
     return out;
   }
-  function updateRelation(id, patch) { const r = relation(id); if (!r) return null; Object.assign(r, normRelation(Object.assign({}, r, clone(patch), { id }))); touch(r); commit({ type: 'relation', id }); return r; }
+  // An edit that names the two dates again (the edit dialog) follows the anchor rule of a new tie, so a typed
+  // date at a newly chosen end becomes an anchor and is not overwritten by the reckoning.
+  function updateRelation(id, patch) {
+    const r = relation(id); if (!r) return null;
+    Object.assign(r, normRelation(Object.assign({}, r, clone(patch), { id }))); touch(r);
+    if ((patch.from || patch.to) && r.from && r.to && r.part !== 'min' && r.part !== 'max') anchorEnds(r);
+    commit({ type: 'relation', id }); return r;
+  }
   function deleteRelation(id) { if (relation(id)) tombstone('relations', id); S.relations = S.relations.filter(r => r.id !== id); commit({ type: 'relation', id, deleted: true }); }
 
   // Write the solver's results: derived dates and the "where this came from" notes. Only slots whose
@@ -705,8 +712,9 @@ window.Store = (() => {
       // into a limit on an end) is cleared, so it does not linger looking like a typed date.
       for (const slot of Object.keys(o.derived || {})) {
         if (nd[slot] || (o.pinned || []).includes(slot) || !slotFact(o, slot)) continue;
-        const rel = relation((o.derived[slot] || {}).relationId);
-        if (rel && rel.status === 'active' && rel.part !== 'min' && rel.part !== 'max') continue;
+        const rel = relation((o.derived[slot] || {}).relationId), ref = { kind, id: o.id, slot };
+        // (a tie that was edited to point at other dates no longer reckons this one either)
+        if (rel && rel.status === 'active' && rel.part !== 'min' && rel.part !== 'max' && (sameRef(rel.from, ref) || sameRef(rel.to, ref))) continue;
         setSlotRaw(o, slot, '', '', ''); touch(o); changed = true;
       }
       if (JSON.stringify(nd) !== JSON.stringify(o.derived || {})) { o.derived = nd; changed = true; }

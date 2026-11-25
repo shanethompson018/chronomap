@@ -838,6 +838,7 @@ window.Editor = (() => {
         h('span', { class: 'rel-badge chain' }, '⛓'),
         h('div', { class: 'grow' }, h('div', {}, Relations.describeRelation(r)),
           h('div', { class: 'sub' }, [over ? 'overruled' : null, r.note, r.sourceId && Store.source(r.sourceId) ? `📖 ${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}` : null].filter(Boolean).join(' · '))),
+        h('button', { type: 'button', class: 'small', title: 'Edit this time gap: its length, after or before, the dates it joins, its source and note', onclick: () => Relations.pick(r.to, { edit: r.id, onDone: () => syncDraftFromStore(true) }) }, '✏️ Edit'),
         h('button', { type: 'button', class: 'small', title: over ? 'Use this time gap again' : 'Keep the record but leave it out of the maths', onclick: () => Store.updateRelation(r.id, { status: over ? 'active' : 'overruled' }) }, over ? 'Restore' : 'Overrule'),
         h('button', { type: 'button', class: 'small', title: 'Delete time gap', onclick: () => { if (confirm('Delete this time gap?')) Store.deleteRelation(r.id); } }, '✕')));
     }

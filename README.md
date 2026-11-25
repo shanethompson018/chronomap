@@ -451,6 +451,11 @@ limit. A date with limits and no date of its own shows as its window, "between 2
 the window at the reduced strength used for approximate dates, and the Timeline gives it a row of its
 own labelled with the window.
 
+**Editing a time gap.** Every time gap has an **✏️ Edit** button, in the marker editor's Time gaps list
+and in Library → Time gaps. It opens the tie dialog filled in: change the date it belongs to, the part it
+sets, on / after / before, the length, give or take, the other date, the source, verse and note, then
+press Save changes. A row added with "+ Add another tie" is saved as a new tie.
+
 Every limit is used both ways, the way Primavera P6 works out early and late dates. If a journey is not
 before a marriage, the marriage is not after the journey, and you enter that once. A fact with a from
 and an until date carries one limit of its own: the until date is not before the from date.
