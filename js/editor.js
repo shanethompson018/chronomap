@@ -53,6 +53,7 @@ window.Editor = (() => {
   const touch = () => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } };
   function syncView() {
     const open = !!draft && !drawer.classList.contains('hidden');
+    if (open && window.App && App.fitDrawer) App.fitDrawer(); // on a PC the drawer ends above the time bar
     if (!open) parked = false;
     drawer.classList.toggle('parked', open && parked);
     document.body.classList.toggle('editing', open && !parked && full());

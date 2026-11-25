@@ -43,6 +43,14 @@ window.App = (() => {
     document.body.classList.toggle('ed-side', !compact && !eink && !coarse);
     const top = document.querySelector('.topbar');
     if (top) document.documentElement.style.setProperty('--top-h', top.offsetHeight + 'px');
+    fitDrawer();
+  }
+  // On a PC the editor is a drawer down the right-hand side. It ends above the map's time bar (when the Map tab
+  // is showing), so the whole slider can be reached while the editor is open. CSS: --ed-bottom on .drawer.
+  function fitDrawer() {
+    const tb = document.querySelector('.timebar');
+    const h = tb && tb.offsetParent !== null ? tb.offsetHeight : 0;
+    document.documentElement.style.setProperty('--ed-bottom', h + 'px');
   }
   function applySize(v, announce) {
     size = v;
@@ -100,6 +108,7 @@ window.App = (() => {
     setTimeout(saveSession, 0);
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+    setTimeout(fitDrawer, 0); // the time bar belongs to the Map tab
     if (name === 'map') MapView.show();
     else if (name === 'ties') Ties.show();
     else if (name === 'network') Network.show();
@@ -191,6 +200,7 @@ window.App = (() => {
     document.getElementById('btn-size-down').addEventListener('click', () => stepSize(-1));
     document.getElementById('btn-size-up').addEventListener('click', () => stepSize(1));
     window.addEventListener('resize', fitLayout);
+    try { new ResizeObserver(fitDrawer).observe(document.querySelector('.timebar')); } catch (e) { /* the resize handler still does it */ } // the bar wraps, or its tab is hidden or shown
     fitLayout();
     restoreSession();
     if (Editor.resume) Editor.resume(); // an unsaved marker edit from a session that was stopped
@@ -277,7 +287,7 @@ window.App = (() => {
     }).catch(e => console.warn('Service worker not registered', e));
   }
 
-  return { init, showTab, currentTab, newMarker, isEink, backHTML, gotoMarker, size: getSize, isCompact: () => document.body.classList.contains('compact') };
+  return { init, showTab, fitDrawer, currentTab, newMarker, isEink, backHTML, gotoMarker, size: getSize, isCompact: () => document.body.classList.contains('compact') };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);
