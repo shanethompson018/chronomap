@@ -541,6 +541,9 @@ body.eink .fact-where, body.eink .fact-role { background: #fff; border: 1px soli
 .journey-stop .ed-row > .journey-n { align-self: center; font-size: calc(13px * var(--fs)); }
 .journey-stop .ed-row > button.narrow { align-self: center; }
 body.eink .journey-stop { border-left-color: #000; }
+/* who makes which part: "joins at" / "leaves at" under a traveller's name */
+.journey-part { margin: -2px 0 8px 14px; }
+.journey-part .field { margin-bottom: 2px; }
 
 /* ---------- approximation ---------- */
 .approx-row { margin-top: 3px; }

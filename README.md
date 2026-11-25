@@ -338,6 +338,12 @@ manuscripts have no ISBN and are typed by hand as before.
   under ⚠ Conflicts as "The order of the journey". A stop with no Arrived date and no window places
   nobody; a stop with no Left date lasts until the next dated place. With no route drawn, the travellers
   stay at each place until they reach the next.
+* **Who makes which part of a journey.** Once a journey has a stop, each traveller named on it has two
+  boxes under their name: **joins at** (the start, or a stop) and **leaves at** (a stop, or the end).
+  Someone who joins at a stop is not placed by the journey before the party arrives there; if nothing
+  else places them, they are shown waiting at that stop. Someone who leaves at a stop stays there until
+  their own next location, and the journey does not bring them to its end place. Left alone, a traveller
+  makes the whole journey. The marker the fact is on always makes the whole journey.
 * **Rough borders.** An area outline can carry a second, lighter dashed outline: the **largest possible
   extent** ("Draw extent"). Each edge of either outline can be marked **firm** (solid: a coast, a
   river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the

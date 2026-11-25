@@ -451,7 +451,7 @@ window.Editor = (() => {
     const w = Facts.when(f);
     const whenLabel = Facts.whenLabel(w, !!(t && t.hasEnd)); // the date, or its window when no date is known
     if (whenLabel) bits.push(whenLabel);
-    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${r ? r.name : 'with'}: ${Store.displayName(o)}` : ''; }).filter(Boolean).join(', ');
+    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); const part = t && t.journey ? UI.partText(f.stops, p) : ''; return o ? `${r ? r.name : 'with'}: ${Store.displayName(o)}${part ? ` (${part})` : ''}` : ''; }).filter(Boolean).join(', ');
     let place = f.placeLabel || '';
     if (!place && f.where && f.where.kind === 'marker') place = (Store.marker(f.where.markerId) || {}).name || '';
     else if (!place && f.where && f.where.kind === 'point') place = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
@@ -476,7 +476,7 @@ window.Editor = (() => {
         const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
         return h('div', { class: 'card fact-card mirror-card' },
           h('div', { class: 'row' },
-            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', UI.journeyText(mi) ? ' · ' + UI.journeyText(mi) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
+            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', UI.journeyText(mi) ? ' · ' + UI.journeyText(mi) : '', UI.partText(mi.stops, mi) ? ' · ' + UI.partText(mi.stops, mi) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
             h('button', { type: 'button', class: 'small narrow', title: `Open ${o.name} to edit that fact`, onclick: () => open(o.id) }, '✏️ ' + o.name)));
       }).filter(Boolean)];
   }
@@ -679,9 +679,23 @@ window.Editor = (() => {
   function renderRole(i, role) {
     const f = draft.facts[i];
     const mine = f.participants.map((p, idx) => ({ p, idx })).filter(x => x.p.roleId === role.id);
-    const items = mine.map(({ p, idx }) => row(
+    // On a journey with stops, each traveller can make only part of it: "joins at" (the start or a stop) and
+    // "leaves at" (a stop or the end). Stored on the participant as the stop's id; absent = the start / the end.
+    const t = Store.factType(f.typeId), all = f.stops || [], stops = t && t.journey && role.goes ? Store.stopsOf(f) : [];
+    const partRow = (p, idx) => {
+      if (!stops.length) return null;
+      const opts = stops.map(s => [s.id, `${all.indexOf(s) + 1}. ${Store.stopName(s)}`]);
+      const cur = key => (stops.some(s => s.id === p[key]) ? p[key] : '');
+      const sel = (key, first, title) => { const e = UI.select(key === 'joinAt' ? [['', first], ...opts] : [...opts, ['', first]], cur(key), { title }); e.addEventListener('change', () => { const q = draft.facts[i].participants[idx]; if (e.value) q[key] = e.value; else delete q[key]; render(); }); return e; };
+      const wrong = cur('joinAt') && cur('leaveAt') && stops.findIndex(s => s.id === p.joinAt) > stops.findIndex(s => s.id === p.leaveAt);
+      return h('div', { class: 'journey-part' },
+        row(h('label', { class: 'field' }, 'joins at', sel('joinAt', 'the start', 'Where this traveller joins the party. Before the party arrives there, the journey does not place them.')),
+          h('label', { class: 'field' }, 'leaves at', sel('leaveAt', 'the end', 'Where this traveller leaves the party. They stay there until their own next location.'))),
+        wrong ? h('div', { class: 'rel-caption conflict' }, '⚠ They join after they leave, so the journey places them nowhere.') : null);
+    };
+    const items = mine.flatMap(({ p, idx }) => [row(
       UI.markerSelect({ value: p.markerId, exclude: [id], placeholder: `${role.name}…`, onChange: v => { if (v) draft.facts[i].participants[idx].markerId = v; } }),
-      h('button', { type: 'button', class: 'small narrow', title: 'Remove', onclick: () => { draft.facts[i].participants.splice(idx, 1); render(); } }, '✕')));
+      h('button', { type: 'button', class: 'small narrow', title: 'Remove', onclick: () => { draft.facts[i].participants.splice(idx, 1); render(); } }, '✕')), partRow(p, idx)]);
     const adder = UI.markerSelect({ exclude: [id, ...mine.map(x => x.p.markerId)], placeholder: mine.length ? `+ another ${role.name.toLowerCase()}…` : `${role.name}…`, onChange: v => { if (v) { draft.facts[i].participants.push({ roleId: role.id, markerId: v }); render(); } } });
     const tie = Store.linkType(role.tieTypeId);
     return h('div', { class: 'fact-role' }, h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, role.name, tie ? h('span', { class: 'muted' }, ` · tie: ${tie.name}`) : h('span', { class: 'muted' }, ' · no tie type set'),

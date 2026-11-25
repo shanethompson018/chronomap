@@ -48,7 +48,9 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 ## js/facts.js
 
 - A fact: `{ typeId, date, dateEnd, dateMin, dateMax, dateEndMin, dateEndMax, where, participants: [{roleId,
-  markerId}], details, note, sourceId, page, confidence }` plus the calculated `calc…` ends.
+  markerId}], details, note, sourceId, page, confidence }` plus the calculated `calc…` ends. On a journey a
+  participant may also carry `joinAt` / `leaveAt` (a stop's id; absent = the start / the end): `normFact` keeps
+  them and `cleanReferences` deletes one that no longer names a stop of that fact.
 - `derive(d)` runs on every commit: Begins/Ends, moves (locations), links, then `deriveSiblings` (Sibling of /
   Half-sibling of from shared Parent of ties; one parent in common = half, the owner's rule) and
   `deriveMirrors` (a fact shown on the other marker: Son / Daughter / Father / Husband… by the owner's sex;
@@ -74,6 +76,13 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   party" drops every journey move from that day on and cuts the one in progress. A journey with no stops takes
   the old code path untouched. `derive` runs before the solver has written a new stop's window, so the stop is
   placed on the second pass (the commit `applyWindows` makes).
+- Who makes which part (19.2): `j.span(T)` gives `{ jp, lp }`, the positions among **all** the fact's stops
+  (`j.pos`, dated or not) of the stop T joins at (-1 = the start) and leaves at (Infinity = the end). The leg
+  into stop p is T's when `jp < p <= lp`; the stay at p when `jp <= p <= lp`, with no `dateEnd` at `p === lp`;
+  the last leg and `~end` only when `lp` is Infinity. The `~start` of a joiner is the join stop's place, judged
+  against the day the party arrives there. "Left the party" counts only own places dated after T's own first
+  day (`since`). `jp > lp`: the route copy is removed and nothing is placed. The owner pin has no entry in
+  `j.part` and makes the whole journey. Mirrors carry `joinAt` / `leaveAt`; `UI.partText(stops, p)` words them.
 - `when(f)` merges typed ends with calculated ends and returns `{ date, min, max, lo, hi, known, knownEnd, … }`.
   With no date, `date` is the middle of the window (or its one end) for ordering only. `whenText` / `whenLabel`
   word a date or its window ("between X and Y", "after X", "before X").
@@ -116,6 +125,8 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   date check all walk `f.stops` as well. `UI.journeyText(j, html)` (`j` = the fact or its mirror) words it
   ("from Ur, by way of Carchemish, stopping at Haran (dates), to Shechem") for the fact line, the mirror line
   and the information panel. A marker row has two ✕: the chooser's own (clears the box, ignored) and the row's.
+- `renderRole`: on a journey fact with stops, a role with `goes` shows a `.journey-part` row under each name
+  ("joins at" / "leaves at", options numbered as in the places list).
 
 ## js/map.js
 

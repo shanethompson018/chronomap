@@ -86,7 +86,8 @@ window.Store = (() => {
     if (!CONFIDENCE.includes(o.confidence)) o.confidence = '';
     // a range needs both ends; a lone bound is kept as typed but does not count as a range
     ['date', 'dateEnd'].forEach(k => { if (o[k + 'Min'] && o[k + 'Max'] && Dates.toDays(o[k + 'Min']) != null && Dates.toDays(o[k + 'Max']) != null && Dates.toDays(o[k + 'Min']) > Dates.toDays(o[k + 'Max'])) { const t = o[k + 'Min']; o[k + 'Min'] = o[k + 'Max']; o[k + 'Max'] = t; } });
-    o.participants = (o.participants || []).filter(p => p && p.roleId && p.markerId).map(p => ({ roleId: p.roleId, markerId: p.markerId }));
+    // a traveller on a journey may make only part of it: joinAt / leaveAt name a stop (its id); absent = the start / the end
+    o.participants = (o.participants || []).filter(p => p && p.roleId && p.markerId).map(p => { const q = { roleId: p.roleId, markerId: p.markerId }; if (p.joinAt) q.joinAt = p.joinAt; if (p.leaveAt) q.leaveAt = p.leaveAt; return q; });
     o.details = o.details || {};
     if (!o.startAt) delete o.startAt; if (!o.endAt) delete o.endAt; // a journey's start and end place (marker ids); absent when not set
     if (Array.isArray(o.stops)) o.stops = o.stops.map(normStop).filter(Boolean); // the places along a journey, in order
@@ -186,6 +187,8 @@ window.Store = (() => {
         if (f.where && f.where.kind === 'marker' && (!has('markers', f.where.markerId) || f.where.markerId === m.id)) f.where = null;
         for (const k of ['startAt', 'endAt']) if (f[k] && (!has('markers', f[k]) || f[k] === m.id)) delete f[k];
         if (f.stops) { f.stops = f.stops.filter(s => s.at.kind !== 'marker' || (has('markers', s.at.markerId) && s.at.markerId !== m.id)); if (!f.stops.length) delete f.stops; }
+        const stopIds = new Set(stopsOf(f).map(s => s.id)); // "joins at" / "leaves at" must name a stop that is still there
+        f.participants.forEach(p => { for (const k of ['joinAt', 'leaveAt']) if (p[k] && !stopIds.has(p[k])) delete p[k]; });
       });
       const factIds = new Set((m.facts || []).flatMap(f => [f.id, ...stopsOf(f).map(s => s.id)])); // a stop's dates are slots too
       const slotOk = s => { if (!s.startsWith('fact:')) return false; const id = s.slice(5).replace(/:end$/, ''); return factIds.has(id); };

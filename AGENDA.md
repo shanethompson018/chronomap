@@ -15,9 +15,10 @@ cross items off as they land. We go through it one item at a time.
 - **Section 18:** markers stacked on one spot share one numbered pin; clicking it lists them. Built
   25 Nov 2026; not checked on the Boox.
 - **Section 19:** routes with stops on the way, and a short route that is part of a longer one. He said
-  to build it ("19: stops first", 25 Nov 2026). 19.1 (places along a journey) built 25 Nov 2026; not
-  checked on the Boox. 19.2 (who makes which part) and 19.3 ("Part of" a longer journey) are next. A
-  place passed is recorded in the wording only until 17.3 draws a line through the places.
+  to build it ("19: stops first", 25 Nov 2026). 19.1 (places along a journey) and 19.2 (who makes which
+  part: "joins at" / "leaves at") built 25 Nov 2026; not checked on the Boox. 19.3 ("Part of" a longer
+  journey) is next. A place passed is recorded in the wording only until 17.3 draws a line through the
+  places.
 - **Section 20:** markers inside a marker (an army, a country, a company), with exclusions. His answers
   are recorded (25 Nov 2026); steps 20.1 and 20.2 proposed; waiting for his go-ahead to build.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
@@ -660,7 +661,7 @@ colour and, with labels on, reads "Haran +2"; otherwise "3 markers". Pins inside
 and counted pin of section 10. Tested on the test copy at the PC size and the tablet size with E-ink on;
 not checked on the Boox itself.
 
-## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, 19.1 built 25 Nov 2026; 19.2 and 19.3 to build)
+## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, 19.1 and 19.2 built 25 Nov 2026; 19.3 to build)
 
 The user's words: "Routes that stop at multiple locations before reaching their final destination. We need
 a way to mark those down. Also we need to consider possibly one source notes a marker moving a small route
@@ -695,8 +696,9 @@ Steps (put to him 25 Nov; he said to build them the same day: "19: stops first")
       and "Ends at". Each row is a marker or a point picked on the map, and is either a stop (arrived and
       left dates, each with limits and ties like any other date) or a place passed. Travellers are at a
       stop between its two dates and on the route between stops.
-- [ ] **19.2 Who makes which part.** Each traveller can have "joins at" and "leaves at" (the start, a
-      stop, or the end). Someone who leaves at a stop stays there until their own next location.
+- [x] **19.2 Who makes which part. Built 25 Nov 2026.** Each traveller can have "joins at" and "leaves
+      at" (the start, a stop, or the end). Someone who leaves at a stop stays there until their own next
+      location.
 - [ ] **19.3 "Part of" a longer journey.** The short journey's dates become limits on the long one (and
       on the matching stops when its ends are stops of the long one). Travellers are placed once. Dates
       that disagree are reported as a conflict, as closed windows are now; the app does not pick a side.
@@ -732,6 +734,26 @@ passed" (no dates). Rules settled while building:
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
 on the Boox itself. For his Genesis 12 reading: Haran, Shechem, Bethel and Egypt are entered as stops on
 one journey, or as separate journeys, as the text is read; that choice is his.
+
+**19.2 as built, 25 Nov 2026.** On a journey fact that has at least one stop, each name in a role ticked
+"they go there too" has two boxes under it: **joins at** (the start, or a stop) and **leaves at** (a stop,
+or the end). Left alone, the traveller makes the whole journey, as before. Rules settled while building:
+
+* Joining at a stop: the journey does not place them before the party arrives there. If nothing else
+  places them before that day, they are shown at that stop beforehand (the same rule as the start place).
+  From the stop's Arrived date they are with the party.
+* Leaving at a stop: they are at the stop from its Arrived date and stay there, with no end, until their
+  own next location. The journey gives them nothing after it and does not bring them to its end place.
+* A traveller's own dated place still means they left the party, but for someone who joins at a stop only
+  a place dated after they joined counts (an earlier one is simply where they were before).
+* If "joins at" comes after "leaves at" the journey places them nowhere, and the editor says so.
+* The boxes name stops only: a place passed has no dates to join or leave by. Removing a stop, or turning
+  it into a place passed, clears the boxes that named it.
+* The marker the fact is on (a person with their own journey fact) always makes the whole journey.
+* The fact's wording and the traveller's own information say "(joins at …, leaves at …)".
+
+Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
+on the Boox itself.
 
 ## 20. Markers inside a marker: an army and its people (raised 25 Nov 2026, under discussion)
 

@@ -310,7 +310,7 @@ window.UI = (() => {
     else if (f.placeLabel) where = esc(f.placeLabel);
     else if (f.where && f.where.kind === 'point') where = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
     else if (f.where && f.where.coords) where = `${f.where.coords.length}-point ${f.where.kind}`;
-    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); return o ? `${esc(r ? r.name : 'with')}: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>` : ''; }).filter(Boolean).join(', ');
+    const who = (f.participants || []).map(p => { const o = Store.marker(p.markerId); const r = t && t.roles.find(x => x.id === p.roleId); const part = t && t.journey ? partText(f.stops, p) : ''; return o ? `${esc(r ? r.name : 'with')}: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>${part ? ` (${esc(part)})` : ''}` : ''; }).filter(Boolean).join(', ');
     const details = Object.entries(f.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
     if (when) bits.push(when + b); else if (b) bits.push(b);
     bits.push(title);
@@ -327,6 +327,13 @@ window.UI = (() => {
     return opts.bare ? line : `<li>${line}</li>`;
   }
 
+  // "joins at Haran, leaves at Bethel": the part of a journey one traveller makes (p.joinAt / p.leaveAt name stops);
+  // '' when they make all of it.
+  function partText(stops, p) {
+    const nm = id => { const s = id && (stops || []).find(x => x.id === id && x.kind === 'stop'); return s ? Store.stopName(s) : ''; };
+    const a = nm(p.joinAt), b = nm(p.leaveAt);
+    return [a ? 'joins at ' + a : '', b ? 'leaves at ' + b : ''].filter(Boolean).join(', ');
+  }
   // "from Ur to Haran": the Starts at / Ends at of a journey fact, as plain words or (html) with links. With places
   // along the way: "from Ur, by way of Carchemish, stopping at Haran (1921 BC – 1920 BC), to Shechem". `j` is the
   // fact or its mirror: { startAt, endAt, stops }.
@@ -356,6 +363,8 @@ window.UI = (() => {
     if (mi.place) bits.push(esc(mi.place));
     const trip = journeyText(mi, true);
     if (trip) bits.push(trip);
+    const part = partText(mi.stops, mi); // this marker makes only part of the journey
+    if (part) bits.push(esc(part));
     const details = Object.entries(mi.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
     if (details) bits.push(`<span class="muted">${details}</span>`);
     let line = bits.join(' · ');
@@ -457,6 +466,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, journeyText, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, partText, journeyText, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();
