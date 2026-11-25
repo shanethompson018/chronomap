@@ -446,11 +446,12 @@ window.Editor = (() => {
     if (!place && f.where && f.where.kind === 'marker') place = (Store.marker(f.where.markerId) || {}).name || '';
     else if (!place && f.where && f.where.kind === 'point') place = `${(+f.where.lat).toFixed(2)}, ${(+f.where.lng).toFixed(2)}`;
     else if (!place && f.where && f.where.coords) place = `${f.where.coords.length}-point ${f.where.kind}`;
+    const trip = t && t.journey ? UI.journeyText(f.startAt, f.endAt) : '';
     const line = h('div', { class: 'fact-line', title: 'Open this fact', onclick: () => { openFacts.add(f.id); render(); } },
       h('span', { class: 'ed-arrow' }, '▸'),
       bits.length ? h('span', { class: 'muted' }, bits.join(' ') + ' · ') : null,
       h('strong', {}, f.label || (t ? t.name : 'Fact')),
-      who ? ' · ' + who : '', place ? ' · ' + place : '',
+      who ? ' · ' + who : '', place ? ' · ' + place : '', trip ? ' · ' + trip : '',
       f.confidence ? h('span', { html: ' ' + UI.gradeBadgeHTML(f.confidence, f.reason) }) : null);
     return line;
   }
@@ -465,7 +466,7 @@ window.Editor = (() => {
         const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
         return h('div', { class: 'card fact-card mirror-card' },
           h('div', { class: 'row' },
-            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
+            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', mi.startAt || mi.endAt ? ' · ' + UI.journeyText(mi.startAt, mi.endAt) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
             h('button', { type: 'button', class: 'small narrow', title: `Open ${o.name} to edit that fact`, onclick: () => open(o.id) }, '✏️ ' + o.name)));
       }).filter(Boolean)];
   }
@@ -488,6 +489,7 @@ window.Editor = (() => {
     }
     // where
     if (t.place !== 'none') card.append(renderWhere(i, t));
+    if (t.journey) card.append(renderJourney(i));
     // roles
     for (const role of t.roles) card.append(renderRole(i, role));
     // details
@@ -619,6 +621,19 @@ window.Editor = (() => {
         h('button', { class: 'primary', onclick: () => { if (!draft) return; draft.facts[i].where[key] = [...set].sort((a, b) => a - b); m.close(); render(); } }, 'Done'),
         h('button', { onclick: () => m.close() }, 'Cancel')));
     const m = UI.modal({ title: which === 'extent' ? 'Edges of the extent outline' : 'Edges of the border', body, width: '420px', side: true, onClose: () => { MapView.hideVertexNumbers(); unpark(); } });
+  }
+  // "Starts at" / "Ends at" on a fact whose type is ticked "a journey" (Library, Fact types). Whoever travels
+  // (this marker when it is a pin, and everyone in a role ticked "they go there too") is at the start place
+  // before the fact's dates and at the end place after them: Facts.deriveJourneys works that out.
+  function renderJourney(i) {
+    const f = draft.facts[i], w = Facts.when(f);
+    const box = (label, key, ph) => h('div', { class: 'field' }, label,
+      UI.markerSelect({ value: f[key] || null, exclude: [id], placeholder: ph, onChange: v => { if (v) draft.facts[i][key] = v; else delete draft.facts[i][key]; } }));
+    return h('div', { class: 'fact-where fact-journey' },
+      row(box('Starts at', 'startAt', 'where they set out from…'), box('Ends at', 'endAt', 'where they arrive…')),
+      h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))' } }, w.date || w.dateEnd
+        ? 'Whoever travels is at the start place before the journey and stays at the end place after it, with no fact or tie of their own. A dated place of their own during the journey means they left the party.'
+        : 'Give the journey a date or limits first: until then nobody is placed at its start or its end.'));
   }
   function renderRole(i, role) {
     const f = draft.facts[i];

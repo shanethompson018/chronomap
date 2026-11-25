@@ -264,7 +264,7 @@ window.DataTab = (() => {
     Store.markers().forEach(m => m.facts.forEach(f => used.set(f.typeId, (used.get(f.typeId) || 0) + 1)));
     for (const t of Store.factTypes().slice().sort((a, b) => a.name.localeCompare(b.name))) {
       const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}` + (r.mirror === false ? ' (not shown on theirs)' : ` (theirs: ${r.mirrorWord || Facts.defaultMirrorWord(t, r)})`) + (r.goes ? ' (they go there too)' : ''); }).join(', ');
-      const implies = [t.begins ? 'begins' : null, t.ends ? 'ends' : null, t.placeFrom ? 'place from ' + ((t.roles.find(r => r.id === t.placeFrom) || {}).name || '?') : null].filter(Boolean).join(', ');
+      const implies = [t.begins ? 'begins' : null, t.ends ? 'ends' : null, t.journey ? 'a journey' : null, t.placeFrom ? 'place from ' + ((t.roles.find(r => r.id === t.placeFrom) || {}).name || '?') : null].filter(Boolean).join(', ');
       tb.append(h('tr', {},
         h('td', {}, t.name),
         h('td', { class: 'narrow' }, t.hasDate === false ? 'none' : (t.hasEnd ? 'from / until' : 'single')),
@@ -293,6 +293,7 @@ window.DataTab = (() => {
     const place = UI.select([['any', 'any (point, outline, or another marker)'], ['point', 'a point or another marker'], ['area', 'an area outline or another marker'], ['route', 'a route or another marker'], ['none', 'no place']], t.place);
     const begins = h('input', { type: 'checkbox', checked: !!t.begins });
     const ends = h('input', { type: 'checkbox', checked: !!t.ends });
+    const journey = h('input', { type: 'checkbox', checked: !!t.journey });
     const details = h('input', { type: 'text', value: (t.details || []).join(', '), placeholder: 'e.g. Cause, Outcome, Age' });
     const rolesHost = h('div');
     const placeFrom = h('select');
@@ -331,7 +332,7 @@ window.DataTab = (() => {
     const save = () => {
       if (!name.value.trim()) { UI.toast('Give the fact type a name', 'error'); return; }
       const data = { name: name.value.trim(), hasDate: hasDate.checked, hasEnd: hasEnd.checked, place: place.value, begins: begins.checked, ends: ends.checked,
-        details: details.value.split(',').map(s => s.trim()).filter(Boolean), roles: t.roles.filter(r => r.name.trim()), placeFrom: placeFrom.value || null };
+        details: details.value.split(',').map(s => s.trim()).filter(Boolean), roles: t.roles.filter(r => r.name.trim()), placeFrom: placeFrom.value || null, journey: journey.checked };
       const saved = existing ? Store.updateFactType(existing.id, data) : Store.addFactType(data);
       m.close(); cb && cb(saved);
     };
@@ -342,6 +343,8 @@ window.DataTab = (() => {
         h('label', {}, begins, ' begins the marker'), h('label', {}, ends, ' ends the marker')),
       h('label', { class: 'field' }, 'Place', place),
       h('label', { class: 'field' }, 'Or take the place from a role', placeFrom),
+      h('div', { class: 'ed-row' }, h('label', { title: 'A fact of this type gets two more boxes, "Starts at" and "Ends at", each choosing a marker. Whoever travels (the marker the fact is on when it is a pin, and everyone in a role ticked "they go there too") is then at the start place before the fact, at the place of the fact during it, and stays at the end place after it. No arrival fact and no tie are needed.' },
+        journey, ' a journey: has a start place and an end place ("Starts at" and "Ends at" boxes on the fact)')),
       h('div', { class: 'field' }, 'Roles (who else is involved; each makes a tie)', rolesHost),
       h('label', { class: 'field' }, 'Detail fields (comma separated)', details),
       h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'primary', onclick: save }, existing ? 'Save' : 'Create'), h('button', { onclick: () => { m.close(); cb && cb(null); } }, 'Cancel')));

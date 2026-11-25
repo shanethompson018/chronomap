@@ -47,6 +47,16 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - A dated "Had child" mirror gives the child its Born date when the child has no dated Begins.
 - "They go there too" (`role.goes`): the fact's move is copied onto every marker named in that role
   (`mv.sharedFrom`); the mirror carries `placed`.
+- Journeys (`factType.journey`, `fact.startAt` / `fact.endAt`, marker ids; both absent when not set):
+  `deriveJourneys` runs after the "they go there too" places are in and adds to each traveller's moves an
+  undated `<factId>~start` and a dated `<factId>~end` (`journeyOf`, `journeyStart` / `journeyEnd`, `sharedFrom`
+  when the fact is on another marker). Travellers = roles with `goes`, plus the owner when `owner.kind === 'pin'`.
+  Arrivals are judged against a snapshot of the moves taken before any start or end is added; starts are judged
+  after the arrivals are in, so a second journey does not add a start where the first one's arrival already
+  places the traveller. A traveller's own dated move after From and up to the arrival = left the party: no
+  arrival, and their copy of the route move gets that date as its `dateEnd`. Move ids must not contain `|`
+  (map layers are keyed `markerId|moveId` and split on it). Section 19 (stops) is meant to add a list
+  between `startAt` and `endAt`.
 - `when(f)` merges typed ends with calculated ends and returns `{ date, min, max, lo, hi, known, knownEnd, … }`.
   With no date, `date` is the middle of the window (or its one end) for ordering only. `whenText` / `whenLabel`
   word a date or its window ("between X and Y", "after X", "before X").
@@ -76,6 +86,9 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - On the tablet the editor is a full-screen view: `Editor.park()` hides it with the work kept while the map is
   needed, `unpark()` and the `#editor-pill` bring it back. Under `body.ed-side` (PC) `park()` does nothing.
 - Draft autosave: `chronomap.draft`, `persistDraft`, `Editor.resume()`.
+- `renderJourney(i)`: the "Starts at" / "Ends at" boxes, shown only when the fact's type has `journey`. Clearing
+  a box deletes the key from the draft fact. `UI.journeyText(startAt, endAt, html)` words it ("from Ur to
+  Haran") for the fact line, the mirror line and the information panel.
 
 ## js/map.js
 

@@ -301,6 +301,21 @@ manuscripts have no ISBN and are typed by hand as before.
   companion's information shows the line as coming from the leader's fact, "which also places this
   marker", and their own facts are not changed. Untick the role and the companions stay where their
   own facts put them.
+* **A journey with a start and an end.** In Library → Fact types, a fact type has a tick **a journey: has
+  a start place and an end place**. A fact of that type shows two more boxes, **Starts at** and **Ends
+  at**, each choosing a marker (Ur, Haran). The app then places whoever travels with no arrival fact and
+  no tie: at the start place before the journey, at the fact's own place (the route) from From to Until,
+  and at the end place from Until onward, until their own next location. Who travels: everyone in a role
+  ticked "they go there too", and the marker the fact is on when that marker is a pin (a person); a route
+  or an area does not travel along itself. The rules:
+  * The start place is used only for a traveller whom nothing else places before the journey.
+  * A traveller's own dated location during the journey means they left the party: they leave the route
+    on that date and the journey does not bring them to its end place. A later location of their own
+    takes over from its date, as always.
+  * If Until is known only by limits (between this and that), the arrival carries the same limits. With
+    no Until, they arrive on the From date.
+  * A journey with no date and no limits places nobody at its start or end; the fact card says so.
+  * The traveller's information says the location is "the start" or "the end" of that journey fact.
 * **Rough borders.** An area outline can carry a second, lighter dashed outline: the **largest possible
   extent** ("Draw extent"). Each edge of either outline can be marked **firm** (solid: a coast, a
   river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the

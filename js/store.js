@@ -88,6 +88,7 @@ window.Store = (() => {
     ['date', 'dateEnd'].forEach(k => { if (o[k + 'Min'] && o[k + 'Max'] && Dates.toDays(o[k + 'Min']) != null && Dates.toDays(o[k + 'Max']) != null && Dates.toDays(o[k + 'Min']) > Dates.toDays(o[k + 'Max'])) { const t = o[k + 'Min']; o[k + 'Min'] = o[k + 'Max']; o[k + 'Max'] = t; } });
     o.participants = (o.participants || []).filter(p => p && p.roleId && p.markerId).map(p => ({ roleId: p.roleId, markerId: p.markerId }));
     o.details = o.details || {};
+    if (!o.startAt) delete o.startAt; if (!o.endAt) delete o.endAt; // a journey's start and end place (marker ids); absent when not set
     return o;
   }
   function normLink(l) {
@@ -159,6 +160,7 @@ window.Store = (() => {
         if (!has('sources', f.sourceId)) f.sourceId = null;
         f.participants = f.participants.filter(p => has('markers', p.markerId) && p.markerId !== m.id);
         if (f.where && f.where.kind === 'marker' && (!has('markers', f.where.markerId) || f.where.markerId === m.id)) f.where = null;
+        for (const k of ['startAt', 'endAt']) if (f[k] && (!has('markers', f[k]) || f[k] === m.id)) delete f[k];
       });
       const factIds = new Set((m.facts || []).map(f => f.id));
       const slotOk = s => { if (!s.startsWith('fact:')) return false; const id = s.slice(5).replace(/:end$/, ''); return factIds.has(id); };
@@ -482,7 +484,8 @@ window.Store = (() => {
       for (const f of m.facts) {
         const roles = (f.participants || []).filter(p => p.markerId === markerId).map(p => { const t = factType(f.typeId); const r = t && t.roles.find(x => x.id === p.roleId); return r ? r.name : 'participant'; });
         const asPlace = f.where && f.where.kind === 'marker' && f.where.markerId === markerId;
-        if (roles.length || asPlace) out.push({ marker: m, fact: f, roles, asPlace });
+        const asStart = f.startAt === markerId, asEnd = f.endAt === markerId; // a journey sets out from here / arrives here
+        if (roles.length || asPlace || asStart || asEnd) out.push({ marker: m, fact: f, roles, asPlace, asStart, asEnd });
       }
     }
     return out;
@@ -529,6 +532,7 @@ window.Store = (() => {
       const before = f.participants.length;
       f.participants = f.participants.filter(p => p.markerId !== id);
       if (f.where && f.where.kind === 'marker' && f.where.markerId === id) { f.where = null; touch(m); }
+      for (const k of ['startAt', 'endAt']) if (f[k] === id) { delete f[k]; touch(m); }
       if (f.participants.length !== before) touch(m);
     }));
     dropRelationsOf('marker', id);

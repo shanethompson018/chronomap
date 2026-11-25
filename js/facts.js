@@ -230,6 +230,7 @@ window.Facts = (() => {
   // Fill marker.start/startLabel/end/endLabel/moves and d.links from every marker's facts.
   function derive(d) {
     const links = [];
+    const journeys = []; // facts of a journey type that name a start or an end place: { f, t, w, owner }
     const taken = []; // places a fact gives to the people in a role marked "they go there too": { to, mv }
     for (const m of d.markers) {
       const facts = m.facts || [];
@@ -251,6 +252,7 @@ window.Facts = (() => {
       m.moves = [];
       for (const f of facts) {
         const t = typeOf(d, f);
+        if (t && t.journey && (f.startAt || f.endAt)) journeys.push({ f, t, w: W.get(f.id), owner: m });
         let where = f.where;
         if (!where && t && t.placeFrom) { const p = (f.participants || []).find(x => x.roleId === t.placeFrom); if (p) where = { kind: 'marker', markerId: p.markerId }; }
         if (!where) continue;
@@ -289,9 +291,72 @@ window.Facts = (() => {
       for (const x of taken) { const o = byId.get(x.to); if (o) { o.moves.push(x.mv); touched.add(o); } }
       for (const o of touched) o.moves.sort((a, b) => (dayOf(a.date) ?? -Infinity) - (dayOf(b.date) ?? -Infinity));
     }
+    if (journeys.length) deriveJourneys(d, journeys);
     deriveSiblings(d, links);
     deriveMirrors(d);
     d.links = links;
+  }
+
+  // ---------- journeys ----------
+  // A fact whose type is ticked "a journey" can name a start place and an end place (f.startAt / f.endAt, marker
+  // ids). Its travellers are then at the start before it, wherever the fact itself puts them during it (the
+  // route), and at the end place after it, with no fact or tie of their own. Travellers: everyone in a role
+  // ticked "they go there too", and the marker the fact is on when that is a pin (a route or an area does not
+  // travel along itself). The places are added to each traveller's moves with ids "<factId>~start" and
+  // "<factId>~end" and are never stored.
+  //  * The arrival is dated by the fact's Until (its From when there is no Until) and carries that date's window.
+  //  * A traveller's own dated place after From and up to the arrival means they left the party: their stay on the
+  //    route stops there and they get no arrival from the journey.
+  //  * The start place is given only to a traveller whom nothing else places before From.
+  //  * A journey with no date and no window places nobody at its start or end.
+  function deriveJourneys(d, journeys) {
+    const byId = new Map(d.markers.map(x => [x.id, x]));
+    const dayOfMove = mv => (mv.date ? dayOf(mv.date) : null);
+    for (const j of journeys) {
+      const { f, t, w, owner } = j;
+      const ids = new Set();
+      if (owner.kind === 'pin') ids.add(owner.id);
+      for (const p of f.participants || []) { const r = t.roles.find(x => x.id === p.roleId); if (r && r.goes && p.markerId) ids.add(p.markerId); }
+      j.travellers = [...ids].map(x => byId.get(x)).filter(Boolean);
+      j.from = w.date ? dayOf(w.date) : null;
+      j.arr = t.hasEnd && w.dateEnd ? { date: w.dateEnd, min: w.endMin, max: w.endMax } : { date: w.date, min: w.min, max: w.max };
+      j.arrDay = j.arr.date ? dayOf(j.arr.date) : null;
+      j.base = { lat: null, lng: null, coords: null, note: '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f),
+        confidence: f.confidence || '', reason: f.reason || '', journeyOf: f.id };
+    }
+    const touched = new Set();
+    const give = (T, owner, mv) => { if (T.id !== owner.id) mv.sharedFrom = owner.id; T.moves.push(mv); touched.add(T); };
+    // arrivals: judged against the places every marker has before any journey adds a start or an end
+    const snap = new Map(d.markers.map(m => [m.id, m.moves.slice()]));
+    for (const j of journeys) {
+      const { f, owner } = j, end = f.endAt && byId.get(f.endAt);
+      if (!end || j.arrDay == null) continue;
+      for (const T of j.travellers) {
+        if (T.id === end.id) continue;
+        const left = snap.get(T.id).filter(mv => { if (mv.id === f.id) return false; const x = dayOfMove(mv); return x != null && x <= j.arrDay && (x === j.arrDay || (j.from != null && x > j.from)); })
+          .sort((a, b) => dayOfMove(a) - dayOfMove(b))[0];
+        if (left) { // they left the party: the stay on the route stops when their own place begins
+          const rt = T.moves.find(mv => mv.id === f.id);
+          if (rt && rt.dateEnd && dayOfMove(left) < dayOf(rt.dateEnd)) { rt.dateEnd = left.date; rt.dateEndMin = left.dateMin || left.date; rt.dateEndMax = left.dateMax || left.date; }
+          continue;
+        }
+        give(T, owner, Object.assign({}, j.base, { id: f.id + '~end', date: j.arr.date, dateMin: j.arr.min || j.arr.date, dateMax: j.arr.max || j.arr.date,
+          dateEnd: '', dateEndMin: '', dateEndMax: '', atMarkerId: end.id, label: end.name, journeyEnd: true }));
+      }
+    }
+    // starts: only for a traveller whom nothing else (an own place, another journey's arrival) places before From
+    for (const j of journeys) {
+      const { f, owner } = j, start = f.startAt && byId.get(f.startAt);
+      if (!start || j.from == null) continue;
+      for (const T of j.travellers) {
+        if (T.id === start.id) continue;
+        const placed = T.moves.some(mv => { if (mv.id === f.id || mv.journeyOf === f.id) return false; const x = dayOfMove(mv); return !mv.date || (x != null && x <= j.from); });
+        if (placed) continue;
+        give(T, owner, Object.assign({}, j.base, { id: f.id + '~start', date: '', dateMin: '', dateMax: '', dateEnd: '', dateEndMin: '', dateEndMax: '',
+          atMarkerId: start.id, label: start.name, journeyStart: true }));
+      }
+    }
+    for (const o of touched) o.moves.sort((a, b) => (dayOf(a.date) ?? -Infinity) - (dayOf(b.date) ?? -Infinity));
   }
 
   // ---------- mirrored facts ----------
@@ -334,7 +399,8 @@ window.Facts = (() => {
             birth: tieName.get(r.tieTypeId) === 'parent of' && r.direction !== 'other-to-this', // the owner is the parent: this is the child's birth
             date: w.date || '', dateMin: w.min || '', dateMax: w.max || '', dateEnd: t.hasEnd ? (w.dateEnd || '') : '', dateEndMin: t.hasEnd ? (w.endMin || '') : '', dateEndMax: t.hasEnd ? (w.endMax || '') : '',
             when: whenLabel(w, !!t.hasEnd), known: w.known, // the date in words (a window when no date is known)
-            placed: !!(r.goes && (f.where || t.placeFrom)),   // the fact also puts this marker at its place
+            startAt: t.journey ? f.startAt || null : null, endAt: t.journey ? f.endAt || null : null, // a journey's start and end place
+            placed: !!(r.goes && (f.where || t.placeFrom || (t.journey && (f.startAt || f.endAt)))),   // the fact also puts this marker at its place
             place, details: Object.assign({}, f.details || {}), note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
         }
       }

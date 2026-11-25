@@ -226,6 +226,7 @@ window.UI = (() => {
       let where = pos.label || (pos.atMarkerId ? (Store.marker(pos.atMarkerId) || {}).name : '') || (pos.coords ? `${pos.coords.length} points` : `${(+pos.lat).toFixed(3)}, ${(+pos.lng).toFixed(3)}`);
       if (pos.atMarkerId) where = 'at / in ' + where;
       if (pos.date) where += ` <span class="muted">(since ${esc(Dates.formatInput(pos.date))})</span>`;
+      if (pos.journeyOf) { const o = pos.sharedFrom ? Store.marker(pos.sharedFrom) : null; where += ` <span class="muted">· the ${pos.journeyEnd ? 'end' : 'start'} of the ${esc(pos.factLabel)} fact${o ? ' on ' + esc(o.name) : ''}</span>`; }
       rows.push([t == null ? 'Latest location' : 'Location', where, 0]);
     } else if (m.moves.length && t != null) {
       rows.push(['Location', '<span class="muted">not on the map at this time</span>', 0]);
@@ -252,7 +253,7 @@ window.UI = (() => {
     const mentions = Store.mentionsOf(m.id).filter(x => !mirroredFacts.has(x.fact.id));
     if (mentions.length) {
       out += `<h4>Mentioned in (${mentions.length})</h4><ul class="fact-list">` + mentions.map(x => {
-        const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : 'as the place';
+        const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : x.asPlace ? 'as the place' : x.asStart ? 'as where it starts' : 'as where it ends';
         return `<li><a class="mlink" data-action="goto-marker" data-id="${esc(x.marker.id)}">${esc(x.marker.name)}</a> · ${esc(Store.factTitle(x.fact))}${x.fact.date ? ` <span class="muted">${esc(Dates.formatInput(x.fact.date))}</span>` : ''} <span class="muted">(${how})</span></li>`;
       }).join('') + '</ul>';
     }
@@ -314,6 +315,8 @@ window.UI = (() => {
     if (when) bits.push(when + b); else if (b) bits.push(b);
     bits.push(title);
     if (where) bits.push(where);
+    const trip = t && t.journey ? journeyText(f.startAt, f.endAt, true) : '';
+    if (trip) bits.push(trip);
     if (who) bits.push(who);
     if (details) bits.push(`<span class="muted">${details}</span>`);
     let line = bits.join(' · ');
@@ -324,6 +327,13 @@ window.UI = (() => {
     return opts.bare ? line : `<li>${line}</li>`;
   }
 
+  // "from Ur to Haran": the Starts at / Ends at of a journey fact, as plain words or (html) with links.
+  function journeyText(startAt, endAt, html) {
+    const nm = id => { const o = id && Store.marker(id); if (!o) return ''; return html ? `<a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>` : Store.displayName(o); };
+    const a = nm(startAt), b = nm(endAt);
+    return [a ? 'from ' + a : '', b ? 'to ' + b : ''].filter(Boolean).join(' ');
+  }
+
   // One mirrored fact: "1 Jan 1901 BC · Born · Son: Isaac · Beersheba · from Isaac's Born fact".
   function mirrorLineHTML(mi, opts = {}) {
     const o = Store.marker(mi.markerId); if (!o) return '';
@@ -332,6 +342,8 @@ window.UI = (() => {
     bits.push(`<strong>${esc(mi.factTitle)}</strong>`);
     bits.push(`<strong>${esc(mi.word)}</strong>: <a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`);
     if (mi.place) bits.push(esc(mi.place));
+    const trip = journeyText(mi.startAt, mi.endAt, true);
+    if (trip) bits.push(trip);
     const details = Object.entries(mi.details || {}).filter(([, v]) => v).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
     if (details) bits.push(`<span class="muted">${details}</span>`);
     let line = bits.join(' · ');
@@ -433,6 +445,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, journeyText, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

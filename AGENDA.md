@@ -9,8 +9,9 @@ cross items off as they land. We go through it one item at a time.
   Waiting for the Boox's problems log (Library, Problems log).
 - **12.4 / design step C:** the lifetime rule (the app limits a person's facts to between their Born and
   Died by itself). Not decided.
-- **Section 17:** an automatic journey ("Starts at" / "Ends at"). 17.1 decided 25 Nov 2026 and being built.
-  17.2 (pins moving along the line) and 17.3 (a straight line when no route is drawn) are for later.
+- **Section 17:** an automatic journey ("Starts at" / "Ends at"). 17.1 built 25 Nov 2026; not checked on
+  the Boox. 17.2 (pins moving along the line) and 17.3 (a straight line when no route is drawn) are for
+  later. With no place on the fact, travellers stay at the start until the arrival date.
 - **Section 18 (asked 25 Nov 2026):** markers stacked on one spot share one numbered pin; clicking it lists
   them. To be built straight after 17.1.
 - **Section 19 (under discussion):** routes with stops on the way, and a short route that is part of a
@@ -574,7 +575,7 @@ and set up:
       different account says so on screen and in the problems log. Checked with a stand-in for Google
       on the test copy; not checked against the real accounts, which only the user can do.
 
-## 17. An automatic journey: "Starts at" and "Ends at" (raised 23 Nov 2026, 17.1 decided 25 Nov 2026)
+## 17. An automatic journey: "Starts at" and "Ends at" (raised 23 Nov 2026, 17.1 built 25 Nov 2026; 17.2 and 17.3 open)
 
 The user's words: "Is there a way you can automate this with a moved to route/marker automatically moving
 markers to another location without me having to input the ties. Let's discuss how it would work."
@@ -599,7 +600,7 @@ there too", makes more sense than a separate "Moved to".
 
 **Proposal put to the user** (answered 25 Nov 2026, see "Decided" below):
 
-- [ ] **17.1 "Starts at" and "Ends at" on a journey fact.** Two new boxes, each choosing a marker (Ur,
+- [x] **17.1 "Starts at" and "Ends at" on a journey fact. Built 25 Nov 2026.** Two new boxes, each choosing a marker (Ur,
       Haran). From them the app works out, with no extra fact and no tie:
       before From, each traveller stays where their own facts put them; From to Until, on the route;
       after Until, at the "Ends at" marker until their own next location or their death. A window on the
@@ -629,6 +630,14 @@ Rules settled while planning (told to him before building):
 * A journey with no date and no limits places nobody at its start or end (the fact card says so).
 * The two boxes are stored as `startAt` and `endAt` on the fact, so a list of stops (section 19) can be
   added between them later.
+
+**As built, 25 Nov 2026.** Tested on the test copy with throwaway markers at the PC size and the tablet
+size (E-ink on); not checked on the Boox itself. What he does with his own Genesis 11:31 entries: in
+Library, Fact types, ✏️ on "Journey", tick "a journey: has a start place and an end place"; on the route
+marker's Journey fact choose Ur and Haran in the two new boxes and give the fact a date or limits. The
+"Lived at Haran" fact with its tie on the Journey's Until can stay (his own fact wins) or be removed.
+An undated location of his own (Lived at Ur, Lived at Haran with no date) still shows from the beginning,
+as before.
 
 Declined on 23 Nov and not to be offered again: a "+ Role" button on the fact in the marker editor.
 
