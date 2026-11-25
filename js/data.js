@@ -125,6 +125,12 @@ window.DataTab = (() => {
       h('h2', {}, `Time gaps (${rels.length})`, h('span', { class: 'spacer' }),
         conflicts.length ? h('button', { class: 'small conflict-btn', onclick: () => Relations.showConflicts() }, `⚠ ${conflicts.length} conflict${conflicts.length > 1 ? 's' : ''}`) : h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'no conflicts'),
         undetCount ? h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))', marginLeft: '10px' } }, `${undetCount} date${undetCount > 1 ? 's' : ''} not yet anchored`) : null),
+      (() => { // the limits the app keeps by itself (relations.js lifeRels); a setting of this device
+        const tick = (k, text, title) => { const cb = h('input', { type: 'checkbox', checked: Store.settings()[k] !== false }); cb.addEventListener('change', () => { Store.setSetting(k, cb.checked); Relations.solve(); Store.notify({ type: 'relations' }); }); return h('label', { title, style: { display: 'flex', gap: '6px', alignItems: 'center', margin: '2px 0' } }, cb, text); };
+        return h('div', { class: 'auto-rules' }, h('div', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, 'Checks the app keeps by itself (they report and narrow; they never change a date you typed):'),
+          tick('autoLife', 'Lifetime rule: a marker\'s facts fall between its Begins and its Ends, and whoever takes part in a fact was alive for it', 'For a person: between Born and Died. A fact type can be let off in Library → Fact types.'),
+          tick('autoKin', 'A child is not born before its parent', 'From every "Parent of" tie.'));
+      })(),
       h('p', { class: 'hint' }, 'Fixed gaps between dates ("Seth\'s birth = Adam\'s birth + 130 y"). Pinned dates are the anchors; everything else is computed and moves with them. A relation that is overruled stays on record but is left out of the maths.'),
       table);
   }
@@ -295,6 +301,7 @@ window.DataTab = (() => {
     const begins = h('input', { type: 'checkbox', checked: !!t.begins });
     const ends = h('input', { type: 'checkbox', checked: !!t.ends });
     const journey = h('input', { type: 'checkbox', checked: !!t.journey });
+    const outside = h('input', { type: 'checkbox', checked: t.outside != null ? !!t.outside : t.id === 'ft_named' });
     const details = h('input', { type: 'text', value: (t.details || []).join(', '), placeholder: 'e.g. Cause, Outcome, Age' });
     const rolesHost = h('div');
     const placeFrom = h('select');
@@ -333,7 +340,7 @@ window.DataTab = (() => {
     const save = () => {
       if (!name.value.trim()) { UI.toast('Give the fact type a name', 'error'); return; }
       const data = { name: name.value.trim(), hasDate: hasDate.checked, hasEnd: hasEnd.checked, place: place.value, begins: begins.checked, ends: ends.checked,
-        details: details.value.split(',').map(s => s.trim()).filter(Boolean), roles: t.roles.filter(r => r.name.trim()), placeFrom: placeFrom.value || null, journey: journey.checked };
+        details: details.value.split(',').map(s => s.trim()).filter(Boolean), roles: t.roles.filter(r => r.name.trim()), placeFrom: placeFrom.value || null, journey: journey.checked, outside: outside.checked };
       const saved = existing ? Store.updateFactType(existing.id, data) : Store.addFactType(data);
       m.close(); cb && cb(saved);
     };
@@ -346,6 +353,8 @@ window.DataTab = (() => {
       h('label', { class: 'field' }, 'Or take the place from a role', placeFrom),
       h('div', { class: 'ed-row' }, h('label', { title: 'A fact of this type gets two more boxes, "Starts at" and "Ends at", each choosing a marker. Whoever travels (the marker the fact is on when it is a pin, and everyone in a role ticked "they go there too") is then at the start place before the fact, at the place of the fact during it, and stays at the end place after it. No arrival fact and no tie are needed.' },
         journey, ' a journey: has a start place, an end place and places along the way ("Starts at", "Places along the way" and "Ends at" on the fact)')),
+      h('div', { class: 'ed-row' }, h('label', { title: 'The app keeps a marker\'s facts between its Begins and its Ends by itself (the lifetime rule, Library → Time gaps). Tick this for a kind of fact that can be dated outside that, such as a name given after death.' },
+        outside, ' may fall outside the lifetime of its marker (the lifetime rule leaves it alone)')),
       h('div', { class: 'field' }, 'Roles (who else is involved; each makes a tie)', rolesHost),
       h('label', { class: 'field' }, 'Detail fields (comma separated)', details),
       h('div', { class: 'row', style: { marginTop: '10px' } }, h('button', { class: 'primary', onclick: save }, existing ? 'Save' : 'Create'), h('button', { onclick: () => { m.close(); cb && cb(null); } }, 'Cancel')));

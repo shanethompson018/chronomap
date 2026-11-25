@@ -451,6 +451,21 @@ limit. A date with limits and no date of its own shows as its window, "between 2
 the window at the reduced strength used for approximate dates, and the Timeline gives it a row of its
 own labelled with the window.
 
+**Checks the app keeps by itself.** Three rules need no entry. They report and narrow; they never change
+a date you typed, and a fact with no date and no tie is left exactly as it is.
+
+* **Until before From.** A fact whose Until falls before its From is listed under ⚠ Conflicts.
+* **The lifetime rule.** A marker's facts fall between its Begins (Born, Founded) and its Ends (Died,
+  Destroyed), and whoever takes part in a fact was alive for some of it. A birth is let off the second
+  half (a father may die before his child is born). "Also named" is let off, and so is any fact type
+  ticked **may fall outside the lifetime of its marker** in Library → Fact types.
+* **Parent and child.** A child is not born before its parent.
+
+A date that already has a tie is narrowed by these and says so ("not after … Died (the lifetime rule)").
+Where dates carry wide ranges, the limits are also checked against the most likely dates alone, and what
+fails only there is listed as **The most likely dates are out of order**. The two rules are switched in
+Library → Time gaps (a setting of each device).
+
 **Editing a time gap.** Every time gap has an **✏️ Edit** button, in the marker editor's Time gaps list
 and in Library → Time gaps. It opens the tie dialog filled in: change the date it belongs to, the part it
 sets, on / after / before, the length, give or take, the other date, the source, verse and note, then

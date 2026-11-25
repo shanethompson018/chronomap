@@ -133,11 +133,12 @@ window.Relations = (() => {
   const limitRels = () => Store.relations().filter(r => r.status === 'active' && isLimit(r) && Store.refExists(r.from) && Store.refExists(r.to));
   // What a slot starts from: a known date is its own earliest and latest (with its range, if it has one); a slot
   // with no date starts from whatever was typed in its earliest / latest boxes, or open.
-  function baseOf(k) {
+  // `likely`: the second pass, which takes a known date at its most likely value and leaves its range out.
+  function baseOf(k, likely) {
     const ref = Store.parseRefKey(k);
     if (Store.isUndetermined(ref)) return { min: '', max: '' };
     const t = Store.slotTyped(ref) || { date: '', min: '', max: '' };
-    return t.date ? { min: t.min || t.date, max: t.max || t.date } : { min: t.min, max: t.max };
+    return t.date ? (likely ? { min: t.date, max: t.date } : { min: t.min || t.date, max: t.max || t.date }) : { min: t.min, max: t.max };
   }
   // Forward and backward pass over the limit ties. Returns slot key -> { E, L, eBy, lBy } where eBy / lBy name
   // the tie that set that end ({ rel, back }: back = the tie was used from its far end), or null when the end is
@@ -145,12 +146,76 @@ window.Relations = (() => {
   // A fact with a from and an until date carries one limit of its own: the until date is not before the from date.
   function ownRels(rels) {
     const seen = new Set(), out = [];
+    const add = (mid, base) => { out.push({ id: 'own|' + mid + '|' + base, from: { kind: 'marker', id: mid, slot: base }, to: { kind: 'marker', id: mid, slot: base + ':end' }, part: 'min', years: 0, months: 0, days: 0 }); };
     for (const r of rels) for (const ref of [r.from, r.to]) {
       const base = ref.slot.replace(/:end$/, ''), k = ref.id + '|' + base;
       if (seen.has(k)) continue;
       seen.add(k);
       const m = Store.marker(ref.id), f = m && (m.facts || []).find(x => 'fact:' + x.id === base), t = f && Store.factType(f.typeId);
-      if (t && t.hasEnd) out.push({ id: 'own|' + k, from: { kind: 'marker', id: ref.id, slot: base }, to: { kind: 'marker', id: ref.id, slot: base + ':end' }, part: 'min', years: 0, months: 0, days: 0 });
+      if (t && t.hasEnd) add(ref.id, base);
+    }
+    // …and so does every fact with something typed for both its From and its Until, tie or no tie, so an Until
+    // that falls before its From is always reported (22.1)
+    const any = (f, e) => !!(e ? f.dateEnd || f.dateEndMin || f.dateEndMax : f.date || f.dateMin || f.dateMax);
+    for (const m of Store.markers()) for (const f of m.facts || []) {
+      const t = Store.factType(f.typeId), k = m.id + '|fact:' + f.id;
+      if (seen.has(k) || !t || !t.hasEnd || t.hasDate === false || !any(f, false) || !any(f, true)) continue;
+      seen.add(k); add(m.id, 'fact:' + f.id);
+    }
+    return out;
+  }
+  // Limits that follow from a lifetime (22.2) and from parent and child (22.3). Nothing is stored and no typed
+  // date is changed: these only take part in the working out, so a date that breaks one shows as a conflict and
+  // a date that already has ties is narrowed by them. A fact with no date and no tie gets no window from them.
+  //  * A marker's lifetime runs from its Begins fact (the earliest dated one) to its Ends fact (the latest).
+  //  * Its own facts fall inside that (unless the fact type is ticked "may fall outside the lifetime").
+  //  * Whoever takes part in a fact was alive for some of it: they began before it ended and ended after it
+  //    began (not asked of a birth: a father may die before his child is born).
+  //  * A child's Begins is not before its parent's Begins (every "Parent of" tie).
+  // Ids: 'life|<m1>|<slot1>|<m2>|<slot2>' and 'kin|…': slot2 is not before slot1. Switches: settings autoLife, autoKin.
+  function lifeRels(given) {
+    const out = [], seen = new Set(), set = Store.settings();
+    if (set.autoLife === false && set.autoKin === false) return out;
+    const ref = (id, slot) => ({ kind: 'marker', id, slot });
+    const add = (kind, m1, s1, m2, s2) => {
+      if (m1 === m2 && s1 === s2) return;
+      const id = [kind, m1, s1, m2, s2].join('|'); if (seen.has(id)) return;
+      seen.add(id); out.push({ id, from: ref(m1, s1), to: ref(m2, s2), part: 'min', years: 0, months: 0, days: 0 });
+    };
+    const touched = new Set(given.flatMap(r => [key(r.from), key(r.to)]));
+    const span = new Map(); // marker id -> { b, e }: its Begins and Ends, each { f, d, slot }
+    for (const m of Store.markers()) {
+      let b = null, e = null;
+      for (const f of m.facts || []) {
+        const t = Store.factType(f.typeId); if (!t || t.hasDate === false) continue;
+        const w = Facts.when(f);
+        if (t.begins) { const d = D(w.date); if (!b || (d != null && (b.d == null || d < b.d))) b = { f, d, slot: 'fact:' + f.id }; }
+        if (t.ends) { const d = D(t.hasEnd ? (w.dateEnd || w.date) : w.date); if (!e || (d != null && (e.d == null || d > e.d))) e = { f, d, slot: 'fact:' + f.id + (t.hasEnd ? ':end' : '') }; }
+      }
+      span.set(m.id, { b, e });
+    }
+    if (set.autoLife !== false) for (const m of Store.markers()) {
+      const own = span.get(m.id);
+      if (own.b && own.e && own.b.f !== own.e.f) add('life', m.id, own.b.slot, m.id, own.e.slot); // it does not end before it begins
+      for (const f of m.facts || []) {
+        const t = Store.factType(f.typeId); if (!t || t.hasDate === false) continue;
+        if (t.outside != null ? t.outside : t.id === 'ft_named') continue; // this kind of fact may fall outside the lifetime
+        const first = 'fact:' + f.id;
+        const hasUntil = t.hasEnd && (!!(f.dateEnd || f.dateEndMin || f.dateEndMax) || touched.has(key(ref(m.id, first + ':end'))));
+        const last = hasUntil ? first + ':end' : first;
+        if (own.b && own.b.f !== f) add('life', m.id, own.b.slot, m.id, first);
+        if (own.e && own.e.f !== f) add('life', m.id, last, m.id, own.e.slot);
+        for (const p of f.participants || []) {
+          const o = p.markerId !== m.id && span.get(p.markerId); if (!o) continue;
+          if (o.b) add('life', p.markerId, o.b.slot, m.id, last);
+          if (o.e && !t.begins) add('life', m.id, first, p.markerId, o.e.slot);
+        }
+      }
+    }
+    if (set.autoKin !== false) for (const l of Store.links()) {
+      const lt = Store.linkType(l.typeId); if (!lt || lt.name.trim().toLowerCase() !== 'parent of') continue;
+      const pa = span.get(l.fromId), ch = span.get(l.toId);
+      if (pa && ch && pa.b && ch.b) add('kin', l.fromId, pa.b.slot, l.toId, ch.b.slot);
     }
     return out;
   }
@@ -193,11 +258,16 @@ window.Relations = (() => {
     }
     return out;
   }
-  const isAuto = id => /^(seq|part)\|/.test(String(id)); // a limit the app keeps by itself (not a tie the user made, so it cannot be overruled)
+  const isAuto = id => /^(seq|part|life|kin)\|/.test(String(id)); // a limit the app keeps by itself (not a tie the user made, so it cannot be overruled)
+  const isLife = id => /^(life|kin)\|/.test(String(id));
+  const isOwn = id => /^own\|/.test(String(id));
+  // the words in front of one of the app's own limits in the conflicts panel
+  const autoLead = id => (isPart(id) ? 'Part of a longer journey: ' : /^kin\|/.test(String(id)) ? 'Parent and child: ' : isLife(id) ? 'Within a lifetime: ' : 'The order of the journey: ');
   const isPart = id => /^part\|/.test(String(id));
   // "arriving at Haran is not before the journey's From"; for a part of a longer journey the two dates are named in full
   function autoText(id) {
     const p = String(id).split('|');
+    if (p[0] === 'life' || p[0] === 'kin') return `${Store.slotLabel({ kind: 'marker', id: p[3], slot: p[4] })} is not before ${Store.slotLabel({ kind: 'marker', id: p[1], slot: p[2] })}`;
     if (p[0] === 'part') {
       const A = Store.slotLabel({ kind: 'marker', id: p[2], slot: p[3] }), B = Store.slotLabel({ kind: 'marker', id: p[4], slot: p[5] });
       return p[1] === 'same' ? `${B} and ${A} are the same moment` : `${B} is not before ${A}`;
@@ -205,11 +275,11 @@ window.Relations = (() => {
     const [, mid, a, b] = p;
     return `${Store.slotShort({ kind: 'marker', id: mid, slot: b })} is not before ${Store.slotShort({ kind: 'marker', id: mid, slot: a })}`;
   }
-  function windows(given) {
+  function windows(given, likely) {
     const auto = seqRels().concat(partRels());
-    const rels = given.concat(ownRels(given), auto);
+    const rels = given.concat(ownRels(given), auto, lifeRels(given));
     const W = new Map();
-    const node = k => { if (!W.has(k)) { const b = baseOf(k); W.set(k, { E: b.min || '', L: b.max || '', eBy: null, lBy: null }); } return W.get(k); };
+    const node = k => { if (!W.has(k)) { const b = baseOf(k, likely); W.set(k, { E: b.min || '', L: b.max || '', eBy: null, lBy: null }); } return W.get(k); };
     const raise = (n, cand, by) => { if (cand && (!n.E || D(cand) > D(n.E))) { n.E = cand; n.eBy = by; return true; } return false; };
     const lower = (n, cand, by) => { if (cand && (!n.L || D(cand, 1) < D(n.L, 1))) { n.L = cand; n.lBy = by; return true; } return false; };
     const cap = 12 + rels.length * 4;
@@ -238,32 +308,46 @@ window.Relations = (() => {
     const { W, looping, auto } = windows(rels);
     winInfo = W;
     const tied = new Set(rels.concat(auto).flatMap(r => [key(r.from), key(r.to)])); // dates that a tie really touches, and the dates of a journey with stops
+    tiedKeys = tied;
     const out = new Map(), shut = [];
     for (const [k, n] of W) {
       if (closed(n)) { n.conflict = true; shut.push([k, n]); continue; }
       // a date that is only in the picture through its own from / until pair shows nothing new
       if (tied.has(k)) out.set(k, { min: n.eBy ? n.E : '', max: n.lBy ? n.L : '' });
     }
-    // One broken limit closes the window of every date along its path. The dates where a tie arrives head-on are
-    // the ones to show; the others (reached by working backwards) only repeat them.
+    const list = shutEntries(shut, false);
+    if (looping && !list.length) list.push({ key: 'win:loop', window: true, loop: true, rels: rels.map(r => r.id), slots: [] });
+    // Second pass: the same limits over the most likely dates alone. Dates that fit only because their ranges are
+    // wide (a child typed 50 years before its father, each give or take 100) are reported too, as a softer entry.
+    if (!looping) {
+      const N = windows(rels, true);
+      if (!N.looping) list.push(...shutEntries([...N.W].filter(([k, n]) => closed(n) && !(W.get(k) && W.get(k).conflict)), true));
+    }
+    return { out, conflicts: list };
+  }
+  // One broken limit closes the window of every date along its path. The dates where a tie arrives head-on are
+  // the ones to show; the others (reached by working backwards) only repeat them. And of those, a date neither of
+  // whose ends was reached by working backwards is where the limits really meet (along a journey's chain of stops
+  // every date between the two that disagree would otherwise be listed). `soft`: found on the second pass.
+  function shutEntries(shut, soft) {
     const headOn = shut.filter(([, n]) => (n.eBy && !n.eBy.back) || (n.lBy && !n.lBy.back));
-    // …and of those, a date neither of whose ends was reached by working backwards is where the limits really
-    // meet (along a journey's chain of stops every date between the two that disagree would otherwise be listed)
     const meet = headOn.filter(([, n]) => !(n.eBy && n.eBy.back) && !(n.lBy && n.lBy.back));
     const bad = new Map();
     for (const [k, n] of (meet.length ? meet : headOn.length ? headOn : shut)) { // one entry per pair of governing ties
       const ids = [n.eBy && n.eBy.rel, n.lBy && n.lBy.rel].filter(Boolean).sort();
       const ck = ids.join('+') || k;
-      if (!bad.has(ck)) bad.set(ck, { key: 'win:' + ck, window: true, rels: ids, slots: [] });
+      if (!bad.has(ck)) bad.set(ck, { key: (soft ? 'soft:' : 'win:') + ck, window: true, soft: !!soft, rels: ids, slots: [] });
       bad.get(ck).slots.push({ ref: Store.parseRefKey(k), E: n.E, L: n.L, eOwn: !n.eBy, lOwn: !n.lBy });
     }
-    const list = [...bad.values()];
-    if (looping && !list.length) list.push({ key: 'win:loop', window: true, loop: true, rels: rels.map(r => r.id), slots: [] });
-    return { out, conflicts: list };
+    return [...bad.values()];
   }
+  let tiedKeys = new Set(); // the dates whose windows are shown: a tie touches them, or they belong to a journey's chain
   // Everything known about the window of one date, for the editor and the badges.
   function windowOf(ref) {
-    const n = winInfo.get(key(ref));
+    const k = key(ref), n0 = winInfo.get(k);
+    // a date that no tie touches says nothing about the lifetime limits that happen to bound it
+    const quiet = by => !!by && isLife(by.rel) && !tiedKeys.has(k);
+    const n = n0 ? { E: quiet(n0.eBy) ? '' : n0.E, L: quiet(n0.lBy) ? '' : n0.L, eBy: quiet(n0.eBy) ? null : n0.eBy, lBy: quiet(n0.lBy) ? null : n0.lBy, conflict: n0.conflict } : null;
     const ties = Store.relationsOfRef(ref).filter(r => r.status === 'active' && isLimit(r));
     return { E: n ? n.E : '', L: n ? n.L : '', eBy: n ? n.eBy : null, lBy: n ? n.lBy : null, conflict: !!(n && n.conflict),
       auto: !!(n && ((n.eBy && isAuto(n.eBy.rel)) || (n.lBy && isAuto(n.lBy.rel)))), // an end is set by the order of a journey's stops
@@ -279,6 +363,10 @@ window.Relations = (() => {
   // The tie that governs an end, said from that date's side.
   function governText(by) {
     if (by && String(by.rel).startsWith('own|')) return by.back ? 'its own until date' : 'its own from date';
+    if (by && isLife(by.rel)) { // the lifetime rule, or parent and child
+      const p = String(by.rel).split('|');
+      return `not ${by.back ? 'after' : 'before'} ${Store.slotLabel({ kind: 'marker', id: by.back ? p[3] : p[1], slot: by.back ? p[4] : p[2] })} (${p[0] === 'kin' ? 'a child is not born before its parent' : 'the lifetime rule'})`;
+    }
     if (by && isPart(by.rel)) { // a date shared with the journey this one is part of (or with a part of this one)
       const p = String(by.rel).split('|');
       return `not ${by.back ? 'after' : 'before'} ${Store.slotLabel({ kind: 'marker', id: by.back ? p[4] : p[2], slot: by.back ? p[5] : p[3] })} (${p[1] === 'same' ? 'the same moment in the journey it is part of' : 'part of a longer journey'})`;
@@ -536,16 +624,20 @@ window.Relations = (() => {
       body.append(h('p', { class: 'hint' }, 'Each entry is either one date that two chains of time gaps place differently (their ranges cannot both be true), or a set of limits that leaves a date no room (its earliest is after its latest). Choose the value to keep (the time gap that produced the other value is kept but marked overruled, so the disagreement stays on record), or mark the date undeterminable.'));
       for (const c of conflicts) {
         if (c.window) { // limits that cannot all be true: name the dates and the ties, and let a tie be set aside
-          const card = h('div', { class: 'card' }, h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, c.loop ? 'These limits chase each other round and never settle' : 'These cannot all be true'));
+          const card = h('div', { class: 'card' }, h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, c.loop ? 'These limits chase each other round and never settle' : c.soft ? 'The most likely dates are out of order' : 'These cannot all be true'));
           for (const x of c.slots) card.append(h('div', { class: 'rel-cand' },
-            h('div', { class: 'grow' }, h('strong', {}, Store.slotLabel(x.ref)), ' ', h('span', { class: 'muted' }, `would have to be not before ${Dates.formatInput(x.E)}${x.eOwn ? ' (its own date)' : ''} and not after ${Dates.formatInput(x.L)}${x.lOwn ? ' (its own date)' : ''}`)),
+            h('div', { class: 'grow' }, h('strong', {}, Store.slotLabel(x.ref)), ' ', h('span', { class: 'muted' }, `${c.soft ? 'going by the most likely dates, ' : ''}would have to be not before ${Dates.formatInput(x.E)}${x.eOwn ? ' (its own date)' : ''} and not after ${Dates.formatInput(x.L)}${x.lOwn ? ' (its own date)' : ''}`)),
             h('button', { class: 'small', onclick: () => Editor.open(x.ref.id) }, 'Open marker')));
           for (const rid of c.rels) {
-            if (isAuto(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), (isPart(rid) ? 'Part of a longer journey: ' : 'The order of the journey: ') + autoText(rid)))); continue; }
+            if (isOwn(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), 'Its own dates: the Until is not before the From'))); continue; }
+            if (isAuto(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), autoLead(rid) + autoText(rid)))); continue; }
             const r = Store.relation(rid); if (!r) continue;
             card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), describeRelation(r), r.sourceId && Store.source(r.sourceId) ? h('span', { class: 'muted' }, ` · ${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}`) : null),
               h('button', { class: 'small', title: 'Keep the record but leave it out of the reckoning', onclick: () => { Store.updateRelation(rid, { status: 'overruled' }); render(); } }, 'Overrule this tie'))); }
-          card.append(h('p', { class: 'hint' }, !c.rels.length ? 'One of these dates was typed outside its own earliest or latest box.'
+          card.append(h('p', { class: 'hint' }, c.soft ? 'Each of these dates has a range, and inside the ranges they can still agree. Going by the most likely dates they cannot all be true. Usually one of them was typed where it should have been worked out, or is left over from an earlier time gap. Correct it in its marker.'
+            : !c.rels.length ? 'One of these dates was typed outside its own earliest or latest box.'
+            : c.rels.every(isOwn) ? 'This fact\'s Until is before its From. Correct one of the two in the marker.'
+            : c.rels.some(isLife) && c.rels.every(r => isAuto(r) || isOwn(r)) ? 'These follow from rules the app keeps by itself: a marker\'s facts fall between its Begins and its Ends, whoever takes part in a fact was alive for it, and a child is not born before its parent. Correct the date that is wrong. If the rule does not fit a kind of fact, tick "may fall outside the lifetime" on its fact type (Library → Fact types); the rules themselves are switched in Library → Time gaps.'
             : c.rels.some(isPart) ? 'One of these journeys is marked "Part of" the other, so these dates are the same moment, or one must fall inside the other. The two do not agree. Correct a date in its marker, or clear the "Part of" box on the shorter journey. The app does not choose between them.'
             : c.rels.every(isAuto) ? 'A journey\'s dates run in order: From, then each stop\'s Arrived and Left, then Until. One of these dates is out of that order. Correct it in the marker, or put the places in the order they were reached.'
             : 'Either a date here is wrong, or one of these ties is. Correct the date in its marker, or overrule the tie that does not hold.'));

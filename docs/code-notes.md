@@ -118,6 +118,19 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - The tie dialog: `Relations.pick(thisRef, { part, onDone })`, rows of `{ part, where: 'on'|'after'|'before',
   y, m, d, markerId, slotKey, verse, approx, lo, hi }` with one shared source, a "Reads as" line per row and a
   result preview. `convert(relId, part)` turns a zero gap into a limit (Library → Time gaps).
+- Automatic checks (22.1 to 22.3). `ownRels` now also covers every from/until fact with something typed at both
+  ends (22.1). `lifeRels(given)` builds `life|<m1>|<slot1>|<m2>|<slot2>` and `kin|…` limits (slot2 not before
+  slot1) on every run: a marker's span is its earliest dated `begins` fact and latest dated `ends` fact; own
+  facts inside it (not `t.outside`, which defaults to true only for `ft_named`); participants overlap it (the
+  "not after their Ends" half is skipped for `begins` facts); `kin` from `Store.links()` named "Parent of".
+  The Until of a from/until fact is used only when it has something typed or a real tie; otherwise the From.
+  These are **not** in `tied`, so no `calc…` window is written for a date no real tie touches, and
+  `windowOf` blanks an end governed by one unless the slot is in `tiedKeys` (`quiet`). Settings `autoLife`,
+  `autoKin` (`!== false` = on), ticked in Library → Time gaps, which then calls `Relations.solve()` and
+  `Store.notify`.
+- Second pass: `windows(rels, true)` makes `baseOf` take a known date at its most likely value. Nodes closed
+  there and not in the first pass become `{ window: true, soft: true }` entries (`shutEntries(shut, soft)`);
+  the panel heads them "The most likely dates are out of order".
 - Editing a tie (21.1): `Relations.pick(null, { edit: relId })` opens the same dialog filled in. `rowOf(r)` is the
   reverse of `rowRelation`. The first row is the saved tie (`Store.updateRelation`, id and status kept); rows
   added are new ties. `thisRef` can be changed in the `.tie-this` box. `preview` leaves the edited tie out as it
@@ -141,6 +154,9 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   date check all walk `f.stops` as well. `UI.journeyText(j, html)` (`j` = the fact or its mirror) words it
   ("from Ur, by way of Carchemish, stopping at Haran (dates), to Shechem") for the fact line, the mirror line
   and the information panel. A marker row has two ✕: the chooser's own (clears the box, ignored) and the row's.
+- `syncDraftFromStore`: a slot that a time gap was reckoning when the draft last looked (`was`) takes the
+  store's date and range even if it is no longer reckoned; before 22, Save wrote the old reckoned date back
+  as a typed one. Still-reckoned slots now take the range as well as the date.
 - `renderPartOf(i)`: the "Part of a longer journey" box (value `markerId|factId`), offered from saved facts
   only; a journey whose own chain of `partOf` leads back to this fact is left out. Under it, one line per
   `Facts.partLinks` result, and on the long journey the list of its parts.

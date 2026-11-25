@@ -405,6 +405,8 @@ button.icon { padding: 4px 7px; }
 .tie-row { padding: 8px; }
 .tie-row-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .tie-this:empty { display: none; }
+.auto-rules { margin: 6px 0 10px; }
+.auto-rules label { font-size: calc(13px * var(--fs)); }
 .tie-this { margin-bottom: 10px; }
 .tie-row-top select { width: auto; flex: 0 0 auto; }
 .tie-row-top .mselect { flex: 1 1 calc(150px * var(--fs)); min-width: calc(120px * var(--fs)); }

@@ -7,8 +7,8 @@ cross items off as they land. We go through it one item at a time.
 
 - **Section 11:** the Boox "crash" when switching apps. Five fixes are built; the cause is not confirmed.
   Waiting for the Boox's problems log (Library, Problems log).
-- **12.4 / design step C:** the lifetime rule (the app limits a person's facts to between their Born and
-  Died by itself). Not decided.
+- **12.4 / design step C:** the lifetime rule. Built 25 Nov 2026 as 22.2 (see section 22), as a check
+  and a limit; it gives no window to a fact that has no date and no tie.
 - **Section 17:** an automatic journey ("Starts at" / "Ends at"). 17.1 built 25 Nov 2026; not checked on
   the Boox. 17.2 (pins moving along the line) and 17.3 (a straight line when no route is drawn) are for
   later. With no place on the fact, travellers stay at the start until the arrival date.
@@ -23,6 +23,10 @@ cross items off as they land. We go through it one item at a time.
   are recorded (25 Nov 2026); steps 20.1 and 20.2 proposed; waiting for his go-ahead to build.
 - **Section 21:** editing a time gap after it is saved. Built 25 Nov 2026 (an Edit button on every time
   gap); not checked on the Boox.
+- **Section 22:** less typing and automatic checks. 22.1 to 22.3 (Until before From, the lifetime rule,
+  a child not before its parent) built 25 Nov 2026; not checked on the Boox. 22.4 ("during" in the tie
+  dialog), 22.5 (a chain that loses its anchor goes blank) and 22.6 (reading by verse) are proposed, not
+  decided.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
@@ -880,3 +884,89 @@ if it was) and the dates are worked out again. Settled while building:
 
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
 on the Boox itself.
+
+## 22. Less typing, automatic checks, easier reading (raised 25 Nov 2026; 22.1 to 22.3 built 25 Nov 2026; 22.4 to 22.6 under discussion)
+
+The user's words, after entering the time gaps for Genesis 11:31 (Terah, Abram, Sarai, Lot): "Please double
+check the logic, and let me know if there is anything missing, or redundancy. Is there a better way of
+inputting this information, or can we change the app to make it better? In order reduce redundancy of
+inputting information. To improve its look, or the way it is read. All while maintaining mobility (able to
+change functionality around) of inputting information in the app."
+
+**What the review of his export found** (told to him 25 Nov; the corrections are his to make):
+
+* The Journey runs backwards: From 9 Feb 1921 BC, Until 10 Feb 2126 BC. Cause: the tie "Terah, Lived at
+  Haran (from) = Terah, Born" sits on the Haran fact (meant for Ur), and the Journey's Until is tied to that
+  date. The app reported nothing, because a from / until pair is only checked where a limit tie touches it.
+* The Journey's From comes from a typed anchor, "Lived at Ur until 9 Feb 1921 BC" on Terah (one day before
+  his death). The verse gives no date, only an order.
+* "Haran (the man), Died = Terah, Born" with no length says he died the day Terah was born; his note shows
+  he meant "while Terah was alive".
+* Lot's Born is typed 2108 BC and anchored, 52 years before his father Haran can have been born.
+* Sarai's "Lived at Ur: not before Married" limits the residence by the marriage, the wrong way round.
+* Missing: Journey Until not after Terah's death; Journey From not before Haran's death or Lot's birth.
+* Redundant since 17.1: the eight "Lived at" facts and their eight date ties; the journey fact with Starts
+  at Ur and Ends at Haran places all four. Eight lifetime limits and four empty Born / Died facts exist
+  only to hold those limits. 9 facts and 14 ties cite Genesis 11:31; one fact and about four limits say the
+  same.
+
+**Proposed changes to the app** (put to him 25 Nov, awaiting his choice; each would be its own item):
+
+- [x] **22.1 Until before From is always reported. Built 25 Nov 2026.** under Conflicts, on every fact, tie or no tie.
+- [x] **22.2 The lifetime rule. Built 25 Nov 2026** (the open 12.4 / design step C): a person's facts stay between their Born
+      and Died by themselves. A limit the app keeps, like the order of a journey; it changes no typed date.
+- [x] **22.3 The family rule. Built 25 Nov 2026:** a child is not born before its parent (from the Parent of ties).
+- [ ] **22.4 "During" in the tie dialog:** one row, "during Terah's life" or "while living at Ur", saved as
+      the two limits it means.
+- [ ] **22.5 A chain that loses its anchor goes blank** instead of its reckoned dates quietly turning into
+      typed dates (today the remaining dates anchor each other at the old values).
+- [ ] **22.6 Reading by verse:** everything entered from one verse on one screen, facts and time gaps
+      together.
+
+His wish to keep freedom of entry is met by making 22.1 to 22.3 limits and reports only: they never change
+what he typed, and entering a person's own facts stays possible beside a journey.
+
+**His second export, 25 Nov 2026** ("Check if I made the right corrections then build"). Done right: the
+eight "Lived at" facts and their ties are gone, no typed anchor is left, the Journey has "Until not after
+Terah died" and "From not before Haran died / Lot born", Lot's Born is cleared and tied to his father's,
+Haran's death is "not after Terah died" and "not after the Journey's From". Left over, told to him:
+
+* A tie the wrong way round: "Journey (from): not after Haran, Died". With its mirror it pins the Journey's
+  start to the day Haran died. To delete.
+* "Journey (until): not after Terah, Died" is entered twice. One to delete.
+* Haran (the man) still has a Died date, 10 Feb 2126 BC (give or take 100 years): the old reckoned date,
+  written back by the bug below. It pulls Terah's, Haran's and Lot's windows. To clear, with its two small
+  boxes.
+* The Journey's Until still has earliest 2226 BC and latest 2026 BC in its small boxes. To clear.
+
+**22.1 to 22.3 as built, 25 Nov 2026** (he said "build"; one commit, because the three share one piece of
+working out; each rule has its own switch instead):
+
+* **Until before From** is reported for every fact that has something typed at both ends, tie or no tie.
+* **Lifetime rule.** A marker's lifetime runs from its Begins fact (Born, Founded, the From of Took place)
+  to its Ends fact (Died, Destroyed). Its own facts fall inside it. Whoever takes part in a fact was alive
+  for some of it (began before it ended, ended after it began); a birth is let off the second half, since
+  a father may die before his child is born. "Also named" is let off entirely, and any fact type can be,
+  with a new tick in Library, Fact types: "may fall outside the lifetime of its marker".
+* **Family rule.** A child's Begins is not before its parent's Begins, from every "Parent of" tie.
+* They are checks and limits, never dates. A date that breaks one is listed under Conflicts ("Within a
+  lifetime: …", "Parent and child: …") with no Overrule button. A date that already has a tie is narrowed
+  by them and says so ("not after … Died (the lifetime rule)"). **A fact with no date and no tie gets no
+  window from them**, so undated facts sort and draw on the map exactly as before. This is narrower than
+  the "shown as reckoned" of design decision 2, chosen so that nothing he has entered changes its look.
+* **A second pass over the most likely dates.** His dates carry wide ranges (the Flood give or take 100
+  years), and inside ranges that wide a child typed 50 years before its father still "fits". So the same
+  limits are worked out again with each known date at its most likely value; what fails only there is
+  listed as a softer entry, "The most likely dates are out of order". This is what catches a case like
+  Lot's 2108 BC. It applies to his own limit ties as well as to the three rules.
+* Switches: Library, Time gaps, two ticks (lifetime rule; child not before parent). They are a setting of
+  the device, not synced.
+* **Bug fixed with it:** when a time gap was edited, turned into a limit or deleted while its marker was
+  open in the editor, the old reckoned date stayed in the editor and Save wrote it back as a typed date.
+  The editor now takes the store's value for any date a time gap had been working out.
+* What the rules do not replace: "the Journey's Until is not after Terah died" and "its From is not
+  before Lot was born" are his readings of the text and stay his ties. For a traveller the rule only says
+  the journey overlaps their life.
+
+Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
+on the Boox itself. Not tried on his real data: any entry it lists there is for him to judge.

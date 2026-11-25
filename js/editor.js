@@ -229,21 +229,24 @@ window.Editor = (() => {
   function syncDraftFromStore(rerender) {
     const s = !isNew && draft ? Store.marker(id) : null;
     if (!s) return;
+    // A date that a time gap was working out when the draft last looked, and no longer does (the time gap was
+    // edited, turned into a limit or deleted): its box could not be typed in, so what the draft holds is the old
+    // reckoned date. It takes the store's value too, or Save would write the old date back as if it were typed.
+    const old = { derived: draft.derived || {}, pinned: draft.pinned || [] };
+    const was = slot => !!old.derived[slot] && !old.pinned.includes(slot);
     draft.pinned = JSON.parse(JSON.stringify(s.pinned || []));
     draft.undetermined = JSON.parse(JSON.stringify(s.undetermined || []));
     draft.derived = JSON.parse(JSON.stringify(s.derived || {}));
     const reckoned = slot => (draft.derived[slot] && !draft.pinned.includes(slot)) || draft.undetermined.includes(slot);
+    const take = (x, sx) => { // x: a draft fact or stop, sx: the same one in the store
+      if (reckoned('fact:' + x.id) || was('fact:' + x.id)) { x.date = sx.date; x.dateMin = sx.dateMin; x.dateMax = sx.dateMax; }
+      if (reckoned('fact:' + x.id + ':end') || was('fact:' + x.id + ':end')) { x.dateEnd = sx.dateEnd; x.dateEndMin = sx.dateEndMin; x.dateEndMax = sx.dateEndMax; }
+      CALC.forEach(k => { if (sx[k]) x[k] = sx[k]; else delete x[k]; });
+    };
     draft.facts.forEach(f => {
       const sf = s.facts.find(x => x.id === f.id); if (!sf) return;
-      if (reckoned('fact:' + f.id)) f.date = sf.date;
-      if (reckoned('fact:' + f.id + ':end')) f.dateEnd = sf.dateEnd;
-      CALC.forEach(k => { if (sf[k]) f[k] = sf[k]; else delete f[k]; });
-      (f.stops || []).forEach(s => { // the stops of a journey have dates of their own
-        const ss = (sf.stops || []).find(x => x.id === s.id); if (!ss) return;
-        if (reckoned('fact:' + s.id)) s.date = ss.date;
-        if (reckoned('fact:' + s.id + ':end')) s.dateEnd = ss.dateEnd;
-        CALC.forEach(k => { if (ss[k]) s[k] = ss[k]; else delete s[k]; });
-      });
+      take(f, sf);
+      (f.stops || []).forEach(st => { const ss = (sf.stops || []).find(x => x.id === st.id); if (ss) take(st, ss); }); // the stops of a journey have dates of their own
     });
     if (rerender) render();
   }
@@ -300,7 +303,7 @@ window.Editor = (() => {
       if (a && b && !win.conflict && b.y - a.y > 0) lines.push(`window ${b.y - a.y} year${b.y - a.y === 1 ? '' : 's'}`);
       winCaption = h('div', { class: 'rel-caption' }, ...lines.map(t => h('div', {}, t)));
     }
-    if (st && st.conflict && st.conflict.window) caption = h('div', { class: 'rel-caption conflict' }, '⚠ The limits on this date leave it no room. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
+    if (st && st.conflict && st.conflict.window) caption = h('div', { class: 'rel-caption conflict' }, st.conflict.soft ? '⚠ The most likely dates around this one are out of order. ' : '⚠ The limits on this date leave it no room. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
     else if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
     if (undet) caption = h('div', { class: 'rel-caption' }, 'Marked undeterminable: not placed on the timeline.');
     return h('label', { class: 'field' }, label,
