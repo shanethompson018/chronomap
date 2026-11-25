@@ -14,10 +14,10 @@ cross items off as they land. We go through it one item at a time.
   later. With no place on the fact, travellers stay at the start until the arrival date.
 - **Section 18:** markers stacked on one spot share one numbered pin; clicking it lists them. Built
   25 Nov 2026; not checked on the Boox.
-- **Section 19 (under discussion):** routes with stops on the way, and a short route that is part of a
-  longer one. Nothing decided.
-- **Section 20 (under discussion):** markers inside a marker (an army and its people), with exclusions.
-  Nothing decided.
+- **Section 19:** routes with stops on the way, and a short route that is part of a longer one. His
+  answers are recorded (25 Nov 2026); steps 19.1 to 19.3 proposed; waiting for his go-ahead to build.
+- **Section 20:** markers inside a marker (an army, a country, a company), with exclusions. His answers
+  are recorded (25 Nov 2026); steps 20.1 and 20.2 proposed; waiting for his go-ahead to build.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
@@ -674,8 +674,32 @@ First thoughts (not put to him yet, nothing decided):
   short one is marked as a leg of the long one, so the travellers are placed once and the long journey
   takes the leg's dates as limits.
 
-To ask him: does each stop need its own dates; do all travellers make every leg, or can some join and
-leave at a stop; is a stop always a marker (a town) or sometimes just a point on the line.
+**His answers, 25 Nov 2026** (decided; not yet told to build):
+
+* Each stop has its own arrived and left dates (or limits), like activities in sequence in P6.
+* Not every traveller makes every leg: "Some can join, leave, or stop."
+* A stop is sometimes a marker and sometimes just a point on the line. And: "sometimes a point on a line
+  does not mean a stop it may just mean the point is along that path." So a place on the journey is
+  either a stop (with dates) or a place it passes (no dates, no stay).
+* A short journey as a leg of a longer one: "Yes that is fine but what if I log the long journey first,
+  and then later stumble upon the short journey how would I enter that?" Answer given to him: the short
+  journey is entered as its own fact with its own source and a "Part of" box naming the long journey.
+  The link is made from the short one, so the order of entry does not matter and the long one is not
+  re-entered.
+
+Proposed steps (put to him 25 Nov, awaiting his go-ahead):
+
+- [ ] **19.1 Places along a journey.** A list on the journey fact between "Starts at" and "Ends at". Each
+      row is a marker or a point picked on the map, and is either a stop (arrived and left dates, each
+      with limits and ties like any other date) or a place passed. Travellers are at a stop between its
+      two dates and on the route between stops.
+- [ ] **19.2 Who makes which part.** Each traveller can have "joins at" and "leaves at" (the start, a
+      stop, or the end). Someone who leaves at a stop stays there until their own next location.
+- [ ] **19.3 "Part of" a longer journey.** The short journey's dates become limits on the long one (and
+      on the matching stops when its ends are stops of the long one). Travellers are placed once. Dates
+      that disagree are reported as a conflict, as closed windows are now; the app does not pick a side.
+
+Still to ask: nothing blocking. The conflict rule in 19.3 was put to him as a recommendation.
 
 ## 20. Markers inside a marker: an army and its people (raised 25 Nov 2026, under discussion)
 
@@ -693,7 +717,28 @@ First thoughts (not put to him yet, nothing decided):
   "Except" box on the fact naming who is left out. "Died in battle" on the army then ends every member but
   the exceptions, with one date and one source.
 
-To ask him: whether every fact type on a group reaches its members or only ticked ones; whether a group
-can hold groups; how members show on the map (one numbered pin for the army, section 18, or each person).
+**His answers, 25 Nov 2026** (decided; not yet told to build):
 
-He wrote "3 things" on 25 Nov but listed two (sections 19 and 20). Asked for the third.
+* Only ticked fact types reach the members: "I like a tick as applies to it's members."
+* An "Except" box on the fact naming who is left out: "Yes that seems good."
+* A group can hold groups. "This does not have to only be an army. That was an example. It could be a
+  corporation, ethnicity, country, etc."
+* On the map: "One numbered pin for the army, and then when you click it it lists out who is there. What
+  do you think about that?" Answer given to him: yes, and it is what section 18 already draws for
+  markers located at another marker ("Army +5"). The number counts the markers he has entered, not the
+  size of the army. A member who is somewhere else at that date (left behind, an exception, an own
+  location) is drawn at their own place and listed in the bubble as "elsewhere". A group that is an
+  area (a country) keeps the fan and counted pin of section 10.
+
+Proposed steps (put to him 25 Nov, awaiting his go-ahead):
+
+- [ ] **20.1 Members follow the group.** Membership is a fact with from and until, entered from either
+      side (on the person: member of the army; on the army: its members). While a member, a marker is
+      wherever the group is unless a fact of its own says otherwise. Groups inside groups follow in the
+      same way.
+- [ ] **20.2 Facts that apply to the members.** A tick on the fact type, "applies to its members", and an
+      "Except" box on the fact. Only those who are members at the fact's date are reached. Each member's
+      information shows the line as coming from the group's fact. A "Died" on the army then ends every
+      member but the exceptions.
+
+The "3 things" in his message of 25 Nov was a typo: there were two.
