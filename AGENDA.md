@@ -9,8 +9,14 @@ cross items off as they land. We go through it one item at a time.
   Waiting for the Boox's problems log (Library, Problems log).
 - **12.4 / design step C:** the lifetime rule (the app limits a person's facts to between their Born and
   Died by itself). Not decided.
-- **Section 17 (next up):** an automatic journey ("Starts at" / "Ends at"). Proposed 23 Nov 2026, under
-  discussion, nothing decided, nothing built. Takes in the older 13.2.
+- **Section 17:** an automatic journey ("Starts at" / "Ends at"). 17.1 decided 25 Nov 2026 and being built.
+  17.2 (pins moving along the line) and 17.3 (a straight line when no route is drawn) are for later.
+- **Section 18 (asked 25 Nov 2026):** markers stacked on one spot share one numbered pin; clicking it lists
+  them. To be built straight after 17.1.
+- **Section 19 (under discussion):** routes with stops on the way, and a short route that is part of a
+  longer one. Nothing decided.
+- **Section 20 (under discussion):** markers inside a marker (an army and its people), with exclusions.
+  Nothing decided.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
@@ -18,8 +24,8 @@ cross items off as they land. We go through it one item at a time.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
   added in Library, Fact types (✏️ on the fact type, then + Add role).
-- Not asked for (mentioned 23 Nov 2026): markers placed on a route sit stacked at its middle; they do not
-  move along the line or spread apart.
+- Markers placed on a route sit stacked at its middle; they do not move along the line (17.2, later).
+  The stacking itself is section 18.
 - None of the work since section 8 has been checked on the Boox itself.
 
 ## 1. Approximation
@@ -568,7 +574,7 @@ and set up:
       different account says so on screen and in the problems log. Checked with a stand-in for Google
       on the test copy; not checked against the real accounts, which only the user can do.
 
-## 17. An automatic journey: "Starts at" and "Ends at" (raised 23 Nov 2026, under discussion, nothing built)
+## 17. An automatic journey: "Starts at" and "Ends at" (raised 23 Nov 2026, 17.1 decided 25 Nov 2026)
 
 The user's words: "Is there a way you can automate this with a moved to route/marker automatically moving
 markers to another location without me having to input the ties. Let's discuss how it would work."
@@ -591,7 +597,7 @@ there too", makes more sense than a separate "Moved to".
   needs a second fact (Lived at Haran, with the party in its role) and a tie: its date *on* the Journey's
   Until. Leaving Ur needs no tie. An undated "Lived at Ur" is fine once the arrival has a date or window.
 
-**Proposal put to the user** (he has not answered yet):
+**Proposal put to the user** (answered 25 Nov 2026, see "Decided" below):
 
 - [ ] **17.1 "Starts at" and "Ends at" on a journey fact.** Two new boxes, each choosing a marker (Ur,
       Haran). From them the app works out, with no extra fact and no tie:
@@ -605,11 +611,72 @@ there too", makes more sense than a separate "Moved to".
       From and Until, and spread apart so every traveller shows.
 - [ ] **17.3 "Starts at" with no drawn route:** a straight line between the two markers (the older 13.2).
 
-To settle with him before building: where the setting lives (suggested: a tick on the fact type, "a
-journey: has a start and an end place", so "Starts at" / "Ends at" appear only on such facts); whether it
-should also work on a person's own fact (a Journey fact on Terah, place = the route marker), not only on a
-route marker; 17.2 now or later. Code to read first: `Facts.derive` in `js/facts.js` (the `taken` list that
-"they go there too" uses), `Store.resolveMove` / `positionAt` in `js/store.js`, `locationsAt` and
-`presence` in `js/map.js`.
+**Decided by the user, 25 Nov 2026** ("Yes build it with your recommendations"):
+
+* Build 17.1 now.
+* The setting is a tick on the fact type (Library, Fact types): "a journey: has a start place and an end
+  place". "Starts at" and "Ends at" appear only on facts of such a type.
+* It works on a person's own fact as well as on a route marker. Who travels: everyone in a role ticked
+  "they go there too", plus the marker the fact is on when that marker is a pin (not when it is the route
+  or an area).
+* 17.2 and 17.3 later, each as its own item.
+
+Rules settled while planning (told to him before building):
+
+* The start place is used only for a traveller whom nothing else places before the journey's From.
+* A traveller's own dated location after From and up to the arrival means they left the party: their stay
+  on the route stops at that date and the journey gives them no arrival.
+* A journey with no date and no limits places nobody at its start or end (the fact card says so).
+* The two boxes are stored as `startAt` and `endAt` on the fact, so a list of stops (section 19) can be
+  added between them later.
 
 Declined on 23 Nov and not to be offered again: a "+ Role" button on the fact in the marker editor.
+
+## 18. Markers stacked on one spot share a numbered pin (asked 25 Nov 2026)
+
+The user's words: "Where point markers stack on each other on the map please make them numbered, and when
+you click the number pin you see all the markers similar to when zooming out."
+
+- [ ] **18.1** Pins that land on the same spot of the screen (travellers on a route, people at the same
+      town marker) are drawn as one pin showing how many there are. Clicking it lists them, as the counted
+      pin inside an area does (section 10); a name in the list opens that marker's information.
+
+## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, under discussion)
+
+The user's words: "Routes that stop at multiple locations before reaching their final destination. We need
+a way to mark those down. Also we need to consider possibly one source notes a marker moving a small route
+because it only considers that small timeline, however if another source considers a longer time line with
+a longer route we need a way for that small route to be included into the longer route."
+
+First thoughts (not put to him yet, nothing decided):
+
+* **Stops:** a list of stops on the journey fact between "Starts at" and "Ends at", each a marker with its
+  own arrived and left dates (or limits), read like activities in sequence in P6. Travellers sit at a stop
+  between its two dates and on the route between stops.
+* **A short route inside a longer one:** each source's journey stays its own fact with its own source. The
+  short one is marked as a leg of the long one, so the travellers are placed once and the long journey
+  takes the leg's dates as limits.
+
+To ask him: does each stop need its own dates; do all travellers make every leg, or can some join and
+leave at a stop; is a stop always a marker (a town) or sometimes just a point on the line.
+
+## 20. Markers inside a marker: an army and its people (raised 25 Nov 2026, under discussion)
+
+The user's words: "Say a marker is an army that includes multiple markers of people. If the army marker
+moves, it moves everyone with it. But we also need a way to exclude people within the marker moving, for
+example say some are wounded we need to be able to exclude them from the move. It does not only have to be
+for moving it can be anything that affects the army affects the people within, examples such as death
+(they all died in a battle except the exclusions), and any other fact type."
+
+First thoughts (not put to him yet, nothing decided):
+
+* Membership is a fact with from and until ("Member of" exists already). While a member, a person is
+  wherever the group is, unless a fact of their own says otherwise.
+* A fact on the group can apply to its members: a tick on the fact type ("applies to its members") and an
+  "Except" box on the fact naming who is left out. "Died in battle" on the army then ends every member but
+  the exceptions, with one date and one source.
+
+To ask him: whether every fact type on a group reaches its members or only ticked ones; whether a group
+can hold groups; how members show on the map (one numbered pin for the army, section 18, or each person).
+
+He wrote "3 things" on 25 Nov but listed two (sections 19 and 20). Asked for the third.
