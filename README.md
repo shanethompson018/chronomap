@@ -344,6 +344,17 @@ manuscripts have no ISBN and are typed by hand as before.
   else places them, they are shown waiting at that stop. Someone who leaves at a stop stays there until
   their own next location, and the journey does not bring them to its end place. Left alone, a traveller
   makes the whole journey. The marker the fact is on always makes the whole journey.
+* **A short journey that is part of a longer one.** One source may describe only a stretch of a journey
+  that another source describes whole. Each is entered as its own journey fact with its own source, and
+  on the short one the box **Part of a longer journey** (under "Ends at") names the long one. It does not
+  matter which was entered first. From then on:
+  * Where the short journey starts or ends at the long journey's start, end or one of its stops, the two
+    dates are the same moment, and a date known in one shows as the window of the other. Where there is
+    no matching place, the short journey must only fall inside the long one. The editor says which.
+  * If the two sources give dates that cannot both be true, it is listed under ⚠ Conflicts. The app
+    changes neither date: correct one, or clear the box.
+  * A traveller named on both is placed once, by the long journey. A traveller named only on the short
+    one is placed by the short one.
 * **Rough borders.** An area outline can carry a second, lighter dashed outline: the **largest possible
   extent** ("Draw extent"). Each edge of either outline can be marked **firm** (solid: a coast, a
   river, a treaty line) or **rough** (dashed over a soft band). Press "Firm / rough edges…" and the

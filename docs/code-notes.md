@@ -83,6 +83,14 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   against the day the party arrives there. "Left the party" counts only own places dated after T's own first
   day (`since`). `jp > lp`: the route copy is removed and nothing is placed. The owner pin has no entry in
   `j.part` and makes the whole journey. Mirrors carry `joinAt` / `leaveAt`; `UI.partText(stops, p)` words them.
+- "Part of" (19.3): `fact.partOf = { markerId, factId }` on the short journey (absent when not set; `normFact`,
+  `cleanReferences` and `deleteMarker` keep it honest). **Every** journey-type fact is now passed to
+  `deriveJourneys` (a long journey may have no start, end or stops). There `j.up` is the longer journey (a loop
+  A → B → A is dropped), and a traveller whom an ancestor also names (`a.everyone`) is taken out of
+  `j.travellers` and loses their copy of the short journey's move, **before** the snapshot, so it is not read as
+  "left the party". `deriveJourneys` returns `covered` (`<factId>|<markerId>`) for the mirrors (`mi.covered`,
+  `mi.partOf`). `Facts.partLinks(fS, tS, fL, tL)` matches places by marker in order and returns which slots
+  are the same moment (`same`) or only inside (`dir`); it stores nothing.
 - `when(f)` merges typed ends with calculated ends and returns `{ date, min, max, lo, hi, known, knownEnd, … }`.
   With no date, `date` is the middle of the window (or its one end) for ordering only. `whenText` / `whenLabel`
   word a date or its window ("between X and Y", "after X", "before X").
@@ -101,8 +109,11 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - Limits the app keeps by itself (`seqRels`, ids `seq|<markerId>|<slot>|<next slot>`): a journey with stops is a
   chain From ≤ Arrived ≤ Left ≤ … ≤ Until. They are added inside `windows()` on every run, their dates count as
   `tied` (so windows are written for them), `windowOf().auto` says an end is set by one, `governText` and the
-  conflicts panel word them ("the order of the journey") and offer no Overrule. `isAuto(id)` is the test; 19.3
-  is meant to add its own kind here.
+  conflicts panel word them ("the order of the journey") and offer no Overrule. `isAuto(id)` is the test.
+  A journey that is part of another, or has a part, gets its From ≤ Until link here even with no stops.
+- `partRels` (19.3) turns `Facts.partLinks` into limits: "the same moment" is two limits, one each way (ids
+  `part|same|<m1>|<slot1>|<m2>|<slot2>`), "inside" is one (`part|in|…`); always slot2 is not before slot1.
+  Dates that disagree therefore close a window and show as an ordinary window conflict. `isPart(id)`.
 - `windowOf(ref)` → `{ E, L, eBy, lBy, conflict, minTies, maxTies }`; `governText(by)`; `limitText`.
 - The tie dialog: `Relations.pick(thisRef, { part, onDone })`, rows of `{ part, where: 'on'|'after'|'before',
   y, m, d, markerId, slotKey, verse, approx, lo, hi }` with one shared source, a "Reads as" line per row and a
@@ -125,6 +136,9 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   date check all walk `f.stops` as well. `UI.journeyText(j, html)` (`j` = the fact or its mirror) words it
   ("from Ur, by way of Carchemish, stopping at Haran (dates), to Shechem") for the fact line, the mirror line
   and the information panel. A marker row has two ✕: the chooser's own (clears the box, ignored) and the row's.
+- `renderPartOf(i)`: the "Part of a longer journey" box (value `markerId|factId`), offered from saved facts
+  only; a journey whose own chain of `partOf` leads back to this fact is left out. Under it, one line per
+  `Facts.partLinks` result, and on the long journey the list of its parts.
 - `renderRole`: on a journey fact with stops, a role with `goes` shows a `.journey-part` row under each name
   ("joins at" / "leaves at", options numbered as in the places list).
 

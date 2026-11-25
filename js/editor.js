@@ -476,7 +476,7 @@ window.Editor = (() => {
         const when = mi.date ? Dates.formatRange(mi.date, mi.dateMin, mi.dateMax) + ' · ' : '';
         return h('div', { class: 'card fact-card mirror-card' },
           h('div', { class: 'row' },
-            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', UI.journeyText(mi) ? ' · ' + UI.journeyText(mi) : '', UI.partText(mi.stops, mi) ? ' · ' + UI.partText(mi.stops, mi) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : ''}`)),
+            h('span', {}, when, h('strong', {}, mi.factTitle), ' · ', h('strong', {}, mi.word + ': '), o.name, mi.place ? ' · ' + mi.place : '', UI.journeyText(mi) ? ' · ' + UI.journeyText(mi) : '', UI.partText(mi.stops, mi) ? ' · ' + UI.partText(mi.stops, mi) : '', h('span', { class: 'muted' }, ` · from ${o.name}'s ${mi.factTitle} fact${mi.placed ? ', which also places this marker' : mi.covered ? '; the longer journey it is part of places this marker' : ''}`)),
             h('button', { type: 'button', class: 'small narrow', title: `Open ${o.name} to edit that fact`, onclick: () => open(o.id) }, '✏️ ' + o.name)));
       }).filter(Boolean)];
   }
@@ -672,9 +672,43 @@ window.Editor = (() => {
         h('div', { class: 'journey-title' }, 'Places along the way', stops.length ? ', in the order they were reached' : ' (optional)'),
         ...rows, row(adder, h('div', { class: 'narrow' }, addPoint))),
       box('Ends at', 'endAt', 'where they arrive…'),
+      renderPartOf(i),
       h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))' } }, w.date || w.dateEnd || stops.length
         ? 'Whoever travels is at the start place before the journey, at each stop between its Arrived and Left dates, on the route between them, and stays at the end place afterwards, with no fact or tie of their own. A place passed has no dates and is recorded in the wording only. A dated place of their own during the journey means they left the party.'
         : 'Give the journey a date or limits first: until then nobody is placed at its start or its end.'));
+  }
+  // "Part of": this journey is a stretch of a longer one entered as another fact (f.partOf = { markerId, factId }).
+  // It is chosen here, on the short one, so the order of entry does not matter. Facts.partLinks says which dates
+  // the two then share; relations.js keeps them as limits and reports dates that disagree as a conflict.
+  function renderPartOf(i) {
+    const f = draft.facts[i], t = Store.factType(f.typeId);
+    const factOf = p => { const m2 = p && Store.marker(p.markerId); return m2 ? (m2.facts || []).find(x => x.id === p.factId) || null : null; };
+    const leadsHere = p => { for (let x = p, n = 0; x && n < 50; n++) { if (x.factId === f.id) return true; const f2 = factOf(x); x = f2 && f2.partOf; } return false; }; // a part of this one cannot be its longer journey
+    const opts = [], parts = [];
+    for (const m2 of Store.markers()) for (const f2 of m2.facts || []) {
+      const t2 = Store.factType(f2.typeId); if (!t2 || !t2.journey || f2.id === f.id) continue;
+      const name = `${m2.name} · ${f2.label || t2.name}`, trip = UI.journeyText({ startAt: f2.startAt, endAt: f2.endAt });
+      if (f2.partOf && f2.partOf.factId === f.id) parts.push(name + (trip ? ` (${trip})` : ''));
+      if (!(f2.partOf && leadsHere(f2.partOf))) opts.push([m2.id + '|' + f2.id, name + (trip ? ` (${trip})` : '')]);
+    }
+    const cur = f.partOf && factOf(f.partOf) ? f.partOf.markerId + '|' + f.partOf.factId : '';
+    const sel = UI.select([['', opts.length ? '— not part of a longer journey —' : '— there is no other journey to choose —'], ...opts], cur, { title: 'When this journey is a stretch of a longer journey that is entered as its own fact (from another source), choose the longer journey here. Their dates then limit each other, and travellers named on both are placed once, by the longer journey.' });
+    sel.addEventListener('change', () => { const [markerId, factId] = sel.value.split('|'); if (factId) draft.facts[i].partOf = { markerId, factId }; else delete draft.facts[i].partOf; render(); });
+    const lines = [];
+    const lf = cur ? factOf(f.partOf) : null;
+    if (lf) {
+      const nm = s => Store.stopName(s);
+      for (const x of Facts.partLinks(f, t, lf, Store.factType(lf.typeId))) {
+        if (x.what === 'from') lines.push(!x.same ? 'It sets out no earlier than the longer journey sets out.' : x.at === 'start' ? 'It sets out when the longer journey sets out (the same start place).' : `It sets out when the longer journey leaves ${nm(x.lStop)}.`);
+        else if (x.what === 'stop') lines.push(`Its stop at ${nm(x.sStop)} is the longer journey's stop there.`);
+        else if (x.what === 'until') lines.push(!x.same ? 'It arrives no later than the longer journey arrives.' : x.at === 'end' ? 'It arrives when the longer journey arrives (the same end place).' : `It arrives when the longer journey arrives at ${nm(x.lStop)}.`);
+      }
+      lines.push('Where the two give different dates, that is listed under ⚠ Conflicts; the app does not choose between them. Travellers named on both are placed once, by the longer journey.');
+    }
+    return h('div', { class: 'journey-partof' },
+      h('div', { class: 'field' }, 'Part of a longer journey', sel),
+      lines.length ? h('div', { class: 'rel-caption' }, ...lines.map(x => h('div', {}, x))) : null,
+      parts.length ? h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))', marginBottom: '6px' } }, 'Entered as part of this journey: ' + parts.join('; ') + '.') : null);
   }
   function renderRole(i, role) {
     const f = draft.facts[i];

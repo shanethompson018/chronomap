@@ -15,10 +15,10 @@ cross items off as they land. We go through it one item at a time.
 - **Section 18:** markers stacked on one spot share one numbered pin; clicking it lists them. Built
   25 Nov 2026; not checked on the Boox.
 - **Section 19:** routes with stops on the way, and a short route that is part of a longer one. He said
-  to build it ("19: stops first", 25 Nov 2026). 19.1 (places along a journey) and 19.2 (who makes which
-  part: "joins at" / "leaves at") built 25 Nov 2026; not checked on the Boox. 19.3 ("Part of" a longer
-  journey) is next. A place passed is recorded in the wording only until 17.3 draws a line through the
-  places.
+  to build it ("19: stops first", 25 Nov 2026). All three steps built 25 Nov 2026: 19.1 (places along a
+  journey), 19.2 (who makes which part: "joins at" / "leaves at") and 19.3 ("Part of" a longer journey).
+  Not checked on the Boox. A place passed is recorded in the wording only until 17.3 draws a line
+  through the places.
 - **Section 20:** markers inside a marker (an army, a country, a company), with exclusions. His answers
   are recorded (25 Nov 2026); steps 20.1 and 20.2 proposed; waiting for his go-ahead to build.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
@@ -661,7 +661,7 @@ colour and, with labels on, reads "Haran +2"; otherwise "3 markers". Pins inside
 and counted pin of section 10. Tested on the test copy at the PC size and the tablet size with E-ink on;
 not checked on the Boox itself.
 
-## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, 19.1 and 19.2 built 25 Nov 2026; 19.3 to build)
+## 19. Routes with stops, and a short route inside a longer one (raised 25 Nov 2026, built 25 Nov 2026)
 
 The user's words: "Routes that stop at multiple locations before reaching their final destination. We need
 a way to mark those down. Also we need to consider possibly one source notes a marker moving a small route
@@ -699,9 +699,10 @@ Steps (put to him 25 Nov; he said to build them the same day: "19: stops first")
 - [x] **19.2 Who makes which part. Built 25 Nov 2026.** Each traveller can have "joins at" and "leaves
       at" (the start, a stop, or the end). Someone who leaves at a stop stays there until their own next
       location.
-- [ ] **19.3 "Part of" a longer journey.** The short journey's dates become limits on the long one (and
-      on the matching stops when its ends are stops of the long one). Travellers are placed once. Dates
-      that disagree are reported as a conflict, as closed windows are now; the app does not pick a side.
+- [x] **19.3 "Part of" a longer journey. Built 25 Nov 2026.** The short journey's dates become limits on
+      the long one (and on the matching stops when its ends are stops of the long one). Travellers are
+      placed once. Dates that disagree are reported as a conflict, as closed windows are now; the app
+      does not pick a side.
 
 Still to ask: nothing blocking. The conflict rule in 19.3 was put to him as a recommendation.
 
@@ -751,6 +752,32 @@ or the end). Left alone, the traveller makes the whole journey, as before. Rules
   it into a place passed, clears the boxes that named it.
 * The marker the fact is on (a person with their own journey fact) always makes the whole journey.
 * The fact's wording and the traveller's own information say "(joins at …, leaves at …)".
+
+Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
+on the Boox itself.
+
+**19.3 as built, 25 Nov 2026.** A journey fact has a box under "Ends at": **Part of a longer journey**,
+listing the other journeys entered (marker, fact, from and to). It is set on the short journey, so the
+order of entry does not matter; the long journey's fact names the journeys entered as part of it. Rules
+settled while building:
+
+* Places are matched by marker, in order. The short journey's start is looked for among the long one's
+  start and stops; its stops among the long one's later stops; its end among the long one's later stops
+  and its end. A point picked on the map matches nothing.
+* A matched place is the same moment in both: the short journey sets out when the long one sets out, or
+  when it **leaves** the matching stop; it arrives when the long one **arrives** at the matching stop, or
+  at its end; a matching stop has the same Arrived and Left. So a date known in one fills the window of
+  the other. The editor says in words which of these apply.
+* An end with no match must only fall inside the long journey: not before its From, not after its Until.
+* Dates that cannot both be true are listed under ⚠ Conflicts as "Part of a longer journey: … and … are
+  the same moment". Neither date is changed and there is no Overrule button: he corrects a date or
+  clears the box. (This was put to him as a recommendation on 25 Nov and is built that way.)
+* A traveller named on both journeys is placed by the long one only (its legs and stops). A traveller
+  named only on the short one is still placed by the short one. The short journey's own route line is
+  still drawn over its dates.
+* A journey cannot be chosen as the longer journey of one of its own parts. Deleting the long journey's
+  fact or marker clears the box.
+* Parts of parts work: a traveller is placed by the nearest longer journey that names them.
 
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on); not checked
 on the Boox itself.

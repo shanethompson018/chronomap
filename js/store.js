@@ -92,6 +92,8 @@ window.Store = (() => {
     if (!o.startAt) delete o.startAt; if (!o.endAt) delete o.endAt; // a journey's start and end place (marker ids); absent when not set
     if (Array.isArray(o.stops)) o.stops = o.stops.map(normStop).filter(Boolean); // the places along a journey, in order
     if (!o.stops || !o.stops.length) delete o.stops;
+    // a short journey that is part of a longer one names the longer journey's fact; absent when not set
+    if (o.partOf && o.partOf.markerId && o.partOf.factId) o.partOf = { markerId: o.partOf.markerId, factId: o.partOf.factId }; else delete o.partOf;
     return o;
   }
   // A place along a journey (fact.stops, in the order travelled). `at` is a marker or a point picked on the map.
@@ -187,6 +189,7 @@ window.Store = (() => {
         if (f.where && f.where.kind === 'marker' && (!has('markers', f.where.markerId) || f.where.markerId === m.id)) f.where = null;
         for (const k of ['startAt', 'endAt']) if (f[k] && (!has('markers', f[k]) || f[k] === m.id)) delete f[k];
         if (f.stops) { f.stops = f.stops.filter(s => s.at.kind !== 'marker' || (has('markers', s.at.markerId) && s.at.markerId !== m.id)); if (!f.stops.length) delete f.stops; }
+        if (f.partOf) { const lm = d.markers.find(x => x.id === f.partOf.markerId); if (f.partOf.factId === f.id || !lm || !(lm.facts || []).some(x => x.id === f.partOf.factId)) delete f.partOf; } // the longer journey is gone
         const stopIds = new Set(stopsOf(f).map(s => s.id)); // "joins at" / "leaves at" must name a stop that is still there
         f.participants.forEach(p => { for (const k of ['joinAt', 'leaveAt']) if (p[k] && !stopIds.has(p[k])) delete p[k]; });
       });
@@ -548,7 +551,8 @@ window.Store = (() => {
         const asStart = f.startAt === markerId, asEnd = f.endAt === markerId; // a journey sets out from here / arrives here
         const along = (f.stops || []).find(s => s.at.kind === 'marker' && s.at.markerId === markerId); // or stops here / passes here
         const asStop = !!along && along.kind === 'stop', asPass = !!along && along.kind === 'pass';
-        if (roles.length || asPlace || asStart || asEnd || along) out.push({ marker: m, fact: f, roles, asPlace, asStart, asEnd, asStop, asPass });
+        const asPart = !!(f.partOf && f.partOf.markerId === markerId); // a shorter journey that is part of one entered here
+        if (roles.length || asPlace || asStart || asEnd || along || asPart) out.push({ marker: m, fact: f, roles, asPlace, asStart, asEnd, asStop, asPass, asPart });
       }
     }
     return out;
@@ -596,6 +600,7 @@ window.Store = (() => {
       f.participants = f.participants.filter(p => p.markerId !== id);
       if (f.where && f.where.kind === 'marker' && f.where.markerId === id) { f.where = null; touch(m); }
       for (const k of ['startAt', 'endAt']) if (f[k] === id) { delete f[k]; touch(m); }
+      if (f.partOf && f.partOf.markerId === id) { delete f.partOf; touch(m); }
       if (f.stops && f.stops.some(s => s.at.kind === 'marker' && s.at.markerId === id)) { f.stops = f.stops.filter(s => !(s.at.kind === 'marker' && s.at.markerId === id)); if (!f.stops.length) delete f.stops; touch(m); }
       if (f.participants.length !== before) touch(m);
     }));

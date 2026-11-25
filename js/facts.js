@@ -252,7 +252,7 @@ window.Facts = (() => {
       m.moves = [];
       for (const f of facts) {
         const t = typeOf(d, f);
-        if (t && t.journey && (f.startAt || f.endAt || (f.stops && f.stops.length))) journeys.push({ f, t, w: W.get(f.id), owner: m });
+        if (t && t.journey) journeys.push({ f, t, w: W.get(f.id), owner: m }); // every journey: one with no start, end or stops may still be the longer journey of another
         let where = f.where;
         if (!where && t && t.placeFrom) { const p = (f.participants || []).find(x => x.roleId === t.placeFrom); if (p) where = { kind: 'marker', markerId: p.markerId }; }
         if (!where) continue;
@@ -291,9 +291,9 @@ window.Facts = (() => {
       for (const x of taken) { const o = byId.get(x.to); if (o) { o.moves.push(x.mv); touched.add(o); } }
       for (const o of touched) o.moves.sort((a, b) => (dayOf(a.date) ?? -Infinity) - (dayOf(b.date) ?? -Infinity));
     }
-    if (journeys.length) deriveJourneys(d, journeys);
+    const covered = journeys.length ? deriveJourneys(d, journeys) : new Set(); // "<factId>|<markerId>": placed by the longer journey instead
     deriveSiblings(d, links);
-    deriveMirrors(d);
+    deriveMirrors(d, covered);
     d.links = links;
   }
 
@@ -324,6 +324,7 @@ window.Facts = (() => {
       if (owner.kind === 'pin') ids.add(owner.id);
       for (const p of f.participants || []) { const r = t.roles.find(x => x.id === p.roleId); if (r && r.goes && p.markerId) { if (!ids.has(p.markerId)) j.part.set(p.markerId, p); ids.add(p.markerId); } }
       j.travellers = [...ids].map(x => byId.get(x)).filter(Boolean);
+      j.everyone = ids;
       j.from = w.date ? dayOf(w.date) : null;
       // the stops that have an arrival to go by, in the order entered (pos = its place among all the stops)
       j.pos = new Map((f.stops || []).filter(s => s.kind === 'stop').map((s, k) => [s.id, k]));
@@ -341,6 +342,24 @@ window.Facts = (() => {
       j.arrDay = j.arr.date ? dayOf(j.arr.date) : null;
       j.base = { lat: null, lng: null, coords: null, note: '', sourceId: f.sourceId || null, page: f.page || '', factLabel: factLabel(d, f),
         confidence: f.confidence || '', reason: f.reason || '', journeyOf: f.id };
+    }
+    // A short journey that is part of a longer one (f.partOf, 19.3): a traveller the longer journey also names is
+    // placed by the longer one alone. Their copy of the short journey's own place is taken away here, before
+    // anything is judged, so it is not mistaken for a place of their own (which would mean "left the party").
+    const byFact = new Map(journeys.map(j => [j.f.id, j])), covered = new Set();
+    for (const j of journeys) j.up = j.f.partOf && j.f.partOf.factId !== j.f.id ? byFact.get(j.f.partOf.factId) || null : null;
+    for (const j of journeys) { let a = j.up; for (let n = 0; a && a !== j && n < 50; n++) a = a.up; if (a === j) j.up = null; } // A part of B part of A: the link is ignored
+    for (const j of journeys) {
+      if (!j.up) continue;
+      j.travellers = j.travellers.filter(T => {
+        for (let a = j.up, n = 0; a && n < 50; a = a.up, n++) {
+          if (!a.everyone.has(T.id)) continue;
+          const k = T.moves.findIndex(mv => mv.id === j.f.id); if (k >= 0) T.moves.splice(k, 1);
+          covered.add(j.f.id + '|' + T.id);
+          return false;
+        }
+        return true;
+      });
     }
     const touched = new Set();
     const give = (T, owner, mv) => { if (T.id !== owner.id) mv.sharedFrom = owner.id; T.moves.push(mv); touched.add(T); };
@@ -416,6 +435,41 @@ window.Facts = (() => {
       }
     }
     for (const o of touched) o.moves.sort((a, b) => (dayOf(a.date) ?? -Infinity) - (dayOf(b.date) ?? -Infinity));
+    return covered;
+  }
+
+  // ---------- a short journey that is part of a longer one ----------
+  // Which dates of the short journey (fS) are which dates of the long one (fL). Places are matched by marker, in
+  // order: the short journey's start with the long one's start or one of its stops (it sets out when the long
+  // one leaves there), its stops with later stops, its end with a later stop or the end. Where an end has no
+  // match it must only fall inside the long journey. Returns [{ a, b, same, dir, what, at, sStop, lStop }]:
+  // slot `a` of the short fact and slot `b` of the long fact are the same moment (same), or a is not before b
+  // (dir 'after') or not after b (dir 'before'). relations.js turns these into limits; nothing is stored.
+  function partLinks(fS, tS, fL, tL) {
+    const out = [];
+    if (!fS || !fL || !tS || !tL || !tS.journey || !tL.journey || tS.hasDate === false || tL.hasDate === false) return out;
+    const stops = f => (f.stops || []).filter(s => s.kind === 'stop');
+    const L = [{ at: 'start', markerId: fL.startAt || null }, ...stops(fL).map(s => ({ at: 'stop', markerId: s.at.kind === 'marker' ? s.at.markerId : null, stop: s })), { at: 'end', markerId: fL.endAt || null }];
+    const sFrom = 'fact:' + fS.id, sUntil = tS.hasEnd ? 'fact:' + fS.id + ':end' : null;
+    const lFrom = 'fact:' + fL.id, lUntil = tL.hasEnd ? 'fact:' + fL.id + ':end' : null;
+    const find = (markerId, from, ok) => { if (!markerId) return -1; for (let k = from; k < L.length; k++) if (L[k].markerId === markerId && ok(L[k])) return k; return -1; };
+    let c = -1; // the long journey's place matched last
+    let k = find(fS.startAt, 0, p => p.at !== 'end');
+    if (k >= 0) { c = k; out.push({ a: sFrom, b: L[k].at === 'start' ? lFrom : 'fact:' + L[k].stop.id + ':end', same: true, what: 'from', at: L[k].at, lStop: L[k].stop || null }); }
+    else out.push({ a: sFrom, b: lFrom, same: false, dir: 'after', what: 'from' });
+    for (const s of stops(fS)) {
+      k = s.at.kind === 'marker' ? find(s.at.markerId, c + 1, p => p.at === 'stop') : -1;
+      if (k < 0) continue;
+      c = k;
+      out.push({ a: 'fact:' + s.id, b: 'fact:' + L[k].stop.id, same: true, what: 'stop', at: 'stop', sStop: s, lStop: L[k].stop });
+      out.push({ a: 'fact:' + s.id + ':end', b: 'fact:' + L[k].stop.id + ':end', same: true, what: 'stop-left', at: 'stop', sStop: s, lStop: L[k].stop });
+    }
+    if (sUntil) {
+      k = find(fS.endAt, c + 1, p => p.at !== 'start');
+      if (k >= 0 && (L[k].at === 'stop' || lUntil)) out.push({ a: sUntil, b: L[k].at === 'end' ? lUntil : 'fact:' + L[k].stop.id, same: true, what: 'until', at: L[k].at, lStop: L[k].stop || null });
+      else if (lUntil) out.push({ a: sUntil, b: lUntil, same: false, dir: 'before', what: 'until' });
+    }
+    return out;
   }
 
   // ---------- mirrored facts ----------
@@ -438,7 +492,7 @@ window.Facts = (() => {
     if (ownerSex === 'female') return parts[1];
     return parts[2] || spec;
   }
-  function deriveMirrors(d) {
+  function deriveMirrors(d, covered) {
     const tieName = new Map(d.linkTypes.map(t => [t.id, t.name.trim().toLowerCase()]));
     const byId = new Map(d.markers.map(m => [m.id, m]));
     for (const m of d.markers) m.mirrors = [];
@@ -461,7 +515,9 @@ window.Facts = (() => {
             startAt: t.journey ? f.startAt || null : null, endAt: t.journey ? f.endAt || null : null, // a journey's start and end place
             stops: t.journey && f.stops ? f.stops : null,                                              // and the places along its way
             joinAt: t.journey && p.joinAt || null, leaveAt: t.journey && p.leaveAt || null,            // the part of it this marker makes (stop ids)
-            placed: !!(r.goes && (f.where || t.placeFrom || (t.journey && (f.startAt || f.endAt || (f.stops || []).some(s => s.kind === 'stop'))))),   // the fact also puts this marker at its place
+            partOf: t.journey && f.partOf || null,                                                     // the longer journey it is part of
+            covered: !!(covered && covered.has(f.id + '|' + other.id)),                                // …which places this marker instead
+            placed: !!(r.goes && !(covered && covered.has(f.id + '|' + other.id)) && (f.where || t.placeFrom || (t.journey && (f.startAt || f.endAt || (f.stops || []).some(s => s.kind === 'stop'))))),   // the fact also puts this marker at its place
             place, details: Object.assign({}, f.details || {}), note: f.note || '', sourceId: f.sourceId || null, page: f.page || '', confidence: f.confidence || '', reason: f.reason || '' });
         }
       }
@@ -484,5 +540,5 @@ window.Facts = (() => {
     return key ? DEFAULTS_BY_CATEGORY[key] : [];
   }
 
-  return { ensureSeeds, migrateV2, derive, when, whenText, whenLabel, factLabel, defaultTypeIdsFor, sexOf, siblingWord, defaultMirrorWord, mirrorWordFor, TIE_DEFAULTS };
+  return { ensureSeeds, migrateV2, derive, partLinks, when, whenText, whenLabel, factLabel, defaultTypeIdsFor, sexOf, siblingWord, defaultMirrorWord, mirrorWordFor, TIE_DEFAULTS };
 })();

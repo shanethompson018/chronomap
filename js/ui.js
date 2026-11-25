@@ -253,7 +253,7 @@ window.UI = (() => {
     const mentions = Store.mentionsOf(m.id).filter(x => !mirroredFacts.has(x.fact.id));
     if (mentions.length) {
       out += `<h4>Mentioned in (${mentions.length})</h4><ul class="fact-list">` + mentions.map(x => {
-        const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : x.asPlace ? 'as the place' : x.asStart ? 'as where it starts' : x.asEnd ? 'as where it ends' : x.asStop ? 'as a stop on the way' : 'as a place it passes';
+        const how = x.roles.length ? `as ${esc(x.roles.join(', '))}` : x.asPlace ? 'as the place' : x.asStart ? 'as where it starts' : x.asEnd ? 'as where it ends' : x.asStop ? 'as a stop on the way' : x.asPass ? 'as a place it passes' : 'as a part of the journey entered on this marker';
         return `<li><a class="mlink" data-action="goto-marker" data-id="${esc(x.marker.id)}">${esc(x.marker.name)}</a> · ${esc(Store.factTitle(x.fact))}${x.fact.date ? ` <span class="muted">${esc(Dates.formatInput(x.fact.date))}</span>` : ''} <span class="muted">(${how})</span></li>`;
       }).join('') + '</ul>';
     }
@@ -350,7 +350,11 @@ window.UI = (() => {
       const w = Facts.whenLabel(Facts.when(s), true);
       return 'stopping at ' + name + (w ? ` (${e(w)})` : '');
     }).filter(Boolean);
-    return [a ? 'from ' + a : '', ...mid, b ? 'to ' + b : ''].filter(Boolean).join(mid.length ? ', ' : ' ');
+    const trip = [a ? 'from ' + a : '', ...mid, b ? 'to ' + b : ''].filter(Boolean).join(mid.length ? ', ' : ' ');
+    // a short journey that is part of a longer one says so
+    const up = j.partOf && Store.marker(j.partOf.markerId), uf = up && (up.facts || []).find(x => x.id === j.partOf.factId);
+    const ut = uf && Store.factType(uf.typeId);
+    return [trip, uf ? `part of the ${e(uf.label || (ut ? ut.name : 'journey'))} fact on ${link(up)}` : ''].filter(Boolean).join(', ');
   }
 
   // One mirrored fact: "1 Jan 1901 BC · Born · Son: Isaac · Beersheba · from Isaac's Born fact".
@@ -371,7 +375,7 @@ window.UI = (() => {
     if (mi.confidence) line += ' ' + gradeBadgeHTML(mi.confidence, mi.reason);
     if (mi.note) line += ` <span class="muted">– ${esc(mi.note)}</span>`;
     if (mi.sourceId) line += ' ' + citeHTML(mi.sourceId, mi.page);
-    line += ` <span class="muted mirror-from">from ${esc(o.name)}'s ${esc(mi.factTitle)} fact${mi.placed ? ', which also places this marker' : ''}</span>`;
+    line += ` <span class="muted mirror-from">from ${esc(o.name)}'s ${esc(mi.factTitle)} fact${mi.placed ? ', which also places this marker' : mi.covered ? '; the longer journey it is part of places this marker' : ''}</span>`;
     return opts.bare ? line : `<li class="mirror" title="Shown here from ${esc(o.name)}'s marker; edit it there">${line}</li>`;
   }
 

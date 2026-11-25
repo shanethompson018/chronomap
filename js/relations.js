@@ -160,9 +160,12 @@ window.Relations = (() => {
   // with no date shows the window its neighbours leave it. Ids are 'seq|<markerId>|<slot>|<next slot>'.
   function seqRels() {
     const out = [];
+    // a journey that is part of a longer one, or has a part, keeps its own From / Until in order as well
+    const linked = new Set();
+    for (const m of Store.markers()) for (const f of m.facts || []) if (f.partOf) { linked.add(f.id); linked.add(f.partOf.factId); }
     for (const m of Store.markers()) for (const f of m.facts || []) {
       const t = Store.factType(f.typeId), stops = Store.stopsOf(f);
-      if (!t || !t.journey || t.hasDate === false || !stops.length) continue;
+      if (!t || !t.journey || t.hasDate === false || !(stops.length || (linked.has(f.id) && t.hasEnd))) continue;
       const chain = ['fact:' + f.id];
       for (const s of stops) chain.push('fact:' + s.id, 'fact:' + s.id + ':end');
       if (t.hasEnd) chain.push('fact:' + f.id + ':end');
@@ -170,14 +173,40 @@ window.Relations = (() => {
     }
     return out;
   }
-  const isAuto = id => /^seq\|/.test(String(id)); // a limit the app keeps by itself (not a tie the user made, so it cannot be overruled)
-  // "arriving at Haran is not before the journey's From"
+  // A short journey marked "Part of" a longer one (fact.partOf) shares dates with it: Facts.partLinks says which
+  // of its dates are the same moment as a date of the longer journey, and which must only fall inside it. "The
+  // same moment" is two limits, one each way, so dates that disagree close a window and show as a conflict; the
+  // app does not pick a side. Ids are 'part|same|<m1>|<slot1>|<m2>|<slot2>' or 'part|in|…': slot2 is not before slot1.
+  function partRels() {
+    const out = [];
+    const ref = (id, slot) => ({ kind: 'marker', id, slot });
+    const add = (kind, m1, s1, m2, s2) => out.push({ id: ['part', kind, m1, s1, m2, s2].join('|'), from: ref(m1, s1), to: ref(m2, s2), part: 'min', years: 0, months: 0, days: 0 });
+    for (const m of Store.markers()) for (const f of m.facts || []) {
+      if (!f.partOf) continue;
+      const lm = Store.marker(f.partOf.markerId), lf = lm && (lm.facts || []).find(x => x.id === f.partOf.factId);
+      if (!lf) continue;
+      for (const x of Facts.partLinks(f, Store.factType(f.typeId), lf, Store.factType(lf.typeId))) {
+        if (x.same) { add('same', m.id, x.a, lm.id, x.b); add('same', lm.id, x.b, m.id, x.a); }
+        else if (x.dir === 'after') add('in', lm.id, x.b, m.id, x.a);
+        else add('in', m.id, x.a, lm.id, x.b);
+      }
+    }
+    return out;
+  }
+  const isAuto = id => /^(seq|part)\|/.test(String(id)); // a limit the app keeps by itself (not a tie the user made, so it cannot be overruled)
+  const isPart = id => /^part\|/.test(String(id));
+  // "arriving at Haran is not before the journey's From"; for a part of a longer journey the two dates are named in full
   function autoText(id) {
-    const [, mid, a, b] = String(id).split('|');
+    const p = String(id).split('|');
+    if (p[0] === 'part') {
+      const A = Store.slotLabel({ kind: 'marker', id: p[2], slot: p[3] }), B = Store.slotLabel({ kind: 'marker', id: p[4], slot: p[5] });
+      return p[1] === 'same' ? `${B} and ${A} are the same moment` : `${B} is not before ${A}`;
+    }
+    const [, mid, a, b] = p;
     return `${Store.slotShort({ kind: 'marker', id: mid, slot: b })} is not before ${Store.slotShort({ kind: 'marker', id: mid, slot: a })}`;
   }
   function windows(given) {
-    const auto = seqRels();
+    const auto = seqRels().concat(partRels());
     const rels = given.concat(ownRels(given), auto);
     const W = new Map();
     const node = k => { if (!W.has(k)) { const b = baseOf(k); W.set(k, { E: b.min || '', L: b.max || '', eBy: null, lBy: null }); } return W.get(k); };
@@ -250,6 +279,10 @@ window.Relations = (() => {
   // The tie that governs an end, said from that date's side.
   function governText(by) {
     if (by && String(by.rel).startsWith('own|')) return by.back ? 'its own until date' : 'its own from date';
+    if (by && isPart(by.rel)) { // a date shared with the journey this one is part of (or with a part of this one)
+      const p = String(by.rel).split('|');
+      return `not ${by.back ? 'after' : 'before'} ${Store.slotLabel({ kind: 'marker', id: by.back ? p[4] : p[2], slot: by.back ? p[5] : p[3] })} (${p[1] === 'same' ? 'the same moment in the journey it is part of' : 'part of a longer journey'})`;
+    }
     if (by && isAuto(by.rel)) { // the order of a journey's stops
       const [, mid, a, b] = String(by.rel).split('|');
       return `not ${by.back ? 'after' : 'before'} ${Store.slotShort({ kind: 'marker', id: mid, slot: by.back ? b : a })} (the order of the journey)`;
@@ -463,11 +496,12 @@ window.Relations = (() => {
             h('div', { class: 'grow' }, h('strong', {}, Store.slotLabel(x.ref)), ' ', h('span', { class: 'muted' }, `would have to be not before ${Dates.formatInput(x.E)}${x.eOwn ? ' (its own date)' : ''} and not after ${Dates.formatInput(x.L)}${x.lOwn ? ' (its own date)' : ''}`)),
             h('button', { class: 'small', onclick: () => Editor.open(x.ref.id) }, 'Open marker')));
           for (const rid of c.rels) {
-            if (isAuto(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), 'The order of the journey: ' + autoText(rid)))); continue; }
+            if (isAuto(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), (isPart(rid) ? 'Part of a longer journey: ' : 'The order of the journey: ') + autoText(rid)))); continue; }
             const r = Store.relation(rid); if (!r) continue;
             card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), describeRelation(r), r.sourceId && Store.source(r.sourceId) ? h('span', { class: 'muted' }, ` · ${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}`) : null),
               h('button', { class: 'small', title: 'Keep the record but leave it out of the reckoning', onclick: () => { Store.updateRelation(rid, { status: 'overruled' }); render(); } }, 'Overrule this tie'))); }
           card.append(h('p', { class: 'hint' }, !c.rels.length ? 'One of these dates was typed outside its own earliest or latest box.'
+            : c.rels.some(isPart) ? 'One of these journeys is marked "Part of" the other, so these dates are the same moment, or one must fall inside the other. The two do not agree. Correct a date in its marker, or clear the "Part of" box on the shorter journey. The app does not choose between them.'
             : c.rels.every(isAuto) ? 'A journey\'s dates run in order: From, then each stop\'s Arrived and Left, then Until. One of these dates is out of that order. Correct it in the marker, or put the places in the order they were reached.'
             : 'Either a date here is wrong, or one of these ties is. Correct the date in its marker, or overrule the tie that does not hold.'));
           body.append(card);
