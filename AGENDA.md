@@ -730,6 +730,16 @@ First thoughts (not put to him yet, nothing decided):
   location) is drawn at their own place and listed in the bubble as "elsewhere". A group that is an
   area (a country) keeps the fan and counted pin of section 10.
 
+* Leaving and rejoining (his follow-up, 25 Nov): "someone leaves the army. Their name should go away
+  from the army marker at that time right, or I think it should keep the marker but have dates of
+  membership, or a part of. And sometimes someone will leave then join again at a later date we need to
+  take that into account." Settled: membership has dates. One membership fact is one spell (from, until);
+  a second fact for the same person and group is a second spell, so leaving and rejoining is two facts.
+  The pin's count and list show who is a member **at the slider's date**: a name drops off at its Until
+  and comes back at the next From. The person's own marker is never removed. "Elsewhere" is only for
+  someone who is still a member at that date but is away (left behind, an exception). The group's
+  information lists every member with the dates of each spell.
+
 Proposed steps (put to him 25 Nov, awaiting his go-ahead):
 
 - [ ] **20.1 Members follow the group.** Membership is a fact with from and until, entered from either
