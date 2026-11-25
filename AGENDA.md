@@ -9,7 +9,10 @@ cross items off as they land. We go through it one item at a time.
   Waiting for the Boox's problems log (Library, Problems log).
 - **12.4 / design step C:** the lifetime rule (the app limits a person's facts to between their Born and
   Died by itself). Not decided.
-- **13.2 (optional):** "From" and "Bound for" on a journey fact. Not decided.
+- **Section 17 (next up):** an automatic journey ("Starts at" / "Ends at"). Proposed 23 Nov 2026, under
+  discussion, nothing decided, nothing built. Takes in the older 13.2.
+- **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
+  (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
@@ -564,3 +567,49 @@ and set up:
       new sign-in, Switch account forgets the old address first, and a renewal that comes back as a
       different account says so on screen and in the problems log. Checked with a stand-in for Google
       on the test copy; not checked against the real accounts, which only the user can do.
+
+## 17. An automatic journey: "Starts at" and "Ends at" (raised 23 Nov 2026, under discussion, nothing built)
+
+The user's words: "Is there a way you can automate this with a moved to route/marker automatically moving
+markers to another location without me having to input the ties. Let's discuss how it would work."
+
+**What he has entered himself** (Genesis 11:31; do not enter or change any of it): a route marker "Journey
+from Ur to Haran" with one fact of his own fact type "Journey" (from / until, role "Travelers" ticked "they
+go there too") naming Terah, Abram, Sarai and Lot; his own fact type "Moved to" (role "Took with", ticked);
+"Located at" facts labelled "Lived" at Ur and at Haran. A list of eight corrections to his entries was given
+to him on 23 Nov (the Journey has no dates or limits; a "1 day before Terah died" gap on Lived at Ur; and
+others). Those are his to make. He agreed that "Located at" labelled "Lived", given a role ticked "they go
+there too", makes more sense than a separate "Moved to".
+
+**What the app does today** (tried on throwaway markers, 23 Nov):
+
+* Travellers named on the route marker's own fact are placed on the route between its From and Until
+  dates, and the line is drawn only then.
+* They sit at one point (the centre of the route's shape, `Store.resolveMove` centroid), stacked exactly on
+  top of each other. They do not move along the line and do not spread apart.
+* After the Until date they vanish from the map unless a fact of their own places them. So the arrival
+  needs a second fact (Lived at Haran, with the party in its role) and a tie: its date *on* the Journey's
+  Until. Leaving Ur needs no tie. An undated "Lived at Ur" is fine once the arrival has a date or window.
+
+**Proposal put to the user** (he has not answered yet):
+
+- [ ] **17.1 "Starts at" and "Ends at" on a journey fact.** Two new boxes, each choosing a marker (Ur,
+      Haran). From them the app works out, with no extra fact and no tie:
+      before From, each traveller stays where their own facts put them; From to Until, on the route;
+      after Until, at the "Ends at" marker until their own next location or their death. A window on the
+      journey's dates carries through to the arrival. A traveller's own fact always wins from its date on
+      (someone who leaves the party). With no Until, arrival is at the From date. Each traveller's
+      information shows the stay as coming from the journey's fact; he adds a "Lived at Haran" fact of
+      his own only when he wants a note or source there.
+- [ ] **17.2 (his choice, can come later) Pins move along the line** in step with the time slider between
+      From and Until, and spread apart so every traveller shows.
+- [ ] **17.3 "Starts at" with no drawn route:** a straight line between the two markers (the older 13.2).
+
+To settle with him before building: where the setting lives (suggested: a tick on the fact type, "a
+journey: has a start and an end place", so "Starts at" / "Ends at" appear only on such facts); whether it
+should also work on a person's own fact (a Journey fact on Terah, place = the route marker), not only on a
+route marker; 17.2 now or later. Code to read first: `Facts.derive` in `js/facts.js` (the `taken` list that
+"they go there too" uses), `Store.resolveMove` / `positionAt` in `js/store.js`, `locationsAt` and
+`presence` in `js/map.js`.
+
+Declined on 23 Nov and not to be offered again: a "+ Role" button on the fact in the marker editor.
