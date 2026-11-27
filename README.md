@@ -445,9 +445,14 @@ gap** records exactly that: *Seth · Born = Adam · Born + 130 y*, with the sour
   date into a reckoned slot, anchor it first.
 * A chain with no anchor is **not yet anchored**: its markers exist and show in the Ties and Network
   views but not on the time slider.
+* A date that a time gap works out is not a typed date. If its chain loses its anchor (the anchor is
+  emptied, or the tie to it is deleted) the reckoned dates go blank; they do not stay behind at the old
+  value. Type a date into any one of them and the rest follow. To keep a reckoned value, anchor it (🔒).
 * **Conflicts.** If two chains place one date differently, or an anchor disagrees with a time gap,
-  a ⚠ badge appears in the top bar. The conflicts panel shows each disagreement with both values and the
-  route that produced each. Choose *Use this* (the losing time gap is kept but marked *overruled*, so the
+  a ⚠ badge appears in the top bar, and a ⚠ beside the marker's name in the lists. The conflicts panel
+  says in one sentence what disagrees, then shows where each side comes from, step by step, back to what
+  was typed; **Open** on a step takes you to that date box. When one conflict follows from another, the
+  panel says which to start with. For two chains that disagree, choose *Use this* (the losing time gap is kept but marked *overruled*, so the
   disagreement stays on record) or *Mark undeterminable* (the date shows as "?" and the marker leaves
   the slider until you decide). Two year-precision dates in the same year are not a conflict.
 * Time gaps sync between devices like everything else, and every device recomputes the same results.
@@ -516,7 +521,9 @@ date" row, *give or take* opens the smallest and largest the length could be.
 there are, with the width of the window.
 
 **Conflicts.** A window that has closed (its earliest is after its latest) is a conflict. The panel
-names the date and the tie that leaves it no room. Correct the date, or overrule the tie.
+says it in one sentence ("… is too early. It is …, and it cannot be before …"), then lists why it cannot
+be before or after that date and where its own date comes from, each step with an **Open** button.
+Correct the date where it was typed, or press **Edit tie** or **Overrule** on the tie that does not hold.
 
 **Earlier workarounds.** A time gap of nothing ("0 years after") says the two dates are the same. If it
 was meant as "some time after", Library → Time gaps offers *make it "not before"* and *make it "not

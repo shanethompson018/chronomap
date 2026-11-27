@@ -142,6 +142,18 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   added are new ties. `thisRef` can be changed in the `.tie-this` box. `preview` leaves the edited tie out as it
   stands (`skipId`). In store.js `updateRelation` runs `anchorEnds` when the patch names `from` / `to`, and
   `applySolved` empties a reckoned date whose tie no longer touches it.
+- Explaining a conflict (24). `winInfo` is the first pass's nodes and `softInfo` the second's; `infoOf(c)`
+  picks one. `relEnds(id)` gives the two dates of any limit, reading the app's own from their ids.
+  `traceEnd(W, ref, side)` follows `eBy` / `lBy` from date to date until an end that is the date's own;
+  `reckonedFrom(ref)` then follows `derived.fromKey` towards the anchor. `conflictText(c, x)` is the one
+  sentence, `conflictNote(ref)` the same for a date box or badge (`{ key, text }`), `markerConflicts(id)`
+  the count for the lists. `linkCauses()` runs at the end of `solve()` and sets `c.cause = { key, ref }`
+  when a far end of the conflict is reckoned through a date that is in another conflict.
+  `showConflicts(focusKey)` draws root conflicts first, each followed by those that name it as cause.
+- A group with no anchor (24.6): the fallback "any typed date anchors the group" leaves out every date
+  that has a `derived` entry, and `Store.applySolved` clears any date that was derived and no longer is
+  (unless pinned). So nothing reckoned survives as a typed date. `Relations.undetermined()` holds those
+  dates; the editor captions them.
 - The lifetime rule (design step C) is 22.2 above. The bar layout (step E) became the Gantt tab, `js/gantt.js`.
 
 ## js/editor.js
@@ -182,6 +194,11 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   `Facts.partLinks` result, and on the long journey the list of its parts.
 - `renderRole`: on a journey fact with stops, a role with `goes` shows a `.journey-part` row under each name
   ("joins at" / "leaves at", options numbered as in the places list).
+
+- `Editor.open(id, slot)`: with a slot (`fact:<id>` or `…:end`, a stop's id works too) the fact is opened
+  and its date box gets the class `flagged` (`flagSlot`, cleared when another marker is opened). The
+  conflict caption under a date box is `Relations.conflictNote(ref).text`; "Show" calls
+  `Relations.showConflicts(note.key)`.
 
 ## js/map.js
 

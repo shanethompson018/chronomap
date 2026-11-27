@@ -25,8 +25,8 @@ cross items off as they land. We go through it one item at a time.
   gap); not checked on the Boox.
 - **Section 22:** less typing and automatic checks. 22.1 to 22.3 (Until before From, the lifetime rule,
   a child not before its parent) built 25 Nov 2026; not checked on the Boox. 22.4 ("during" in the tie
-  dialog), 22.5 (a chain that loses its anchor goes blank) and 22.6 (reading by verse) are proposed, not
-  decided.
+  dialog) and 22.6 (reading by verse) are proposed, not decided. 22.5 (a chain that loses its anchor goes
+  blank) was built 27 Nov 2026 as 24.6.
 - **Section 23:** the editor's date boxes, the editor and the time bar, and no made-up middle date. 23.1
   to 23.7 built 25 Nov 2026 (23.4 is the "Where and when" list; 23.5 to 23.7 are his corrections to it
   and to the wording of ranged dates); not checked on the Boox.
@@ -34,8 +34,8 @@ cross items off as they land. We go through it one item at a time.
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. Superseded 27 Nov 2026 by the Gantt tab
   (section 25).
-- **Section 24:** conflicts that explain themselves. Proposed 27 Nov 2026 from his three conflicts;
-  waiting for his go-ahead to build. 24.6 is the old 22.5, now recommended.
+- **Section 24:** conflicts that explain themselves. Built 27 Nov 2026 ("Yes, build 24"), 24.1 to 24.7;
+  not checked on the Boox, and not seen with his own data in the app.
 - **Section 25:** the Gantt tab. Built 27 Nov 2026; not checked on the Boox, and not seen with his own
   data. Three choices were made without asking (see the section); his to change.
 - **A stay of a whole number of years can read one year short** (found 27 Nov 2026, not fixed): "Where
@@ -932,7 +932,7 @@ change functionality around) of inputting information in the app."
 - [x] **22.3 The family rule. Built 25 Nov 2026:** a child is not born before its parent (from the Parent of ties).
 - [ ] **22.4 "During" in the tie dialog:** one row, "during Terah's life" or "while living at Ur", saved as
       the two limits it means.
-- [ ] **22.5 A chain that loses its anchor goes blank** instead of its reckoned dates quietly turning into
+- [x] **22.5 (built 27 Nov 2026 as 24.6) A chain that loses its anchor goes blank** instead of its reckoned dates quietly turning into
       typed dates (today the remaining dates anchor each other at the old values).
 - [ ] **22.6 Reading by verse:** everything entered from one verse on one screen, facts and time gaps
       together.
@@ -1066,7 +1066,7 @@ The Flood's "Took place" fact; that is his to decide.
 23.5 is one commit, 23.6 and 23.7 another. Tested on the test copy with throwaway markers at the PC size
 and the tablet size (E-ink on); not checked on the Boox itself.
 
-## 24. Conflicts that explain themselves (asked 27 Nov 2026, proposed, not built)
+## 24. Conflicts that explain themselves (asked 27 Nov 2026, built 27 Nov 2026)
 
 The user's words, with his export: "There are 3 conflicts. Attached is the json. I can't understand what
 the conflicts mean. Please describe where the conflicts exist. Also how can we make the app clearer for
@@ -1097,26 +1097,26 @@ and Lot's "Lived at Haran" before their births ("The most likely dates are out o
 
 **Proposed** (each its own item; he still enters and corrects every date himself):
 
-- [ ] **24.1 One sentence that names both sides.** Each entry is headed by the marker and fact, then says
+- [x] **24.1 One sentence that names both sides.** Each entry is headed by the marker and fact, then says
       what clashes with both dates: "The Journey arrives before it sets out. From: 9 Feb 1921 BC. Until:
       between 10 Feb 2226 BC and 10 Feb 2026 BC." / "Abram · Lived Haran begins before Abram is born.
       Lived Haran, from: 10 Feb 2126 BC. Abram · Born: not before 10 Feb 2056 BC."
-- [ ] **24.2 Where each date comes from.** Under each of the two dates, the steps back to what he
+- [x] **24.2 Where each date comes from.** Under each of the two dates, the steps back to what he
       entered, one line a step, with the tie's words and verse: "From ← equals Terah · Lived at Ur (until)
       ← typed there, anchored". Every line has an Open button that opens that marker with that fact open
       and the date box marked.
-- [ ] **24.3 One cause, said once.** Entries whose steps end in the same entered date or pass through the
+- [x] **24.3 One cause, said once.** Entries whose steps end in the same entered date or pass through the
       same tie are grouped: "3 conflicts, 1 cause", the shared entry first, marked "start here".
-- [ ] **24.4 A "What to do" line** for each kind, naming the marker to open (the cause, not the place the
+- [x] **24.4 A "What to do" line** for each kind, naming the marker to open (the cause, not the place the
       clash shows) and the two or three ways out (correct the date, edit or overrule the tie, untick the
       rule for that fact type).
-- [ ] **24.5 Marks outside the panel.** A warning mark on the marker's name in Library → Markers and in
+- [x] **24.5 Marks outside the panel.** A warning mark on the marker's name in Library → Markers and in
       the map's left list; on the fact line; and under the date box the same sentence as the panel, with
       "Show" opening the panel at that entry. A date that only carries someone else's clash says "wrong
       because of Terah · Lived at Haran" instead of looking like the cause.
-- [ ] **24.6 A chain that loses its anchor goes blank** (the old 22.5). Without it the corrections above
+- [x] **24.6 A chain that loses its anchor goes blank** (the old 22.5). Without it the corrections above
       cannot be made by editing. Recommended with this section.
-- [ ] **24.7 The second pass in his words.** "The most likely dates are out of order" becomes "Out of
+- [x] **24.7 The second pass in his words.** "The most likely dates are out of order" becomes "Out of
       order going by the dates in the date boxes (the ranges still overlap)", and the entry shows the
       ranges as well as those dates.
 
@@ -1124,6 +1124,41 @@ Code: `showConflicts()`, `shutEntries()`, `autoText()`, `governText()`, `slotSta
 (the steps of 24.2 are already there: follow `eBy` / `lBy` from date to date until an end that is the
 date's own, then `Store.derivedInfo` for a reckoned date); the captions in `dateField` in `js/editor.js`;
 `badgesHTML`.
+
+**As built, 27 Nov 2026** (he said "Yes, build 24"; three commits: the panel 24.1 to 24.4 and 24.7, the
+marks 24.5, the blank chain 24.6):
+
+* **The panel** (⚠ in the top bar, or Library → Time gaps). Each entry opens with one sentence: "… ends
+  before it begins. From: … Until: …", "… is too early. It is …, and it cannot be before …: …", "… is too
+  late …", or "… has no room. It cannot be before … and it cannot be after …". Under it two short lists,
+  "Why it cannot be before / after X" and "Where its own date comes from": one line a step, each limit
+  with its verse, then the date at the far end as "typed here" (and "anchored" when it is) or "not typed,
+  reckoned from …", followed back up to three time gaps. Every line has **Open**, which closes the panel
+  and opens that marker with that fact open and that date box outlined in red (black on E-ink). A line
+  that is one of his own ties also has **Edit tie** and **Overrule**.
+* **One cause, said once.** A conflict whose date is reckoned from a date that is itself in conflict is
+  listed under that one, set in, and says "This follows from the conflict at …". The top of the panel
+  says "3 conflicts, 1 to start with". The app does not say which entry is wrong: it shows the steps.
+* **The second pass** now reads "Going by the dates in the date boxes: …" and gives each such date as
+  "1 Jan 1700 in its date box (its range is … to …)".
+* **Marks.** A warning mark beside the marker's name in Library → Markers and in the map's left list;
+  the mark on a fact line now carries the sentence; under the date box in the editor the sentence itself,
+  with **Show**, which opens the panel at that entry. A date that only follows from another conflict
+  says so there ("This date is reckoned from …, which is in conflict. Correct that one first.").
+  The mark sits on the markers where a conflict shows, not on the marker where the cause was entered:
+  the app cannot know which entry is the wrong one.
+* **A chain that loses its anchor goes blank.** A date that a time gap had been working out no longer
+  counts as a typed date. When the anchor of its chain is emptied or released and emptied, or the tie to
+  it is deleted, every date that was reckoned from it goes blank, and its box says "A time gap ties this
+  date to others, and none of them has a date yet". Typing a date into any one of them fills the rest
+  again. To keep a reckoned date's value, anchor it (the lock) first. Checked against his export of
+  27 Nov in the read-only script: with the new rule no date of his changes and none goes blank.
+* With this his three conflicts can be corrected by editing: change or delete the tie "Lived at Haran =
+  Terah · Born", release and empty Terah's "Lived at Ur" Until. Removing the eight facts is still the
+  simpler way and is what he chose before.
+
+Tested on a test copy with throwaway markers (his case rebuilt in small) at the PC size and the tablet
+size (E-ink on); not checked on the Boox itself, and not seen with his own data in the app.
 
 **Found on the way: his corrections of 25 Nov came back.** His export of 25 Nov 17:05 had none of the
 eight "Lived at" facts or their time gaps. The export of 27 Nov has all eight, with the same ids, and
