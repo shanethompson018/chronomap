@@ -274,7 +274,7 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 
 ## js/gantt.js
 
-- Chosen markers, ticks and span in `chronomap.gantt` `{ ids, where, facts, mirrors, ties, gaps, t0, t1 }`
+- Chosen markers, ticks and span in `chronomap.gantt` `{ ids, where, facts, mingle, mirrors, ties, gaps, t0, t1 }`
   (`t0` / `t1` are day numbers; null = the whole span, worked out from every date on the chart plus 4%).
 - All HTML, no SVG. `.gt-axis` and every `.gt-row` are grids with the same two columns (`--gt-label`, then
   the track), so anything in the track is placed by `left` / `width` in per cent of the span. `.gt-over` is
@@ -288,9 +288,15 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   carry min / max and the words, so `open()` reads "after …" / "before …" to know which end is open.
 - `marks(r)`: hatched `.gt-box.maybe` from `s.E` to `e.L`, solid `.gt-box.sure` from `s.L` to `e.E` when
   that has length, `.gt-dot` for one certain date, `.gt-box.bad` when `e.L < s.E`. Never a middle date.
-- `drawLinks`: only own-fact rows register their slots (`slotS`, `slotE` are `Store.refKey`s), so a tie is
-  drawn when both its dates are own facts of chosen markers and Facts is ticked. `part: 'max'` joins the
-  two `L`s, everything else the two `E`s.
+- `drawLinks` goes through every active relation. Own-fact rows and rows from other markers (`kind: 'x'`,
+  which take their dates from the holding marker's fact through `Facts.when`) register `slotS` / `slotE`
+  (`Store.refKey`s); a date can be on several rows, and the two nearest are joined. Both dates on the
+  chart: the elbow line. One only: a stub (16px line, arrowhead, `.gt-lag.stub` label), grouped by row,
+  side and direction. `part: 'max'` uses the two `L`s, everything else the two `E`s.
+- `onWheel` (on `#gt-body`, not passive): Ctrl = scale about the pointer, Shift / sideways / over
+  `.gt-axis` = shift; anything else is left to scroll the rows. It sets `view` and `pref.t0` / `t1` at
+  once, draws after 16 ms (a timer, since `requestAnimationFrame` does not run in a hidden pane) and
+  saves after 400 ms.
 - The marker bar colour is the CSS variable `--c` set on the row; `body.eink` forces it to black.
 - A new tab needs: the button and panel in `index.html`, the script there and in `sw.js` `SHELL`, and in
   `js/app.js` a branch in `showTab`, in `showMarker`, in `onGlobalClick` (its `data-action`) and its

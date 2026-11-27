@@ -36,8 +36,9 @@ cross items off as they land. We go through it one item at a time.
   (section 25).
 - **Section 24:** conflicts that explain themselves. Built 27 Nov 2026 ("Yes, build 24"), 24.1 to 24.7;
   not checked on the Boox, and not seen with his own data in the app.
-- **Section 25:** the Gantt tab. Built 27 Nov 2026; not checked on the Boox, and not seen with his own
-  data. Three choices were made without asking (see the section); his to change.
+- **Section 25:** the Gantt tab. Built 27 Nov 2026, with his three changes of the same day (25.2 the mouse
+  wheel, 25.3 places and facts in one list, 25.4 a line for every time gap and limit); not checked on the
+  Boox.
 - **A stay of a whole number of years can read one year short** (found 27 Nov 2026, not fixed): "Where
   and when" said "about 29 years" for 1 Jan 1700 to 1 Jan 1730. `stayLength` in `js/ui.js` divides days
   by 365.2425 and rounds down. The Gantt tab shows the same words.
@@ -1221,6 +1222,33 @@ under both Where and when and Facts; a fact or tie with no date is listed with n
   marker goes back to the whole span so the new one is in sight.
 * The rows of "Where and when" are now worked out once (`UI.whereRows`) and used by both the list and
   the chart, so the two cannot disagree.
+
+**His reply, 27 Nov 2026**, with a screenshot of Terah on the chart: "In the gantt chart add a scroll wheel
+for the earlier and later. Also add a scroll wheel for the wider closer. Keep the buttons. I like the
+idea of keeping 'where and when', and facts separate. However add a tick box to have them mingled
+together, or separate like already is. The ties should be showing a line from start to finish or finish
+to start, however the logic is determined. It does it for born but not all other ties."
+
+- [x] **25.2 The mouse wheel. Built 27 Nov 2026.** Turned on the strip of dates at the top, or with
+      Shift held anywhere on the chart, it moves to earlier and later dates. With Ctrl held it shows a
+      wider or a closer span, keeping the date under the pointer where it is. A plain turn over the rows
+      still scrolls the rows up and down, which is why the plain wheel moves the dates only on the strip.
+      The five buttons stay. The tablet has no wheel and is unchanged.
+- [x] **25.3 Places and facts in one list. Built 27 Nov 2026.** A tick in the left panel, "Where and
+      when and facts in one list": ticked, both are under one heading in date order (the place bars stay
+      the taller ones); not ticked, each has its own heading as before. A fact that is also a place is
+      still shown as both.
+- [x] **25.4 A line for every time gap and limit. Built 27 Nov 2026.** The line was drawn only between
+      two of the marker's own facts (Born to Died), which is what his screenshot showed. Now a row that
+      comes from another marker (a son's Born, the Journey) carries its dates too, so the line is drawn
+      to it. Where the other date of a time gap or limit is not on the chart at all, a short arrow
+      stands at the date that is, into it or out of it, with the other date's name and the length
+      beside it ("← Nahor · Born + 29 y", "→ not before + 70 y: Abram · Born"; "and 3 more" when there
+      are several). Tapping such a row lists them all above the chart.
+
+25.2 to 25.4 are three commits. Tested on a test copy with throwaway markers at the PC size and the
+tablet size (E-ink on); the wheel was tried with made-up wheel events, not a real mouse; not checked on
+the Boox, and not seen with his own data.
 
 Not in it: the map slider's date as a line down the chart (the "data date" of P6); dragging the chart
 sideways with a finger (the Earlier and Later buttons do it); printing. Each is a small addition if he

@@ -173,11 +173,17 @@ it can begin to the latest it can end) and **solid** where it is certain (from t
 the earliest it can end). A single date that is certain is a diamond; one with a range is a hatched bar.
 A fact that ends before it begins is a red dashed bar. **Time gaps and limits** are lines with an
 arrowhead from the date they start from to the date they set: solid for a time gap, with its length;
-dashed for a limit ("not before", "not after"). They are drawn when both dates are on the chart.
+dashed for a limit ("not before", "not after"). When the other date is not on the chart, a short arrow
+stands at the date that is, with the other date's name beside it.
 
-Tap a row to read it in full above the chart, with every time gap and limit on its dates. Nothing here
-zooms: the span shown is changed with the buttons **Whole span**, **Earlier**, **Later**, **Wider** and
-**Closer**. The markers, the ticks and the span are kept on the device.
+The tick **Where and when and facts in one list** puts places and facts under one heading in date order;
+without it each has its own heading.
+
+Tap a row to read it in full above the chart, with every time gap and limit on its dates. The span shown
+is changed with the buttons **Whole span**, **Earlier**, **Later**, **Wider** and **Closer**, or with the
+mouse wheel: turned on the strip of dates, or with Shift held, it moves earlier and later; with Ctrl
+held it goes wider and closer. A plain turn over the rows scrolls them. The markers, the ticks and the
+span are kept on the device.
 
 ### Timeline
 The facts of one or more markers in date order, as a list you scroll. Add a marker in the left panel,
