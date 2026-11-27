@@ -41,9 +41,11 @@ cross items off as they land. We go through it one item at a time.
 - **A stay of a whole number of years can read one year short** (found 27 Nov 2026, not fixed): "Where
   and when" said "about 29 years" for 1 Jan 1700 to 1 Jan 1730. `stayLength` in `js/ui.js` divides days
   by 365.2425 and rounds down. The Gantt tab shows the same words.
-- **Deleted facts came back (found 27 Nov 2026, not looked into):** the eight "Lived at" facts he removed
-  on 25 Nov are in his export of 27 Nov again with the same ids, and Lot's cleared Born date is typed
-  again. Sync is suspected (the other device's older copy of those markers winning); not proven.
+- **Section 26:** removed facts came back after a sync. Looked into 27 Nov 2026: the way it happens is
+  shown on the test copy (a device that is behind stamps its old copy as new when the solver rewrites a
+  reckoned value on it; a removed fact and its time gaps leave no deletion record). Fix proposed (26.1
+  to 26.4), not built; waiting for his go-ahead. **Until 26.1 is built, a release that changes what the
+  solver writes can undo a correction of his on a device that has not synced yet.**
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
@@ -1166,7 +1168,7 @@ Lot's Born typed and anchored again; the two ties he deleted at 17:16 and 17:17 
 fact drops its time gaps with no deletion record (`cleanReferences` in `js/store.js` filters them), and a
 marker syncs whole, newest copy winning, while the solver stamps a marker as changed whenever it rewrites
 a reckoned date. So another device's older copy can win. This is a reading of the code, not a proven
-cause. Told to him 27 Nov; to be looked into on its own.
+cause. Told to him 27 Nov; looked into the same day: see section 26.
 
 **The way out told to him:** on the PC remove the eight facts, empty the Journey's From and Until, then
 empty Lot's Born (typed 2108 BC, 52 years before his father can be born; the other three hide it today).
@@ -1225,3 +1227,113 @@ wants it.
 
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on), including
 the largest letter size and dates BC; not checked on the Boox itself, and not seen with his own data.
+
+## 26. Removed facts came back after a sync (found and looked into 27 Nov 2026; fix proposed, not built)
+
+On 25 Nov he removed the eight "Lived at" facts on Terah, Abram, Sarai and Lot and emptied Lot's Born. On
+27 Nov they were all back. His two exports were compared by a script that only reads them; neither was
+loaded into the app, and nothing of his was changed.
+
+**What the exports show** (times are his PC's clock):
+
+* 25 Nov 13:50 to 16:24: the sixteen time gaps on the eight facts are made.
+* 25 Nov 16:56 to 17:00: the eight facts are removed. 17:03: synced, the Drive file written. The export of
+  17:05 has none of the facts and none of the sixteen time gaps.
+* 25 Nov 17:13: the release of 22.1 to 22.3 goes out. From then on the solver writes windows by itself
+  (the lifetime rule: "Died not before the end of Lived at").
+* 25 Nov 17:16 and 17:17: he deletes two limits directly (from Haran · Died and from Terah · Died to the
+  Journey). These have deletion records.
+* 27 Nov 11:47:49: Lot, Abram and Sarai are stamped as changed in the same thousandth of a second. Saving
+  a marker stamps one marker; only the solver stamps several at once.
+* 27 Nov 11:50:37: Terah and Haran are stamped together. They are the two markers the two deleted limits
+  start from: what a device does when those two deletions reach it and its solver takes the limits out.
+* 27 Nov 11:52:39: the Journey is stamped. 11:52:45: the Drive file is written.
+* 27 Nov 11:58:47: the PC comes back on screen, syncs, and has nothing to write: it took what was in Drive.
+* The export of 27 Nov: the eight facts with their old ids; the sixteen time gaps with their stamps of
+  25 Nov and no deletion record in either export; Lot's Born typed and anchored again; windows of the
+  lifetime rule on the returned copies; the two directly deleted limits still deleted. No other marker
+  has a stamp later than 25 Nov 13:55.
+
+**How it happens: three things in the app that work together.**
+
+1. A marker syncs as one whole record, and the copy with the newest stamp wins (`mergeDocs` in
+   `js/sync.js`).
+2. The solver stamps a marker as changed whenever it rewrites a reckoned date or a window on it
+   (`applySolved` and `applyWindows` in `js/store.js` call `touch`). A device that still holds the old
+   copy can so stamp it "now", later than his real correction, without him touching that marker.
+3. Removing a fact leaves no deletion record, and neither do the time gaps that go with it
+   (`cleanReferences` only filters them out). A marker or a time gap deleted directly does leave one.
+   So nothing stops a removed fact and its time gaps from returning with an old copy.
+
+**Shown on the test copy** (the released files of 2026-11-27 12:24, on a port of their own; Google Drive
+faked; two copies of the data, A and B, as two devices; `T-` records only, all removed afterwards). On
+both: T-Person with Born typed and anchored, a "Lived at" fact reckoned by two time gaps, and Died with a
+limit. On A the "Lived at" fact is removed, Born emptied and the limit deleted directly; A syncs. Then:
+
+* **B is opened and synced, nothing else.** Right result: the removal holds on both.
+* **On B, before it syncs, the date of another marker is changed** (T-Anchor, which T-Person is reckoned
+  from). The solver rewrites the reckoned date on B's old copy of T-Person and stamps it. After the sync,
+  on both devices: the fact is back with its old id, both time gaps are back with no deletion record,
+  Born is typed and anchored again, and the limit deleted directly stays deleted. The four marks of his
+  export.
+* **Nobody touches B at all.** B's copy holds the Died window as the version before 17:13 on 25 Nov left
+  it. Opening the app is enough: the lifetime rule rewrites the window, the old copy is stamped, and the
+  result is the same as above.
+
+**Proven or only likely.** That the app can do this, and how, is proven. That this is what happened to
+him is very likely and not proven: the exports fit it to the minute (a device that had not synced since
+before 16:56 on 25 Nov is opened on 27 Nov at 11:47 with the newer version, its solver stamps the old
+copies, it syncs at 11:50), but they do not say which device wrote the Drive file. The same result would
+come from opening and saving those markers on a device that was behind; three markers stamped in one
+thousandth of a second speak against that. What would settle it: the tablet's problems log for 27 Nov
+11:47 to 11:53 (on the PC: Library → Problems log → "Load the logs of my other devices"). A line there
+ending "wrote the Drive file", and "new data arrived" on the PC at 11:58, is the proof.
+
+**What he should do meanwhile** (told to him 27 Nov):
+
+1. Before a correction, open the app on both devices. Library → Backup must show the same version stamp
+   on both (close and open the app again if one is older). Tap Sync on each until it says "Synced just
+   now", the one he is not going to work on first.
+2. Make the correction on one device only and wait until it says Synced.
+3. Straight away pick up the other device and tap Sync before anything else; check the facts are gone
+   there too.
+4. After every update of the app, step 1 again before changing anything.
+5. Keep making an export after a correction. That is how this was caught.
+
+**The release of 27 Nov 12:45 (24.6, a chain that loses its anchor goes blank) is such an update:** it
+changes what the solver writes. If he removed the eight facts on the PC before the tablet had opened
+that version and synced, the tablet can bring them back once more when it is next opened. Then the
+removal has to be done again, after step 1.
+
+For the sessions: until 26.1 is built, a release that changes what the solver writes makes every device
+that is behind stamp its old copies when it is next opened, before it has synced. Build 26.1 before any
+other change to the solver.
+
+**Proposed** (changes to the app; he still enters, corrects and removes everything himself):
+
+- [ ] **26.1 The solver no longer stamps a marker as changed.** Reckoned dates, their "where this comes
+      from" notes and windows are worked out again on every device from what he typed and from his time
+      gaps, so they do not need to travel as a change. Only his own changes stamp a marker. This takes
+      away the cause seen here. In `applySolved` and `applyWindows`: no `touch`. To settle when building:
+      a reckoned date sits in the same box as a typed one (`f.date`), so two devices on different
+      versions could each rewrite the Drive file at every sync (nothing lost, only wasted writes) unless
+      reckoned values are left out when two copies are compared (`sharedKey`).
+- [ ] **26.2 A deletion record for a removed fact, a removed stop, and every time gap that goes with
+      them**, as a deleted marker already has. A sync then never brings such a fact or time gap back,
+      even when the older copy of the marker wins for another reason (he really did change that marker
+      on a device that was behind). In `updateMarker`: compare the facts before and after, and give a
+      record to each time gap `cleanReferences` drops; in `mergeDocs`: take recorded facts out of the
+      copy that wins. A backup that is imported on purpose must be able to bring a fact back.
+- [ ] **26.3 A warning before changing things on a device that is behind.** When the Google sign-in has
+      run out, or the last sync is more than an hour old, opening the editor says: "This device last
+      synced … Tap Sync first, or a newer change made on your other device may be undone." One tap.
+- [ ] **26.4 The Sync page says what the last sync did**: the names of the markers it took from the
+      other device and of those it sent. A return like this one would be seen the same minute.
+
+Recommended: 26.1 and 26.2 together as one release, then 26.3. 26.4 if he wants it.
+
+What stays as it is after all four: a marker is still one record. If he empties a typed date on one
+device and changes the same marker on another device that is behind, the later of the two whole copies
+wins. 26.3 warns of it.
+
+Not checked on the Boox.
