@@ -720,6 +720,8 @@ body.eink .conflict-card.focus, body.eink .field.flagged { outline-color: #000; 
 .gt-head.d { border-top-color: var(--text); transform: translate(-50%, -5px); }
 .gt-head.u { border-bottom-color: var(--text); transform: translate(-50%, -5px); }
 .gt-lag { position: absolute; transform: translate(4px, -50%); font-size: calc(10.5px * var(--fs)); white-space: nowrap; background: var(--bg); padding: 0 3px; border-radius: 3px; color: var(--text); }
+.gt-axis { cursor: ew-resize; }
+body.eink .gt-wheel { display: none; } /* the tablet has no wheel */
 #gt-info:not(.open) { display: none; }
 #gt-info.open + .info-close { display: block; position: absolute; top: 8px; right: 8px; z-index: 21; }
 body.eink .gt-row, body.eink .gt-key { --c: #000 !important; }

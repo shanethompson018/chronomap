@@ -31,6 +31,7 @@ window.Gantt = (() => {
     $('gt-later').onclick = () => shift(0.25);
     $('gt-wider').onclick = () => scale(1.6);
     $('gt-closer').onclick = () => scale(1 / 1.6);
+    $('gt-body').addEventListener('wheel', onWheel, { passive: false });
     Store.subscribe(() => { if (App.currentTab() === 'gantt') draw(); });
   }
   function show() { draw(); }
@@ -52,6 +53,27 @@ window.Gantt = (() => {
   function setView(v) { pref.t0 = v ? Math.round(v[0]) : null; pref.t1 = v ? Math.round(v[1]) : null; save(); draw(); }
   function shift(by) { if (!view) return; const w = view[1] - view[0]; setView([view[0] + w * by, view[1] + w * by]); }
   function scale(k) { if (!view) return; const mid = (view[0] + view[1]) / 2, half = Math.min(Math.max((view[1] - view[0]) * k / 2, 15), 3652425); setView([mid - half, mid + half]); }
+
+  // The mouse wheel (25.2). Turned on the strip of dates, or with Shift held anywhere on the chart, it moves to
+  // earlier and later dates; with Ctrl held it shows a wider or a closer span, keeping the date under the pointer
+  // where it is. A plain turn over the rows still scrolls them. One notch is a tenth of the span, or about a sixth
+  // wider or closer. The chart is drawn again shortly after, not on every event, and the span is saved when it rests.
+  let wheelDraw = 0, wheelSave = 0;
+  function onWheel(e) {
+    const across = Math.abs(e.deltaX) > Math.abs(e.deltaY); // Shift + wheel arrives as a sideways turn in Chrome
+    if (!view || !(e.ctrlKey || e.shiftKey || across || e.target.closest('.gt-axis'))) return;
+    e.preventDefault();
+    const d = (across ? e.deltaX : e.deltaY) * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 300 : 1), w = view[1] - view[0];
+    if (e.ctrlKey) {
+      const tr = $('gt-body').querySelector('.gt-axis .gt-track'), box = tr && tr.getBoundingClientRect();
+      const f = box && box.width ? Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)) : 0.5;
+      const nw = Math.min(Math.max(w * Math.exp(d * 0.0015), 30), 7304850), at = view[0] + w * f;
+      view = [at - nw * f, at + nw * (1 - f)];
+    } else view = [view[0] + w * d / 1000, view[1] + w * d / 1000];
+    pref.t0 = Math.round(view[0]); pref.t1 = Math.round(view[1]);
+    if (!wheelDraw) wheelDraw = setTimeout(() => { wheelDraw = 0; draw(); }, 16);
+    clearTimeout(wheelSave); wheelSave = setTimeout(save, 400);
+  }
 
   // ---------- the rows ----------
   const D = s => (s ? Dates.toDays(s) : null);
@@ -254,7 +276,8 @@ window.Gantt = (() => {
       const key = (cls, text) => h('span', {}, h('span', { class: 'gt-key' }, h('span', { class: cls })), text);
       el.append(h('div', { class: 'gt-legend' },
         key('gt-box maybe', 'can be (earliest to latest)'), key('gt-box sure', 'certain'), key('gt-dot', 'one date'),
-        key('gt-ln hz gap', 'time gap'), key('gt-ln hz lim', 'limit'), h('span', {}, 'Tap a row to read it in full.')));
+        key('gt-ln hz gap', 'time gap'), key('gt-ln hz lim', 'limit'), h('span', {}, 'Tap a row to read it in full.'),
+        h('span', { class: 'gt-wheel' }, 'Mouse wheel on the strip of dates, or Shift + wheel: earlier and later. Ctrl + wheel: wider and closer.')));
       return;
     }
     const sub = r.subHTML != null ? r.subHTML : UI.esc(r.sub);
