@@ -722,6 +722,9 @@ body.eink .conflict-card.focus, body.eink .field.flagged { outline-color: #000; 
 .gt-lag { position: absolute; transform: translate(4px, -50%); font-size: calc(10.5px * var(--fs)); white-space: nowrap; background: var(--bg); padding: 0 3px; border-radius: 3px; color: var(--text); }
 .gt-axis { cursor: ew-resize; }
 body.eink .gt-wheel { display: none; } /* the tablet has no wheel */
+.gt-lag.stub { color: var(--muted); }
+.gt-lag.stub.left { transform: translate(calc(-100% - 4px), -50%); }
+body.eink .gt-lag.stub { color: #000; }
 #gt-info:not(.open) { display: none; }
 #gt-info.open + .info-close { display: block; position: absolute; top: 8px; right: 8px; z-index: 21; }
 body.eink .gt-row, body.eink .gt-key { --c: #000 !important; }

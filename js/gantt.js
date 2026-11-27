@@ -126,8 +126,14 @@ window.Gantt = (() => {
     // facts other markers hold about this one; a marker that is on the chart itself shows its own
     if (pref.mirrors) (m.mirrors || []).forEach((mi, i) => {
       const o = Store.marker(mi.markerId); if (!o || on.has(o.id)) return;
-      fs.push({ kind: 'x', key: `x|${m.id}|${i}`, label: `${mi.factTitle} · ${mi.word}: ${Store.displayName(o)}`, sub: mi.when || '', span: !!mi.dateEnd,
-        s: mi.date ? open(pt(mi.date, mi.dateMin, mi.dateMax), mi.known, mi.when) : null, e: mi.dateEnd ? pt(mi.dateEnd, mi.dateEndMin, mi.dateEndMax) : null });
+      // the fact as the marker that holds it has it: its dates, and the names of its two dates, so that a time gap or
+      // limit on them is drawn to this row (25.4)
+      const f = (o.facts || []).find(x => x.id === mi.factId), t = f && Store.factType(f.typeId), w = f && t ? Facts.when(f) : null;
+      const ref = Store.refKey({ kind: 'marker', id: o.id, slot: 'fact:' + mi.factId });
+      fs.push({ kind: 'x', key: `x|${m.id}|${i}`, label: `${mi.factTitle} · ${mi.word}: ${Store.displayName(o)}`, sub: mi.when || '', span: w ? !!t.hasEnd : !!mi.dateEnd,
+        s: w ? slot(w.known, w.date, w.min, w.max, w.lo, w.hi) : mi.date ? open(pt(mi.date, mi.dateMin, mi.dateMax), mi.known, mi.when) : null,
+        e: w ? (t.hasEnd ? slot(w.knownEnd, w.dateEnd, w.endMin, w.endMax, w.loEnd, w.hiEnd) : null) : mi.dateEnd ? pt(mi.dateEnd, mi.dateEndMin, mi.dateEndMax) : null,
+        slotS: w ? ref : null, slotE: w && t.hasEnd ? ref + ':end' : null });
     });
     fs.forEach((r, i) => { r.order = i; });
     const byDay = (a, b) => (firstDay(a) - firstDay(b)) || (a.order - b.order);
@@ -255,25 +261,46 @@ window.Gantt = (() => {
   // Time gaps and limits as relationship lines: from the date a tie starts from, down or up to the row of the date
   // it sets, then along to that date, ending in an arrowhead. Where the dates have ranges, a "not after" limit joins
   // the latest of the two and every other tie the earliest: the way the late and the early dates are worked out.
+  // Every time gap and limit on a date that is on the chart is shown (25.4). Both its dates on the chart: the line.
+  // One of them not on the chart: a short arrow at the date that is, with the other date's name beside it.
   function drawLinks(over, els) {
-    const at = new Map();
-    rows.forEach((r, i) => {
-      if (r.slotS && r.s) at.set(r.slotS, { i, E: r.s.E, L: r.s.L });
-      if (r.slotE && r.e) at.set(r.slotE, { i, E: r.e.E, L: r.e.L });
-    });
-    const seen = new Set();
-    for (const id of pref.ids) for (const r of Store.relationsFor(id)) {
-      if (seen.has(r.id) || r.status !== 'active') continue;
-      seen.add(r.id);
-      const a = at.get(Store.refKey(r.from)), b = at.get(Store.refKey(r.to)), side = r.part === 'max' ? 'L' : 'E';
-      if (!a || !b || a.i === b.i || !isFinite(a[side]) || !isFinite(b[side])) continue;
+    const at = new Map(); // a date's key -> the rows that show it (a fact two chosen markers share is on the chart twice)
+    const reg = (k, i, p) => { if (k && p) { if (!at.has(k)) at.set(k, []); at.get(k).push({ i, E: p.E, L: p.L }); } };
+    rows.forEach((r, i) => { reg(r.slotS, i, r.s); reg(r.slotE, i, r.e); });
+    const mid = el => el.offsetTop + el.offsetHeight / 2, stubs = new Map();
+    for (const r of Store.relations()) {
+      if (r.status !== 'active' || !r.from || !r.to) continue;
+      const A = at.get(Store.refKey(r.from)), B = at.get(Store.refKey(r.to)), side = r.part === 'max' ? 'L' : 'E';
+      if (!A && !B) continue;
       const limit = r.part === 'min' || r.part === 'max', cls = limit ? ' lim' : ' gap';
-      const xa = pct(a[side]), xb = pct(b[side]), mid = el => el.offsetTop + el.offsetHeight / 2, ya = mid(els[a.i]), yb = mid(els[b.i]);
+      if (!A || !B) { // the other date is not on the chart
+        if (!Store.refExists(A ? r.to : r.from)) continue;
+        const how = limit ? (r.part === 'min' ? 'not before' : 'not after') + (lenText(r) ? ' ' + lenText(r) : '') : (lenText(r) || 'the same day');
+        const text = A ? `${how}: ${Store.slotLabel(r.to)}` : limit ? `${Store.slotLabel(r.from)} (${how})` : `${Store.slotLabel(r.from)} ${how}`;
+        for (const p of (A || B)) {
+          if (!isFinite(p[side])) continue;
+          const k = p.i + (A ? '>' : '<') + pct(p[side]).toFixed(1); // one arrow for each row, direction and place along the bar
+          if (!stubs.has(k)) stubs.set(k, { p, side, out: !!A, texts: [] });
+          stubs.get(k).texts.push(text);
+        }
+        continue;
+      }
+      let a = A[0], b = B[0];
+      for (const x of A) for (const y of B) if (Math.abs(x.i - y.i) < Math.abs(a.i - b.i)) { a = x; b = y; } // the two rows nearest each other
+      if (a.i === b.i || !isFinite(a[side]) || !isFinite(b[side])) continue;
+      const xa = pct(a[side]), xb = pct(b[side]), ya = mid(els[a.i]), yb = mid(els[b.i]);
       over.append(h('div', { class: 'gt-ln v' + cls, style: { left: xa + '%', top: Math.min(ya, yb) + 'px', height: Math.abs(yb - ya) + 'px' } }));
       if (xa !== xb) over.append(h('div', { class: 'gt-ln hz' + cls, style: { left: Math.min(xa, xb) + '%', width: Math.abs(xb - xa) + '%', top: yb + 'px' } }));
       over.append(h('div', { class: 'gt-head ' + (xb > xa ? 'r' : xb < xa ? 'l' : yb > ya ? 'd' : 'u'), style: { left: xb + '%', top: yb + 'px' } }));
       const text = limit ? (r.part === 'min' ? 'not before' : 'not after') + (lenText(r) ? ' ' + lenText(r) : '') : (lenText(r) || '=');
       over.append(h('div', { class: 'gt-lag', style: { left: xa + '%', top: (ya + yb) / 2 + 'px' } }, text));
+    }
+    for (const s of stubs.values()) { // an arrow into the date (the other date sets it) or out of it (it sets the other)
+      const x = pct(s.p[s.side]), el = els[s.p.i], y = mid(el);
+      over.append(h('div', { class: 'gt-ln hz gap', style: { left: s.out ? x + '%' : `calc(${x}% - 16px)`, width: '16px', top: y + 'px' } }));
+      over.append(h('div', { class: 'gt-head r', style: { left: s.out ? `calc(${x}% + 16px)` : x + '%', top: y + 'px' } }));
+      over.append(h('div', { class: 'gt-lag stub' + (x > 55 ? ' left' : ''), style: { left: x + '%', top: (s.out ? el.offsetTop + el.offsetHeight - 8 : el.offsetTop + 8) + 'px' } }, // what sets it above the bar, what it sets below
+        (s.out ? '→ ' : '← ') + s.texts[0] + (s.texts.length > 1 ? ` (and ${s.texts.length - 1} more)` : '')));
     }
   }
 
