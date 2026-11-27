@@ -708,13 +708,11 @@ window.Store = (() => {
           setSlotRaw(o, res.ref.slot, res.value, min, max); touch(o); changed = true;
         }
       }
-      // A date that was reckoned through a tie which is no longer a tie on a date (deleted, overruled, or turned
-      // into a limit on an end) is cleared, so it does not linger looking like a typed date.
+      // A date that was reckoned and no longer is (its tie was deleted, overruled, turned into a limit or pointed
+      // at other dates, or its chain lost its anchor: 24.6) is cleared, so it does not linger looking like a typed
+      // date. Making it an anchor (🔒) is the way to keep its value.
       for (const slot of Object.keys(o.derived || {})) {
         if (nd[slot] || (o.pinned || []).includes(slot) || !slotFact(o, slot)) continue;
-        const rel = relation((o.derived[slot] || {}).relationId), ref = { kind, id: o.id, slot };
-        // (a tie that was edited to point at other dates no longer reckons this one either)
-        if (rel && rel.status === 'active' && rel.part !== 'min' && rel.part !== 'max' && (sameRef(rel.from, ref) || sameRef(rel.to, ref))) continue;
         setSlotRaw(o, slot, '', '', ''); touch(o); changed = true;
       }
       if (JSON.stringify(nd) !== JSON.stringify(o.derived || {})) { o.derived = nd; changed = true; }

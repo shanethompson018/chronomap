@@ -302,6 +302,8 @@ window.Editor = (() => {
     const restore = undet ? h('button', { type: 'button', class: 'small', title: 'Stop treating this date as undeterminable', onclick: () => { Store.setUndetermined(ref, false); syncDraftFromStore(true); } }, 'Restore') : null;
     let caption = null;
     if (reckoned) caption = h('div', { class: 'rel-caption' }, '⛓ reckoned from ' + Relations.describeDerived(ref) + (st.range && st.range.min !== st.range.max ? ` → ${Dates.formatRange(st.range.date, st.range.min, st.range.max)}` : ''));
+    // a date in a chain of time gaps none of whose dates is known yet: say so, or the empty box explains nothing
+    else if (inStore && !undet && !value && Relations.undetermined().has(Store.refKey(ref))) caption = h('div', { class: 'rel-caption' }, '⛓ A time gap ties this date to others, and none of them has a date yet. Type a date in one of them and the rest follow.');
     // what the ties on the ends work out: one line per end, naming the tie that governs it
     let winCaption = null;
     if (hasWin && !undet) {

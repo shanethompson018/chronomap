@@ -85,7 +85,10 @@ window.Relations = (() => {
         comp.sort();
         const info = new Map(comp.map(k => { const ref = Store.parseRefKey(k); const range = Store.slotRange(ref) || { date: '', min: '', max: '' }; return [k, { ref, range, valid: !!range.date && Dates.isValid(range.date), pinned: Store.isPinned(ref), undet: Store.isUndetermined(ref) }]; }));
         let pins = comp.filter(k => { const i = info.get(k); return i.pinned && i.valid && !i.undet; });
-        if (!pins.length) pins = comp.filter(k => { const i = info.get(k); return i.valid && !i.undet; }); // nothing anchored yet: any typed date anchors the group
+        // Nothing anchored: any typed date anchors the group. A date that a time gap had been working out is not a
+        // typed date (24.6): when its chain loses its anchor it goes blank with the rest, instead of staying behind
+        // at the old value and filling the others in again.
+        if (!pins.length) pins = comp.filter(k => { const i = info.get(k); return i.valid && !i.undet && !Store.derivedInfo(i.ref); });
         if (!pins.length) { comp.forEach(k => undet.add(k)); continue; }
 
         const cands = new Map();
