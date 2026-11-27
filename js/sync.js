@@ -197,11 +197,26 @@ window.Sync = (() => {
       const k = t.coll + ':' + t.id;
       if (!tomb.has(k) || tomb.get(k).at < t.at) tomb.set(k, t);
     });
+    // A removed fact, or a removed place along a journey, has a record of its own (coll 'facts', 26.2). It is
+    // taken out of whichever copy of its marker wins, so an older copy that wins for another reason cannot bring
+    // it back. A later record marked `back` (an imported backup) cancels the removal.
+    const goneFact = id => { const t = tomb.get('facts:' + id); return !!t && !t.back; };
+    const withoutGoneFacts = m => {
+      if (!Array.isArray(m.facts) || !m.facts.some(f => goneFact(f.id) || (f.stops || []).some(s => goneFact(s.id)))) return m;
+      const facts = m.facts.filter(f => !goneFact(f.id)).map(f => {
+        if (!(f.stops || []).some(s => goneFact(s.id))) return f;
+        const g = Object.assign({}, f, { stops: f.stops.filter(s => !goneFact(s.id)) });
+        if (!g.stops.length) delete g.stops;
+        return g;
+      });
+      return Object.assign({}, m, { facts });
+    };
     for (const coll of colls) {
       const byId = new Map();
       (local[coll] || []).forEach(r => byId.set(r.id, r));
       (remote[coll] || []).forEach(r => { const l = byId.get(r.id); if (!l || (r.updatedAt || 0) > (l.updatedAt || 0)) byId.set(r.id, r); });
       out[coll] = [...byId.values()].filter(r => { const t = tomb.get(coll + ':' + r.id); return !(t && t.at > (r.updatedAt || 0)); });
+      if (coll === 'markers') out[coll] = out[coll].map(withoutGoneFacts);
     }
     out.deleted = [...tomb.values()];
     return out;

@@ -34,6 +34,17 @@ window.Store = (() => {
   // Mark a record as changed now; any data change also means the sample data is no longer pristine.
   function touch(rec) { if (rec) rec.updatedAt = Date.now(); if (S) S.settings.sampleUntouched = false; return rec; }
   function tombstone(coll, id) { S.deleted.push({ coll, id, at: Date.now() }); S.settings.sampleUntouched = false; }
+  // A fact, or a place along a journey, has no record of its own: it lives inside its marker, and a marker syncs
+  // whole. So its removal is recorded too, as coll 'facts' (26.2), and Sync.mergeDocs takes a removed fact out of
+  // whichever copy of the marker wins. A fact that is there again on purpose (an imported backup) gets a later
+  // record marked `back`, which cancels the removal.
+  const factIdsOf = m => (m.facts || []).flatMap(f => [f.id, ...(f.stops || []).map(s => s.id)]);
+  function recordFacts(gone, now) { // gone: ids that were there before; now: Set of the ids that are there
+    const last = new Map();
+    for (const t of S.deleted) if (t.coll === 'facts' && (!last.has(t.id) || last.get(t.id).at <= t.at)) last.set(t.id, t);
+    for (const id of gone) if (!now.has(id)) tombstone('facts', id);
+    for (const id of now) { const t = last.get(id); if (t && !t.back) S.deleted.push({ coll: 'facts', id, at: Date.now(), back: true }); }
+  }
   function normMove(mv) { return Object.assign({ id: uid(), date: '', lat: null, lng: null, coords: null, label: '', note: '', sourceId: null, page: '' }, mv || {}); }
   function normCitation(c) { return Object.assign({ sourceId: null, page: '', note: '' }, c || {}); }
   function normMarker(m) {
@@ -575,6 +586,7 @@ window.Store = (() => {
   function addMarker(data) { const m = touch(normMarker(data)); sortMovesInPlace(m); S.markers.push(m); commit({ type: 'marker', id: m.id }); return m; }
   function updateMarker(id, patch) {
     const m = marker(id); if (!m) return null;
+    const hadFacts = factIdsOf(m), hadGaps = S.relations.map(r => r.id);
     Object.assign(m, clone(patch), { id });
     m.moves = (m.moves || []).map(normMove); sortMovesInPlace(m);
     m.facts = (m.facts || []).map(normFact);
@@ -582,6 +594,11 @@ window.Store = (() => {
     m.fieldSources = m.fieldSources || {};
     for (const k of Object.keys(m.fieldSources)) if (!(k in m.fields) || !m.fieldSources[k] || !m.fieldSources[k].sourceId) delete m.fieldSources[k];
     cleanReferences(S);
+    // A fact or a place along a journey that was removed, and every time gap that went with it, leaves a deletion
+    // record (26.2), so a sync cannot bring them back with an older copy of this marker.
+    recordFacts(hadFacts, new Set(factIdsOf(m)));
+    const gaps = new Set(S.relations.map(r => r.id));
+    hadGaps.forEach(rid => { if (!gaps.has(rid)) tombstone('relations', rid); });
     touch(m);
     commit({ type: 'marker', id }); return m;
   }
@@ -754,6 +771,7 @@ window.Store = (() => {
   // ---------- backup ----------
   function exportJSON() { return JSON.stringify(S, null, 2); }
   function importJSON(text, mode = 'merge') {
+    const hadFacts = S.markers.flatMap(m => factIdsOf(m).map(fid => [fid, m.id]));
     const obj = normalize(JSON.parse(text));
     if (mode === 'replace') {
       const keep = S.settings;
@@ -772,6 +790,9 @@ window.Store = (() => {
     SYNC_COLLS.forEach(coll => S[coll].forEach(r => { if (!r.updatedAt) r.updatedAt = Date.now(); }));
     S.settings.sampleUntouched = false;
     S = normalize(S);
+    // Facts (26.2): one the file took out of a marker that is still here leaves a deletion record; one the file
+    // brings back has its deletion record cancelled, so the next sync does not take it out again.
+    recordFacts(hadFacts.filter(([, mid]) => S.markers.some(m => m.id === mid)).map(([fid]) => fid), new Set(S.markers.flatMap(factIdsOf)));
     commit({ type: 'all' });
     return { markers: obj.markers.length, links: obj.links.length };
   }
