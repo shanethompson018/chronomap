@@ -13,17 +13,17 @@ window.Gantt = (() => {
   const $ = id => document.getElementById(id);
   const h = UI.h;
   const KEY = 'chronomap.gantt';
-  const pref = Object.assign({ ids: [], where: true, facts: true, mirrors: true, ties: true, gaps: true, t0: null, t1: null }, (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })());
+  const pref = Object.assign({ ids: [], where: true, facts: true, mingle: false, mirrors: true, ties: true, gaps: true, t0: null, t1: null }, (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })());
   if (!Array.isArray(pref.ids)) pref.ids = [];
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pref)); } catch (e) { /* ignore */ } };
-  const TICKS = ['where', 'facts', 'mirrors', 'ties', 'gaps'];
+  const TICKS = ['where', 'facts', 'mingle', 'mirrors', 'ties', 'gaps'];
   let picker, selectedId = null, pickedKey = null, rows = [], view = null;
 
   function init() {
     // pref.ids is handed to the picker as its exclude list, so it is only ever changed in place
     picker = UI.markerSelect({ placeholder: 'Add a marker…', exclude: pref.ids, onChange: v => { if (v) add(v); picker.setValue(null); } });
     $('gt-add').append(picker);
-    TICKS.forEach(k => { const el = $('gt-' + k); el.checked = pref[k] !== false; el.addEventListener('change', () => { pref[k] = el.checked; save(); draw(); }); });
+    TICKS.forEach(k => { const el = $('gt-' + k); el.checked = !!pref[k]; el.addEventListener('change', () => { pref[k] = el.checked; save(); draw(); }); });
     $('gt-clear').onclick = () => { pref.ids.length = 0; selectedId = null; pickedKey = null; save(); draw(); };
     $('gt-info-close').onclick = () => { selectedId = null; drawInfo(); };
     $('gt-fit').onclick = () => setView(null);
@@ -102,14 +102,14 @@ window.Gantt = (() => {
       sub: [m.start ? `${m.startLabel || 'Begins'} ${said(m.start, m.startMin, m.startMax, m.startKnown, m.startWhen)}` : '', m.end ? `${m.endLabel || 'Ends'} ${said(m.end, m.endMin, m.endMax, m.endKnown, m.endWhen)}` : ''].filter(Boolean).join(' · '),
       s: open(pt(m.start, m.startMin, m.startMax), m.startKnown, m.startWhen), e: open(pt(m.end, m.endMin, m.endMax), m.endKnown, m.endWhen) });
 
+    const wr = [];
     if (pref.where) {
       const ws = UI.whereRows(m);
-      if (ws.length) push({ kind: 'g', key: 'g|w|' + m.id, label: 'Where and when' });
       ws.forEach((r, i) => {
         const mv = r.mv, at = mv.atMarkerId && Store.marker(mv.atMarkerId);
         const place = at ? Store.displayName(at) : mv.coords && mv.coords.length ? 'On the way' + (mv.label ? ` (${mv.label})` : '') : (mv.label || `${(+mv.lat).toFixed(2)}, ${(+mv.lng).toFixed(2)}`);
-        if (r.ends) push({ kind: 'w', key: `w|${m.id}|${i}`, label: place, sub: `${low(mv.factLabel || 'ended')} here${mv.when ? ' · ' + mv.when : ''}`, s: open(pt(mv.date, mv.dateMin, mv.dateMax), mv.dateKnown, mv.when) });
-        else push({ kind: 'w', key: `w|${m.id}|${i}`, label: place, span: true,
+        if (r.ends) wr.push({ kind: 'w', key: `w|${m.id}|${i}`, label: place, sub: `${low(mv.factLabel || 'ended')} here${mv.when ? ' · ' + mv.when : ''}`, s: open(pt(mv.date, mv.dateMin, mv.dateMax), mv.dateKnown, mv.when) });
+        else wr.push({ kind: 'w', key: `w|${m.id}|${i}`, label: place, span: true,
           sub: [r.fromStart ? 'from the beginning' : 'from ' + r.startSaid, r.end ? 'until ' + r.endSaid : '', r.len].filter(Boolean).join(' · '),
           s: open(pt(r.start, r.startMin, r.startMax), r.startKnown, r.startSaid), e: open(pt(r.end, r.endMin, r.endMax), r.endKnown, r.endSaid) });
       });
@@ -130,9 +130,18 @@ window.Gantt = (() => {
         s: mi.date ? open(pt(mi.date, mi.dateMin, mi.dateMax), mi.known, mi.when) : null, e: mi.dateEnd ? pt(mi.dateEnd, mi.dateEndMin, mi.dateEndMax) : null });
     });
     fs.forEach((r, i) => { r.order = i; });
-    fs.sort((a, b) => (firstDay(a) - firstDay(b)) || (a.order - b.order));
-    if (fs.length) push({ kind: 'g', key: 'g|f|' + m.id, label: 'Facts' });
-    fs.forEach(push);
+    const byDay = (a, b) => (firstDay(a) - firstDay(b)) || (a.order - b.order);
+    fs.sort(byDay);
+    if (pref.mingle && wr.length && fs.length) { // 25.3: places and facts in one list in date order (a place before a fact of the same day)
+      wr.forEach((r, i) => { r.order = i - wr.length; });
+      push({ kind: 'g', key: 'g|wf|' + m.id, label: 'Where and when, and facts' });
+      wr.concat(fs).sort(byDay).forEach(push);
+    } else {
+      if (wr.length) push({ kind: 'g', key: 'g|w|' + m.id, label: 'Where and when' });
+      wr.forEach(push);
+      if (fs.length) push({ kind: 'g', key: 'g|f|' + m.id, label: 'Facts' });
+      fs.forEach(push);
+    }
 
     if (pref.ties) {
       const ls = Store.linksOf(m.id).filter(l => Store.marker(l.fromId === m.id ? l.toId : l.fromId));
