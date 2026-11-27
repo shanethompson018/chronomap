@@ -48,6 +48,9 @@ in your Drive with `chronomap-data.json` and a `photos` folder. From then on:
   foreground, and whenever you press the button;
 * each marker, tie, category, source and photo is merged separately: the newest version wins, so edits
   to different things on two devices both survive, and a deletion on one device is not undone by the other;
+* a fact you remove from a marker, a place you take off a journey, and the time gaps that went with
+  them stay removed on every device, even if the other device still held the older marker. Dates the
+  app works out by itself never count as a change of yours;
 * a device that still shows the untouched sample data takes whatever is in Drive on its first sync;
 * Google's sign-in lasts about an hour at a time. When it lapses the button says "Sign in"; one click
   (and sometimes a short Google popup that closes itself) renews it. Allow popups for the site if the

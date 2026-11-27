@@ -29,10 +29,19 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 - Relations (time gaps and limits): `normRelation` gives `part` 'date' | 'min' | 'max' (default 'date').
   `addRelation` anchors ends automatically for date ties only. `addRelations(list)` is one commit.
   `applySolved` writes reckoned dates and clears one whose tie is no longer an active date tie.
-  `applyWindows` writes or removes `calcMin / calcMax / calcEndMin / calcEndMax` on facts. `slotTyped(ref)` is
+  `applyWindows` writes or removes `calcMin / calcMax / calcEndMin / calcEndMax` on facts. **Neither calls
+  `touch` (26.1), and nothing the solver writes may ever stamp a marker**: a device that is behind would stamp
+  its old copy "now" and win the sync over a real correction. That is how removed facts came back in Nov 2026. `slotTyped(ref)` is
   what the user typed for a slot.
 - `setSetting` skips an unchanged value; `setSettings(obj)` changes several in one commit.
 - Sync pieces: `exportSyncDoc`, `replaceSyncDoc`; merge is per record, newest wins, with tombstones.
+- Facts have tombstones too (26.2), coll `facts`, though `facts` is not a collection: a fact and a stop live
+  inside their marker. `updateMarker` and `importJSON` call `recordFacts(gone, now)`; `updateMarker` also
+  tombstones each time gap `cleanReferences` dropped. A record `{ coll: 'facts', id, at, back: true }` cancels an
+  earlier removal (the fact is there again after an import). `S.deleted` may hold several records for one id;
+  the newest counts. Anything that removes a fact outside `updateMarker` must call `recordFacts` itself.
+- `importJSON` keeps the stamps that are in the file, so with sync on a newer copy in Drive wins again at the
+  next sync (agenda 26.5, open).
 - Places along a journey: `fact.stops` (absent when empty), each `{ id, kind: 'stop'|'pass', at: { kind:
   'marker', markerId } | { kind: 'point', lat, lng }, label }`; a stop also has the six date boxes of a fact and
   the four `calc…` ends, **under the same names**, so every function that works on a fact's dates works on a
@@ -301,6 +310,14 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   replace and upload when nothing changed. A watchdog (`runStarted`, `runNo`) frees a stuck run.
 - When sync "works" but two devices differ, compare the "Google account:" line in Library → Sync first: two
   devices signed in to different Google accounts each sync happily to their own Drive.
+- `mergeDocs`: after the newest copy of each marker is chosen, facts and stops with a `facts` tombstone are
+  taken out of it (unless the newest record for that id is marked `back`). The copy keeps its stamp.
+- `sharedKey` sorts object keys but not lists: two devices holding the same records in a different order each
+  write the Drive file at every sync. Harmless; an import can cause it.
+- To test sync without Google: mock `window.fetch` for `googleapis.com` with one file held in a variable, put
+  the fake token in place, reload (the token is only read at start; keep `driveSync` off across the reload so
+  nothing goes to Google), then call `Sync.run` with `driveSync` on. Two devices are two saved copies of
+  `chronomap.v1`, swapped with `Store.load()` and `Store.notify({ type: 'all' })`.
 
 ## js/photos.js
 

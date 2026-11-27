@@ -41,11 +41,12 @@ cross items off as they land. We go through it one item at a time.
 - **A stay of a whole number of years can read one year short** (found 27 Nov 2026, not fixed): "Where
   and when" said "about 29 years" for 1 Jan 1700 to 1 Jan 1730. `stayLength` in `js/ui.js` divides days
   by 365.2425 and rounds down. The Gantt tab shows the same words.
-- **Section 26:** removed facts came back after a sync. Looked into 27 Nov 2026: the way it happens is
-  shown on the test copy (a device that is behind stamps its old copy as new when the solver rewrites a
-  reckoned value on it; a removed fact and its time gaps leave no deletion record). Fix proposed (26.1
-  to 26.4), not built; waiting for his go-ahead. **Until 26.1 is built, a release that changes what the
-  solver writes can undo a correction of his on a device that has not synced yet.**
+- **Section 26:** removed facts came back after a sync. Looked into 27 Nov 2026 and shown on the test
+  copy. 26.1 (the solver no longer stamps a marker as changed) and 26.2 (a removed fact, a removed stop
+  and their time gaps leave a deletion record) built 27 Nov 2026 ("Yes, build 26"); not checked on the
+  Boox. Both devices must have opened the new version for it to hold. 26.3 (a warning on a device that
+  is behind), 26.4 (the Sync page says what the last sync did) and 26.5 (an imported backup is undone by
+  the next sync: found while testing, his decision) are proposed, not decided.
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
@@ -1228,7 +1229,7 @@ wants it.
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on), including
 the largest letter size and dates BC; not checked on the Boox itself, and not seen with his own data.
 
-## 26. Removed facts came back after a sync (found and looked into 27 Nov 2026; fix proposed, not built)
+## 26. Removed facts came back after a sync (found 27 Nov 2026; 26.1 and 26.2 built 27 Nov 2026; 26.3 to 26.5 proposed)
 
 On 25 Nov he removed the eight "Lived at" facts on Terah, Abram, Sarai and Lot and emptied Lot's Born. On
 27 Nov they were all back. His two exports were compared by a script that only reads them; neither was
@@ -1305,21 +1306,21 @@ changes what the solver writes. If he removed the eight facts on the PC before t
 that version and synced, the tablet can bring them back once more when it is next opened. Then the
 removal has to be done again, after step 1.
 
-For the sessions: until 26.1 is built, a release that changes what the solver writes makes every device
-that is behind stamp its old copies when it is next opened, before it has synced. Build 26.1 before any
-other change to the solver.
+For the sessions: this held until 26.1 was built. A device still running a version from before 26.1
+keeps the old behaviour until it has opened the new one, so the steps above stay good advice until both
+of his devices show a version stamp of 27 Nov 2026 or later from this section.
 
 **Proposed** (changes to the app; he still enters, corrects and removes everything himself):
 
-- [ ] **26.1 The solver no longer stamps a marker as changed.** Reckoned dates, their "where this comes
+- [x] **26.1 The solver no longer stamps a marker as changed. Built 27 Nov 2026.** Reckoned dates, their "where this comes
       from" notes and windows are worked out again on every device from what he typed and from his time
       gaps, so they do not need to travel as a change. Only his own changes stamp a marker. This takes
       away the cause seen here. In `applySolved` and `applyWindows`: no `touch`. To settle when building:
       a reckoned date sits in the same box as a typed one (`f.date`), so two devices on different
       versions could each rewrite the Drive file at every sync (nothing lost, only wasted writes) unless
       reckoned values are left out when two copies are compared (`sharedKey`).
-- [ ] **26.2 A deletion record for a removed fact, a removed stop, and every time gap that goes with
-      them**, as a deleted marker already has. A sync then never brings such a fact or time gap back,
+- [x] **26.2 A deletion record for a removed fact, a removed stop, and every time gap that goes with
+      them. Built 27 Nov 2026**, as a deleted marker already has. A sync then never brings such a fact or time gap back,
       even when the older copy of the marker wins for another reason (he really did change that marker
       on a device that was behind). In `updateMarker`: compare the facts before and after, and give a
       record to each time gap `cleanReferences` drops; in `mergeDocs`: take recorded facts out of the
@@ -1329,11 +1330,48 @@ other change to the solver.
       synced … Tap Sync first, or a newer change made on your other device may be undone." One tap.
 - [ ] **26.4 The Sync page says what the last sync did**: the names of the markers it took from the
       other device and of those it sent. A return like this one would be seen the same minute.
+- [ ] **26.5 An imported backup should win the next sync** (found while testing 26.2; his decision).
+      Today Library → Backup → Import puts the file's records in place on that device, but they keep the
+      stamps they have in the file. With sync on, the next sync takes the newer copy from Drive again
+      for everything changed since the backup was made, so the import is quietly undone for those
+      records ("Replace all" too). This was so before section 26. The change: records an import puts in
+      place count as changed now. It means an import overrules newer changes on the other device, which
+      is what it already does on the device itself.
 
-Recommended: 26.1 and 26.2 together as one release, then 26.3. 26.4 if he wants it.
-
-What stays as it is after all four: a marker is still one record. If he empties a typed date on one
+What stays as it is after 26.1 to 26.4: a marker is still one record. If he empties a typed date on one
 device and changes the same marker on another device that is behind, the later of the two whole copies
 wins. 26.3 warns of it.
 
-Not checked on the Boox.
+**26.1 and 26.2 as built, 27 Nov 2026** ("Yes, build 26"; two commits, one release):
+
+* **26.1.** `applySolved` and `applyWindows` in `js/store.js` no longer call `touch`. A reckoned date,
+  its "where this comes from" note and a window still travel in the Drive file, but as part of the
+  marker's last real change; each device works them out again after a sync. The wasted writes feared
+  above were not seen with both copies on one version: after a change both sides settle and a further
+  sync writes nothing. Left as it is: two devices on different versions, or with the lifetime or family
+  rule switched differently, each write the Drive file once per sync. Nothing is lost by it.
+* **26.2.** Saving a marker compares its facts and its places along a journey with what was there. Each
+  one that is gone gets a deletion record of kind `facts` (a fact has no record of its own: it lives in
+  its marker), and each time gap that `cleanReferences` drops with it gets the ordinary record of a
+  deleted time gap. In a sync, `mergeDocs` takes a recorded fact or place out of whichever copy of the
+  marker wins. Records last 180 days like the others.
+* **A fact that is there again on purpose** (an imported backup holds it) gets a later record marked
+  `back`, which cancels the removal, so the next sync does not take it out again. Its time gaps do not
+  come back that way; see 26.5.
+* **Nothing changes on screen.** No new button, no new wording.
+
+Tested on the test copy with `T-` records, Google Drive faked, two copies of the data as two devices:
+
+* The three cases above (the device that is behind is only opened; another marker is changed on it; it
+  holds a window from the older version): the removal now holds on both devices in all three, the
+  emptied Born stays empty, and a further sync on each writes nothing.
+* The marker itself is saved on the device that is behind: its whole copy wins, as before (the emptied
+  Born is typed again: the limit named above), but the removed fact and its two time gaps stay removed.
+* A place along a journey removed on one device, the same marker saved on the other: the place and its
+  time gap stay removed.
+* A date changed on one device: the dates reckoned from it arrive on the other with no stamp on their
+  marker, and a second sync on each writes nothing.
+* A backup imported after the removal, the marker then saved: the fact is back on both devices and
+  stays. Imported and synced with nothing else done: undone by the sync (26.5).
+
+Not checked on the Boox, and not with his real accounts: Google's sign-in cannot be tested from here.
