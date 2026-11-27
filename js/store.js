@@ -690,8 +690,10 @@ window.Store = (() => {
   }
   function deleteRelation(id) { if (relation(id)) tombstone('relations', id); S.relations = S.relations.filter(r => r.id !== id); commit({ type: 'relation', id, deleted: true }); }
 
-  // Write the solver's results: derived dates and the "where this came from" notes. Only slots whose
-  // value actually changed are marked as edited, so a recomputation that changes nothing causes no sync traffic.
+  // Write the solver's results: derived dates and the "where this came from" notes.
+  // The solver never marks a marker as edited (26.1): what it writes is worked out again on every device from
+  // what the user typed and from the time gaps. A stamp here once let a device that was behind stamp its old
+  // copy of a marker "now", and that old copy then won the sync over a real correction made elsewhere.
   function applySolved(results, undeterminedKeys) {
     let changed = false;
     const owners = S.markers.map(m => ({ kind: 'marker', o: m }));
@@ -705,7 +707,7 @@ window.Store = (() => {
         const cur = slotRange(res.ref);
         const min = res.min && res.min !== res.value ? res.min : '', max = res.max && res.max !== res.value ? res.max : '';
         if (!cur || res.value !== cur.date || min !== ((slotParts(res.ref.slot).isEnd ? slotFact(o, res.ref.slot).dateEndMin : slotFact(o, res.ref.slot).dateMin) || '') || max !== ((slotParts(res.ref.slot).isEnd ? slotFact(o, res.ref.slot).dateEndMax : slotFact(o, res.ref.slot).dateMax) || '')) {
-          setSlotRaw(o, res.ref.slot, res.value, min, max); touch(o); changed = true;
+          setSlotRaw(o, res.ref.slot, res.value, min, max); changed = true;
         }
       }
       // A date that was reckoned and no longer is (its tie was deleted, overruled, turned into a limit or pointed
@@ -713,7 +715,7 @@ window.Store = (() => {
       // date. Making it an anchor (🔒) is the way to keep its value.
       for (const slot of Object.keys(o.derived || {})) {
         if (nd[slot] || (o.pinned || []).includes(slot) || !slotFact(o, slot)) continue;
-        setSlotRaw(o, slot, '', '', ''); touch(o); changed = true;
+        setSlotRaw(o, slot, '', '', ''); changed = true;
       }
       if (JSON.stringify(nd) !== JSON.stringify(o.derived || {})) { o.derived = nd; changed = true; }
       if (o.moves && changed) sortMovesInPlace(o);
@@ -722,12 +724,11 @@ window.Store = (() => {
     return changed;
   }
   // Write the windows that ties on the ends work out: calcMin / calcMax (calcEndMin / calcEndMax for an "until"
-  // date) on each fact, removed where there is none. `map` is slot key -> { min, max }. Only facts whose window
-  // changed are marked as edited.
+  // date) on each fact, removed where there is none. `map` is slot key -> { min, max }. Like applySolved, this
+  // never marks a marker as edited (26.1).
   function applyWindows(map) {
     let changed = false;
     for (const o of S.markers) {
-      let touched = false;
       for (const fact of o.facts || []) for (const f of [fact, ...stopsOf(fact)]) { // a fact's dates, then each of its stops'
         for (const isEnd of [false, true]) {
           const w = map.get(refKey(factRef(o.id, f.id, isEnd))) || { min: '', max: '' };
@@ -735,10 +736,9 @@ window.Store = (() => {
           if ((f[kMin] || '') === (w.min || '') && (f[kMax] || '') === (w.max || '')) continue;
           if (w.min) f[kMin] = w.min; else delete f[kMin];
           if (w.max) f[kMax] = w.max; else delete f[kMax];
-          touched = true;
+          changed = true;
         }
       }
-      if (touched) { touch(o); changed = true; }
     }
     if (changed) commit({ type: 'relations' });
     return changed;
