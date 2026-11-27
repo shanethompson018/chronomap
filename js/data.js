@@ -479,7 +479,8 @@ window.DataTab = (() => {
         h('button', { onclick: () => file.click() }, '⬆ Import JSON'), mode, file,
         h('span', { class: 'spacer' }),
         h('button', { onclick: () => { if (confirm('Load the sample dataset? This replaces your current data (export first if you want to keep it).')) Store.resetToSample(); } }, 'Load sample data'),
-        h('button', { class: 'danger', onclick: () => { if (confirm('Delete ALL markers, ties, categories and link types?') && confirm('Really delete everything? Export first if unsure.')) Store.clearAll(); } }, 'Clear everything')));
+        h('button', { class: 'danger', onclick: () => { if (confirm('Delete ALL markers, ties, categories and link types?') && confirm('Really delete everything? Export first if unsure.')) Store.clearAll(); } }, 'Clear everything')),
+      h('p', { class: 'hint' }, 'An import counts as a change made now. With sync on, everything the file holds also replaces the same items on your other devices at the next sync, even where they were changed after the file was made.'));
   }
 
   function randomColor() { const hues = [0, 30, 60, 120, 180, 210, 260, 300]; return hslToHex(hues[Math.floor(Math.random() * hues.length)], 65, 55); }

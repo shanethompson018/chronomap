@@ -20,7 +20,18 @@ window.Sync = (() => {
   // the same text for the same content whatever order the keys were written in (to tell "nothing changed" reliably)
   const stable = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, key) => { o[key] = x[key]; return o; }, {}) : x));
   // ...of the shared part of a document only (a document read back from Drive also carries things that do not sync)
-  const sharedKey = doc => stable(['version', 'deleted', ...Store.syncCollections()].reduce((o, k) => { o[k] = doc[k]; return o; }, {}));
+  // The order of the records in a list does not count either (26.5): each device keeps its own order (records
+  // from elsewhere go to the end, an import moves some), and two devices holding the same records in a different
+  // order would otherwise each rewrite the Drive file at every sync. The order inside a record still counts,
+  // except a marker's `mirrors`: Facts.derive fills that list from the other markers, in the order they come.
+  const byText = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  const sharedKey = doc => stable(['version', 'deleted', ...Store.syncCollections()].reduce((o, k) => {
+    const v = doc[k];
+    o[k] = !Array.isArray(v) ? v
+      : k === 'deleted' ? v.slice().sort((a, b) => byText(`${a.coll}:${a.id}:${a.at}`, `${b.coll}:${b.id}:${b.at}`))
+        : v.map(r => (k === 'markers' && r && r.mirrors ? Object.assign({}, r, { mirrors: undefined }) : r)).sort((a, b) => byText(String(a.id), String(b.id)));
+    return o;
+  }, {}));
   let status = { state: 'off', text: 'Sync off' }, lastError = null;
 
   const cfg = () => window.ChronoConfig || {};

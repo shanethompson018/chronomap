@@ -782,12 +782,16 @@ window.Store = (() => {
     }
     else {
       const upsert = (list, items) => items.forEach(it => { const i = list.findIndex(x => x.id === it.id); if (i >= 0) list[i] = it; else list.push(it); });
-      upsert(S.categories, obj.categories); upsert(S.linkTypes, obj.linkTypes);
+      upsert(S.categories, obj.categories); upsert(S.linkTypes, obj.linkTypes); upsert(S.factTypes, obj.factTypes); // (fact types were left out until 26.5: a fact of a type only the file had became a Note)
       upsert(S.markers, obj.markers); upsert(S.links, obj.links); upsert(S.sources, obj.sources); upsert(S.photos, obj.photos); upsert(S.relations, obj.relations);
       S.deleted = S.deleted.concat(obj.deleted || []);
     }
-    // imported records count as changed now, so they win over older copies on other devices
-    SYNC_COLLS.forEach(coll => S[coll].forEach(r => { if (!r.updatedAt) r.updatedAt = Date.now(); }));
+    // What an import puts in place counts as changed now (26.5): every record the file holds wins the next sync,
+    // as it has already replaced the copy on this device. With the stamps from the file, the newer copies in
+    // Drive came back at the next sync and the import was quietly undone. A deletion record older than this
+    // stamp no longer removes the record either.
+    const now = Date.now(), fromFile = new Set(SYNC_COLLS.flatMap(coll => obj[coll].map(r => coll + ':' + r.id)));
+    SYNC_COLLS.forEach(coll => S[coll].forEach(r => { if (!r.updatedAt || fromFile.has(coll + ':' + r.id)) r.updatedAt = now; }));
     S.settings.sampleUntouched = false;
     S = normalize(S);
     // Facts (26.2): one the file took out of a marker that is still here leaves a deletion record; one the file
