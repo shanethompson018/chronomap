@@ -142,7 +142,7 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   added are new ties. `thisRef` can be changed in the `.tie-this` box. `preview` leaves the edited tie out as it
   stands (`skipId`). In store.js `updateRelation` runs `anchorEnds` when the patch names `from` / `to`, and
   `applySolved` empties a reckoned date whose tie no longer touches it.
-- Not built: the lifetime rule (design step C) and the Timeline bar layout (step E).
+- The lifetime rule (design step C) is 22.2 above. The bar layout (step E) became the Gantt tab, `js/gantt.js`.
 
 ## js/editor.js
 
@@ -234,11 +234,41 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   Partners alternate left and right, ordered by marriage date, then first child's birth.
 - Generations shown are typed, with All (`chronomap.family`).
 
+## js/ui.js: where and when
+
+- `UI.whereRows(m)` is the list as data (one entry per place: its move, where the stay begins and ends,
+  which rule ended it, its length); `UI.whereItems` words it and `js/gantt.js` draws it. Change the rule
+  in `whereRows` only.
+
 ## js/timeline.js
 
 - Chosen markers and layout in `chronomap.timeline` `{ ids, layout: 'list'|'lanes', mirrors, gaps }`. Rows are
   grouped by day; a date known only as a window gets its own row labelled with the window and is left out of
   the "… later" gap text.
+
+## js/gantt.js
+
+- Chosen markers, ticks and span in `chronomap.gantt` `{ ids, where, facts, mirrors, ties, gaps, t0, t1 }`
+  (`t0` / `t1` are day numbers; null = the whole span, worked out from every date on the chart plus 4%).
+- All HTML, no SVG. `.gt-axis` and every `.gt-row` are grids with the same two columns (`--gt-label`, then
+  the track), so anything in the track is placed by `left` / `width` in per cent of the span. `.gt-over` is
+  laid over the track column for the year lines and the relationship lines; those lines are placed in per
+  cent across and in pixels down (each row's `offsetTop`), so they are drawn again when the rows' total
+  height changes (a `ResizeObserver` on `.gt-rows`).
+- `rowsOf(m)` builds the rows: `{ kind: 'm'|'g'|'w'|'f'|'x'|'t', key, label, sub | subHTML, s, e, span,
+  slotS, slotE }` (heading, group title, place, own fact, fact from another marker, tie). `s` and `e` are
+  `{ E, L }` day numbers: the earliest and latest a date can be, equal when it is certain, ±Infinity for a
+  window with one end. Own facts take them from `Facts.when` (`lo` / `hi`); places, lifetimes and ties only
+  carry min / max and the words, so `open()` reads "after …" / "before …" to know which end is open.
+- `marks(r)`: hatched `.gt-box.maybe` from `s.E` to `e.L`, solid `.gt-box.sure` from `s.L` to `e.E` when
+  that has length, `.gt-dot` for one certain date, `.gt-box.bad` when `e.L < s.E`. Never a middle date.
+- `drawLinks`: only own-fact rows register their slots (`slotS`, `slotE` are `Store.refKey`s), so a tie is
+  drawn when both its dates are own facts of chosen markers and Facts is ticked. `part: 'max'` joins the
+  two `L`s, everything else the two `E`s.
+- The marker bar colour is the CSS variable `--c` set on the row; `body.eink` forces it to black.
+- A new tab needs: the button and panel in `index.html`, the script there and in `sw.js` `SHELL`, and in
+  `js/app.js` a branch in `showTab`, in `showMarker`, in `onGlobalClick` (its `data-action`) and its
+  `init()`. The tab itself is restored by the session code with no change.
 
 ## js/sync.js
 

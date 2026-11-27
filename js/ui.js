@@ -286,7 +286,7 @@ window.UI = (() => {
         + `<button data-action="network" data-id="${esc(m.id)}">🕸️ Network</button>`
         + `<button data-action="ties" data-id="${esc(m.id)}">🔗 Ties</button>`
         + (Store.linksOf(m.id).some(l => /^(parent|spouse) of$/i.test(((Store.linkType(l.typeId) || {}).name || '').trim())) ? `<button data-action="family" data-id="${esc(m.id)}">🌳 Family</button>` : '')
-        + ((m.facts || []).length || (m.mirrors || []).length ? `<button data-action="timeline" data-id="${esc(m.id)}" title="Add this marker to the Timeline tab">🕒 Timeline</button>` : '')
+        + ((m.facts || []).length || (m.mirrors || []).length ? `<button data-action="timeline" data-id="${esc(m.id)}" title="Add this marker to the Timeline tab">🕒 Timeline</button><button data-action="gantt" data-id="${esc(m.id)}" title="Add this marker to the Gantt tab">📊 Gantt</button>` : '')
         + '</div>';
     }
     return out + '</div>';
@@ -304,15 +304,37 @@ window.UI = (() => {
     return words ? (about ? 'about ' : '') + words : '';
   }
   // whereItems returns the lines (opts.plain: names as plain words, for the editor, where a tap must not leave the form).
-  function whereItems(m, t, opts = {}) {
+  // whereRows is the same list as data (the Gantt tab draws it as bars): for each place its move, and where the
+  // stay begins and ends: { mv, ends, fromStart, start, startMin, startMax, startKnown, startSaid, end, endMin,
+  // endMax, endKnown, endSaid, endBy ('own' | 'next' | 'life'), len }.
+  function whereRows(m) {
     if (!m || m.kind !== 'pin') return [];
     const moves = Store.sortedMoves(m).filter(Store.hasLocation);
     if (!moves.length || (moves.length < 2 && !moves[0].date && !moves[0].dateEnd && !moves[0].journeyOf)) return []; // one place with nothing to say about when
+    const ranged = (a, b) => !!(a && b && a !== b);
+    return moves.map((mv, i) => {
+      const r = { mv, ends: !!mv.ends, fromStart: false, start: '', startMin: '', startMax: '', startKnown: false, startSaid: '', end: '', endMin: '', endMax: '', endKnown: false, endSaid: '', endBy: '', len: '' };
+      let about = false;
+      // from
+      if (mv.date) { r.start = mv.date; r.startMin = mv.dateMin || ''; r.startMax = mv.dateMax || ''; r.startKnown = mv.dateKnown !== false; r.startSaid = mv.when || Dates.formatInput(mv.date); about = ranged(mv.dateMin, mv.dateMax); }
+      else { r.fromStart = true; if (m.start) { r.start = m.start; r.startMin = m.startMin || ''; r.startMax = m.startMax || ''; r.startKnown = m.startKnown !== false; r.startSaid = m.startWhen || Dates.formatInput(m.start); about = ranged(m.startMin, m.startMax); } }
+      // until: its own until date, else the next dated place, else the marker's end
+      const next = moves.slice(i + 1).find(x => x.date);
+      if (mv.dateEnd) { r.endBy = 'own'; r.end = mv.dateEnd; r.endMin = mv.dateEndMin || ''; r.endMax = mv.dateEndMax || ''; r.endKnown = mv.dateEndKnown !== false; r.endSaid = mv.whenEnd || Dates.formatInput(mv.dateEnd); about = about || ranged(mv.dateEndMin, mv.dateEndMax); }
+      else if (next) { r.endBy = 'next'; r.end = next.date; r.endMin = next.dateMin || ''; r.endMax = next.dateMax || ''; r.endKnown = next.dateKnown !== false; r.endSaid = next.when || Dates.formatInput(next.date); about = about || ranged(next.dateMin, next.dateMax); }
+      else if (m.end) { r.endBy = 'life'; r.end = m.end; r.endMin = m.endMin || ''; r.endMax = m.endMax || ''; r.endKnown = m.endKnown !== false; r.endSaid = m.endWhen || Dates.formatInput(m.end); about = about || ranged(m.endMin, m.endMax); }
+      if (!r.ends && r.start && r.end && r.startKnown && r.endKnown) r.len = stayLength(r.start, r.end, about);
+      return r;
+    });
+  }
+  function whereItems(m, t, opts = {}) {
+    const rows = whereRows(m);
+    if (!rows.length) return [];
     const now = t == null ? null : Store.positionAt(m, t);
     const link = o => (opts.plain ? `<strong>${esc(Store.displayName(o))}</strong>` : `<a class="mlink" data-action="goto-marker" data-id="${esc(o.id)}">${esc(Store.displayName(o))}</a>`);
-    const ranged = (a, b) => !!(a && b && a !== b);
     const low = s => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
-    const items = moves.map((mv, i) => {
+    const items = rows.map(r => {
+      const mv = r.mv;
       const at = mv.atMarkerId && Store.marker(mv.atMarkerId), owner = mv.sharedFrom && Store.marker(mv.sharedFrom);
       let place;
       if (at) place = link(at);
@@ -321,17 +343,9 @@ window.UI = (() => {
       const src = mv.journeyOf || owner ? `the ${esc(mv.factLabel)} fact${owner ? ' on ' + link(owner) : ''}` : esc(mv.factLabel || ''); // which fact puts them there
       // the place where the marker ends (died at Haran) is not a stay: it is said as what it is
       if (mv.ends) return `<li><strong>${place}</strong> · ${esc(low(mv.factLabel || 'ended'))} here${mv.when ? ' · ' + esc(mv.when) : ''}</li>`;
-      // from
-      let start = '', startKnown = false, about = false, from;
-      if (mv.date) { from = 'from ' + esc(mv.when || Dates.formatInput(mv.date)); start = mv.date; startKnown = mv.dateKnown !== false; about = ranged(mv.dateMin, mv.dateMax); }
-      else { from = 'from the beginning'; if (m.start) { start = m.start; startKnown = m.startKnown !== false; about = ranged(m.startMin, m.startMax); } }
-      // until: its own until date, else the next dated place, else the marker's end
-      const next = moves.slice(i + 1).find(x => x.date);
-      let until = '', end = '', endKnown = false;
-      if (mv.dateEnd) { until = 'until ' + esc(mv.whenEnd || Dates.formatInput(mv.dateEnd)); end = mv.dateEnd; endKnown = mv.dateEndKnown !== false; about = about || ranged(mv.dateEndMin, mv.dateEndMax); }
-      else if (next) { until = 'until ' + esc(next.when || Dates.formatInput(next.date)); end = next.date; endKnown = next.dateKnown !== false; about = about || ranged(next.dateMin, next.dateMax); }
-      else if (m.end) { until = `until ${esc(low(m.endLabel || 'the end'))} (${esc(m.endWhen || Dates.formatInput(m.end))})`; end = m.end; endKnown = m.endKnown !== false; about = about || ranged(m.endMin, m.endMax); }
-      const len = start && end && startKnown && endKnown ? stayLength(start, end, about) : '';
+      const from = r.fromStart ? 'from the beginning' : 'from ' + esc(r.startSaid);
+      const until = r.endBy === 'life' ? `until ${esc(low(m.endLabel || 'the end'))} (${esc(r.endSaid)})` : r.end ? 'until ' + esc(r.endSaid) : '';
+      const len = r.len;
       return `<li><strong>${place}</strong> · ${from}${until ? ' · ' + until : ''}${len ? ` · <strong>${esc(len)}</strong>` : ''}${src ? ` <span class="muted">· ${src}</span>` : ''}${now && now.id === mv.id ? ' <span class="muted">· here at the slider\'s date</span>' : ''}</li>`;
     });
     return items;
@@ -522,6 +536,6 @@ window.UI = (() => {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
-  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, whereItems, partText, journeyText, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
+  return { esc, h, toast, textToHTML, parseLatLng, factWhenHTML, mirrorWhenHTML, zoomTools, zoomFilter, markerCard, closeMarkerCard, select, sourceSelect, promptNewSource, citeHTML, fieldTree, markerInfoHTML, factLineHTML, mirrorLineHTML, whereItems, whereRows, partText, journeyText, tieHTML, markerSelect, modal, download, sizeGuard, GRAPH_LIMIT,
     reliabilitySelect, confidenceSelect, gradeBadgeHTML, reliabilityHTML, RELIABILITY_LABELS, CONFIDENCE_LABELS, CONFIDENCE_GLYPH };
 })();

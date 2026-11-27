@@ -27,6 +27,7 @@
     <button class="tab" data-tab="network">Network</button>
     <button class="tab" data-tab="family">Family</button>
     <button class="tab" data-tab="timeline">Timeline</button>
+    <button class="tab" data-tab="gantt">Gantt</button>
     <button class="tab" data-tab="data">Library</button>
   </nav>
   <div class="topbar-right">
@@ -200,6 +201,41 @@
     <button class="info-close" id="tl-info-close" title="Close details">✕</button>
   </section>
 
+  <!-- ================= GANTT TAB ================= -->
+  <section id="tab-gantt" class="tab-panel">
+    <aside class="side">
+      <div class="side-section">
+        <div class="side-title">Markers on the chart <button id="gt-clear" class="link-btn hidden">clear all</button></div>
+        <div id="gt-add"></div>
+        <div id="gt-chosen" class="tl-chosen"></div>
+        <p class="hint">Add one marker or several. Each gets a block of bars over the same dates: its lifetime, where it is and when, its facts and its ties.</p>
+      </div>
+      <div class="side-section">
+        <div class="side-title">Show</div>
+        <label><input type="checkbox" id="gt-where" checked> Where and when</label>
+        <label><input type="checkbox" id="gt-facts" checked> Facts</label>
+        <label title="Facts written on another marker that name this one, such as Son: Isaac from Isaac's Born fact"><input type="checkbox" id="gt-mirrors" checked> Facts from other markers</label>
+        <label><input type="checkbox" id="gt-ties" checked> Ties</label>
+        <label title="A line from the date a time gap or limit starts from to the date it sets, when both are on the chart"><input type="checkbox" id="gt-gaps" checked> Time gaps and limits</label>
+      </div>
+      <div class="side-section"><div id="gt-stats" class="muted"></div></div>
+    </aside>
+    <div class="tl-area gt-area">
+      <div class="gt-tools">
+        <button id="gt-fit" class="small" title="Show everything on the chart">Whole span</button>
+        <button id="gt-earlier" class="small" title="Move to earlier dates">◀ Earlier</button>
+        <button id="gt-later" class="small" title="Move to later dates">Later ▶</button>
+        <button id="gt-wider" class="small" title="Show a longer span of time">− Wider</button>
+        <button id="gt-closer" class="small" title="Show a shorter span of time">+ Closer</button>
+        <span id="gt-span" class="gt-span"></span>
+      </div>
+      <div id="gt-detail" class="gt-detail"></div>
+      <div id="gt-body" class="gt-body"></div>
+    </div>
+    <aside class="info-panel" id="gt-info"></aside>
+    <button class="info-close" id="gt-info-close" title="Close details">✕</button>
+  </section>
+
   <!-- ================= NETWORK TAB ================= -->
   <section id="tab-network" class="tab-panel">
     <aside class="side">
@@ -280,6 +316,7 @@
 <script src="js/network.js"></script>
 <script src="js/family.js"></script>
 <script src="js/timeline.js"></script>
+<script src="js/gantt.js"></script>
 <script src="js/data.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/app.js"></script>

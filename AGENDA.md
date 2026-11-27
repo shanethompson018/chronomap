@@ -32,9 +32,15 @@ cross items off as they land. We go through it one item at a time.
   and to the wording of ranged dates); not checked on the Boox.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
-- **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
+- **14.4 / design step E:** the bar layout in the Timeline tab. Superseded 27 Nov 2026 by the Gantt tab
+  (section 25).
 - **Section 24:** conflicts that explain themselves. Proposed 27 Nov 2026 from his three conflicts;
   waiting for his go-ahead to build. 24.6 is the old 22.5, now recommended.
+- **Section 25:** the Gantt tab. Built 27 Nov 2026; not checked on the Boox, and not seen with his own
+  data. Three choices were made without asking (see the section); his to change.
+- **A stay of a whole number of years can read one year short** (found 27 Nov 2026, not fixed): "Where
+  and when" said "about 29 years" for 1 Jan 1700 to 1 Jan 1730. `stayLength` in `js/ui.js` divides days
+  by 365.2425 and rounds down. The Gantt tab shows the same words.
 - **Deleted facts came back (found 27 Nov 2026, not looked into):** the eight "Lived at" facts he removed
   on 25 Nov are in his export of 27 Nov again with the same ids, and Lot's cleared Born date is typed
   again. Sync is suspected (the other device's older copy of those markers winning); not proven.
@@ -1130,3 +1136,57 @@ cause. Told to him 27 Nov; to be looked into on its own.
 **The way out told to him:** on the PC remove the eight facts, empty the Journey's From and Until, then
 empty Lot's Born (typed 2108 BC, 52 years before his father can be born; the other three hide it today).
 On a copy inside the script: 3 conflicts, then 1, then 0. Not tried in the app.
+
+## 25. The Gantt tab (asked 27 Nov 2026, built 27 Nov 2026)
+
+The user's words: "Please make a new tab for a gantt chart where I can select a marker, or markers, and it
+displays 'where and when', facts, and ties." This replaces 14.4 / design step E.
+
+**The plan, as told to him before building:**
+
+* A tab "Gantt" between Timeline and Library. Markers are chosen in the left panel as on the Timeline tab
+  (add, move up and down, take off, clear all); the choice is kept on the device.
+* One block per marker over a shared time axis: its lifetime (Begins to Ends) as the heading bar, then
+  **Where and when** (one bar per place, the same rows as the list of that name), **Facts** (a bar for a
+  fact with From and Until, a diamond for a single date), facts from other markers, and **Ties** (one bar
+  per tie to another marker, from when it begins to when it ends). Each group has a tick in the left panel.
+* **A date with a range or a window is never given a middle.** A bar is hatched from the earliest it can
+  begin to the latest it can end, and solid where it is certain (from the latest it can begin to the
+  earliest it can end). A single date with a range is a hatched bar and no diamond. In P6 terms: early
+  start to late finish hatched, late start to early finish solid.
+* **Time gaps and limits are relationship lines**, as in P6: an arrow from the date a tie starts from to
+  the date it sets. A time gap is a solid line with its length ("+70 y"); a limit is a dashed line ("not
+  before", "not after"). Drawn when both dates are on the chart.
+* Beside every bar the dates in words ("between … and …"), so nothing has to be read off the axis. Tapping
+  a row writes it out in full above the chart, with every time gap and limit on its dates.
+* **Nothing zooms.** The span shown has its own buttons: Whole span, earlier, later, wider, closer.
+* Works at the PC size and on the tablet upright with E-ink on (hatching and solid read without colour).
+
+**Chosen without asking, easy to change:** hatched and solid as above; a fact that is also a place shows
+under both Where and when and Facts; a fact or tie with no date is listed with no bar.
+
+- [x] **25.1 The Gantt tab. Built 27 Nov 2026.** As planned, with these details:
+
+* The left panel has the marker chooser, the chosen markers (move up, move down, take off, clear all) and
+  five ticks: Where and when, Facts, Facts from other markers, Ties, Time gaps and limits. A marker's
+  information has a new button, 📊 Gantt, beside 🕒 Timeline.
+* Every row has two lines of words (what it is, and its dates as they read everywhere else) and its bar.
+  Tapping a row writes it out above the chart with each time gap and limit on its dates, and two buttons:
+  Information and Edit marker. Until a row is tapped that strip is the key to the marks.
+* A fact whose Until is before its From is drawn as a red dashed bar (black dashes on E-ink), so a
+  backwards fact is seen on the chart.
+* A window with one end only ("after X") runs to the edge of the chart on its open side.
+* A "not after" limit joins the latest of its two dates; a "not before" limit and a time gap join the
+  earliest. That is how the late and the early dates are worked out.
+* A fact that another chosen marker holds is not repeated under "facts from other markers".
+* The year lines choose a round step (1, 2, 5, 10 … years) that leaves about seven on the axis. Adding a
+  marker goes back to the whole span so the new one is in sight.
+* The rows of "Where and when" are now worked out once (`UI.whereRows`) and used by both the list and
+  the chart, so the two cannot disagree.
+
+Not in it: the map slider's date as a line down the chart (the "data date" of P6); dragging the chart
+sideways with a finger (the Earlier and Later buttons do it); printing. Each is a small addition if he
+wants it.
+
+Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on), including
+the largest letter size and dates BC; not checked on the Boox itself, and not seen with his own data.

@@ -114,6 +114,7 @@ window.App = (() => {
     else if (name === 'network') Network.show();
     else if (name === 'family') Family.show();
     else if (name === 'timeline') Timeline.show();
+    else if (name === 'gantt') Gantt.show();
     else if (name === 'data') DataTab.show();
   }
   const currentTab = () => current;
@@ -130,6 +131,7 @@ window.App = (() => {
     else if (current === 'network') Network.select(id);
     else if (current === 'family') Family.select(id);
     else if (current === 'timeline') Timeline.select(id);
+    else if (current === 'gantt') Gantt.select(id);
     else UI.markerCard(id);
   }
   function gotoMarker(id, fromId) {
@@ -162,6 +164,7 @@ window.App = (() => {
     else if (action === 'ties') { showTab('ties'); Ties.setHub(id); }
     else if (action === 'family') { showTab('family'); Family.setRoot(id); }
     else if (action === 'timeline') { showTab('timeline'); Timeline.add(id); }
+    else if (action === 'gantt') { showTab('gantt'); Gantt.add(id); }
     else if (action === 'view-photo') { e.preventDefault(); Photos.view(el.dataset.photo); }
     else if (action === 'change-border') { showTab('map'); Editor.changeBorderHere(id); }
     else if (action === 'goto-marker') {
@@ -182,6 +185,7 @@ window.App = (() => {
       Network.init();
       Family.init();
       Timeline.init();
+      Gantt.init();
       DataTab.init();
       Photos.init().catch(err => console.warn('Photos failed to load', err));
       Sync.init();

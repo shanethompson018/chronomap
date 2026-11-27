@@ -654,3 +654,69 @@ body.eink .tl-date { border-right-color: #000; }
 body.eink .tl-date:not(.gap)::after { background: #000; border-color: #fff; }
 body.eink .tl-gap { color: #000; }
 body.eink .tl-chip { min-height: 36px; }
+
+/* ---------- Gantt tab ---------- */
+.gt-area { flex-direction: column; }
+.gt-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.gt-span { margin-left: auto; color: var(--muted); font-size: calc(12px * var(--fs)); }
+.gt-detail { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: calc(13px * var(--fs)); line-height: 1.5; max-height: 30%; overflow: auto; }
+.gt-detail ul { margin: 4px 0 0; padding-left: 18px; }
+.gt-legend { display: flex; flex-wrap: wrap; gap: 2px 16px; align-items: center; color: var(--muted); font-size: calc(12px * var(--fs)); }
+.gt-key { display: inline-block; position: relative; width: 30px; height: 14px; vertical-align: middle; margin-right: 5px; --c: var(--accent); }
+.gt-key .gt-box { left: 0; width: 100%; }
+.gt-key .gt-dot { left: 50%; }
+.gt-key .gt-ln { left: 0; width: 100%; top: 50%; }
+/* the label column and the bars share one grid, so a line across the bars can be placed in per cent */
+.gt-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; --gt-label: clamp(150px, 36%, calc(330px * var(--fs))); }
+.gt-axis, .gt-row { display: grid; grid-template-columns: var(--gt-label) minmax(0, 1fr); }
+.gt-axis { position: sticky; top: 0; z-index: 4; background: var(--bg); border-bottom: 2px solid var(--border); height: calc(26px * var(--fs)); }
+.gt-tick { position: absolute; top: 0; bottom: 0; padding-left: 4px; border-left: 1px solid var(--border); font-size: calc(11px * var(--fs)); color: var(--muted); white-space: nowrap; display: flex; align-items: center; }
+.gt-rows { position: relative; padding-bottom: 60px; }
+.gt-row { min-height: calc(40px * var(--fs)); border-bottom: 1px solid var(--border); cursor: pointer; }
+.gt-row.picked { background: var(--bg3); }
+.gt-row.k-g { min-height: calc(22px * var(--fs)); cursor: default; }
+.gt-row.k-m { background: var(--bg2); border-top: 2px solid var(--border); }
+.gt-label { min-width: 0; padding: 3px 8px 3px 22px; display: flex; flex-direction: column; justify-content: center; border-right: 2px solid var(--border); }
+.k-m > .gt-label, .k-g > .gt-label, .gt-axis > .gt-label { padding-left: 12px; }
+.gt-name, .gt-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gt-sub { font-size: calc(11.5px * var(--fs)); }
+.k-m .gt-name { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.k-m .gt-name > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.k-g .gt-name { font-size: calc(11px * var(--fs)); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.gt-track { position: relative; min-width: 0; overflow: hidden; }
+.gt-box, .gt-dot { position: absolute; top: 50%; }
+.gt-box { height: 14px; min-width: 3px; transform: translateY(-50%); border-radius: 2px; box-sizing: border-box; }
+.gt-box.maybe { border: 1px solid var(--c); background: repeating-linear-gradient(135deg, var(--c) 0 1.5px, transparent 1.5px 6px); }
+.gt-box.sure { background: var(--c); }
+.gt-box.bad { border: 2px dashed var(--danger); background: repeating-linear-gradient(135deg, var(--danger) 0 1.5px, transparent 1.5px 6px); }
+.k-m .gt-box { height: 9px; }
+.k-w .gt-box { height: 18px; }
+.k-t .gt-box { height: 8px; border-radius: 4px; }
+.k-x .gt-box, .k-x .gt-dot { opacity: .75; }
+.gt-dot { width: 11px; height: 11px; background: var(--c); transform: translate(-50%, -50%) rotate(45deg); }
+.gt-over { position: absolute; top: 0; bottom: 0; right: 0; left: var(--gt-label); pointer-events: none; overflow: hidden; }
+.gt-grid { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--border); opacity: .55; }
+.gt-ln { position: absolute; box-sizing: border-box; --ln: var(--text); }
+.gt-ln.v { border-left: 1.5px solid var(--ln); }
+.gt-ln.hz { border-top: 1.5px solid var(--ln); }
+.gt-ln.lim { border-style: dashed; border-width: 0; }
+.gt-ln.v.lim { border-left-width: 1.5px; }
+.gt-ln.hz.lim { border-top-width: 1.5px; }
+.gt-head { position: absolute; width: 0; height: 0; border: 5px solid transparent; }
+.gt-head.r { border-left-color: var(--text); transform: translate(-5px, -50%); }
+.gt-head.l { border-right-color: var(--text); transform: translate(-5px, -50%); }
+.gt-head.d { border-top-color: var(--text); transform: translate(-50%, -5px); }
+.gt-head.u { border-bottom-color: var(--text); transform: translate(-50%, -5px); }
+.gt-lag { position: absolute; transform: translate(4px, -50%); font-size: calc(10.5px * var(--fs)); white-space: nowrap; background: var(--bg); padding: 0 3px; border-radius: 3px; color: var(--text); }
+#gt-info:not(.open) { display: none; }
+#gt-info.open + .info-close { display: block; position: absolute; top: 8px; right: 8px; z-index: 21; }
+body.eink .gt-row, body.eink .gt-key { --c: #000 !important; }
+body.eink .gt-axis, body.eink .gt-row.k-m, body.eink .gt-row.picked, body.eink .gt-lag { background: #fff; }
+body.eink .gt-row.picked > .gt-label { box-shadow: inset 6px 0 0 #000; }
+body.eink .gt-row, body.eink .gt-label, body.eink .gt-axis, body.eink .gt-tick, body.eink .gt-grid, body.eink .gt-tools, body.eink .gt-detail { border-color: #000; }
+body.eink .gt-grid { opacity: .35; }
+body.eink .gt-tick, body.eink .gt-legend, body.eink .gt-span, body.eink .k-g .gt-name { color: #000; }
+body.eink .gt-box.bad { border-color: #000; background: repeating-linear-gradient(90deg, #000 0 3px, transparent 3px 7px); }
+body.eink .k-x .gt-box, body.eink .k-x .gt-dot { opacity: 1; }
+body.eink .gt-sub { font-size: calc(13px * var(--fs)); color: #000; }
+body.eink .gt-tick, body.eink .gt-lag { font-size: calc(12px * var(--fs)); }

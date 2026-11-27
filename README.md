@@ -158,6 +158,24 @@ to make them the root. The 🌳 Family button in a person's bubble opens the tre
 *Down* are typed numbers of generations, or *All* (the default) to follow the ties as far as they go;
 a tree of more than 300 people shows its size and a *Draw it* button rather than drawing at once.
 
+### Gantt
+The chosen markers as bars over one line of time, the way Primavera P6 draws activities. Add a marker in
+the left panel, or press 📊 Gantt in a marker's information. Each marker is a block: its lifetime as the
+heading bar, then a row for every place it is (**Where and when**), every dated **fact** (its own, and
+those other markers hold about it) and every **tie** to another marker. Each group has a tick in the left
+panel. Beside every bar its dates are written in words.
+
+No date is given a made-up middle. A bar is **hatched** over all the time it can cover (from the earliest
+it can begin to the latest it can end) and **solid** where it is certain (from the latest it can begin to
+the earliest it can end). A single date that is certain is a diamond; one with a range is a hatched bar.
+A fact that ends before it begins is a red dashed bar. **Time gaps and limits** are lines with an
+arrowhead from the date they start from to the date they set: solid for a time gap, with its length;
+dashed for a limit ("not before", "not after"). They are drawn when both dates are on the chart.
+
+Tap a row to read it in full above the chart, with every time gap and limit on its dates. Nothing here
+zooms: the span shown is changed with the buttons **Whole span**, **Earlier**, **Later**, **Wider** and
+**Closer**. The markers, the ticks and the span are kept on the device.
+
 ### Timeline
 The facts of one or more markers in date order, as a list you scroll. Add a marker in the left panel,
 or press 🕒 Timeline in a marker's information. Each date is a row on the spine with its facts beside
@@ -571,6 +589,7 @@ js/ties.js        Ties tab
 js/network.js     Network tab
 js/family.js      Family tab (family tree)
 js/timeline.js    Timeline tab (facts of chosen markers in date order)
+js/gantt.js       Gantt tab (chosen markers as bars over one time axis)
 js/data.js        Library tab
 js/photos.js      photo library (images in IndexedDB), picker, lightbox
 js/sync.js        Google Drive sync (sign-in, Drive folder, per-record merge, photos)

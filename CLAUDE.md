@@ -101,7 +101,7 @@ https://shanethompson018.github.io/chronomap/ (GitHub Pages, branch `main`, publ
 | `js/overlay.js` | A picture laid over the map, and outlines traced from it |
 | `js/ui.js` | Shared helpers: `h`, modal, marker information panel, fact lines, coordinate reading, zoom tools |
 | `js/graph.js` | The drawing shared by Ties and Network |
-| `js/ties.js`, `js/network.js`, `js/family.js`, `js/timeline.js` | Those four tabs |
+| `js/ties.js`, `js/network.js`, `js/family.js`, `js/timeline.js`, `js/gantt.js` | Those five tabs |
 | `js/data.js` | Library tab: Sync, Time gaps, Sources, Images, Categories, Fact types, Tie types, Markers, Backup, Problems log |
 | `js/sync.js` | Google Drive sync |
 | `js/photos.js` | The image library (IndexedDB), chooser, lightbox |
