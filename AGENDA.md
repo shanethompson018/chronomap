@@ -33,6 +33,11 @@ cross items off as they land. We go through it one item at a time.
 - **Section 16:** the wrong-account fix is live but only the user can confirm it with his real accounts
   (PC: Library, Sync, Switch account, pick the account the Boox shows).
 - **14.4 / design step E:** the bar layout in the Timeline tab. "Later".
+- **Section 24:** conflicts that explain themselves. Proposed 27 Nov 2026 from his three conflicts;
+  waiting for his go-ahead to build. 24.6 is the old 22.5, now recommended.
+- **Deleted facts came back (found 27 Nov 2026, not looked into):** the eight "Lived at" facts he removed
+  on 25 Nov are in his export of 27 Nov again with the same ids, and Lot's cleared Born date is typed
+  again. Sync is suspected (the other device's older copy of those markers winning); not proven.
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
@@ -1054,3 +1059,74 @@ The Flood's "Took place" fact; that is his to decide.
 
 23.5 is one commit, 23.6 and 23.7 another. Tested on the test copy with throwaway markers at the PC size
 and the tablet size (E-ink on); not checked on the Boox itself.
+
+## 24. Conflicts that explain themselves (asked 27 Nov 2026, proposed, not built)
+
+The user's words, with his export: "There are 3 conflicts. Attached is the json. I can't understand what
+the conflicts mean. Please describe where the conflicts exist. Also how can we make the app clearer for
+understanding where the conflicts exist so I don't have to go to you everytime."
+
+**What his three conflicts were** (worked out from the export by a script that only reads it; the export
+was not loaded into the app). One cause, on Terah: the time gap "Lived at Haran (from) = Terah · Born"
+(meant for Ur), and "Lived at Ur" with its Until typed and anchored at 9 Feb 1921 BC. The Journey from Ur
+to Haran copies both through time gaps of zero, so it sets out in 1921 BC and arrives between 2226 BC and
+2026 BC. The panel listed: the Journey's Until before its From ("These cannot all be true"), and Abram's
+and Lot's "Lived at Haran" before their births ("The most likely dates are out of order", twice).
+
+**What made them unreadable** (the evidence for the changes below):
+
+* The panel names the date where the clash shows, not the entry that causes it. All three opened the
+  Journey, Abram or Lot; the fault was in Terah. "Correct one of the two in the marker" pointed at two
+  boxes that hold no typed date.
+* "Would have to be not before 9 Feb 1921 BC and not after 10 Feb 2026 BC (its own date)" does not say
+  which two things disagree. One is the From, the other the Until's own latest; neither is named.
+* It does not say where a date comes from. Both were reckoned through two steps from another marker.
+* Three entries, one cause, and nothing says so.
+* "The most likely dates" are dates he no longer sees anywhere else (since 23.5 a ranged date reads
+  "between X and Y").
+* Outside the panel only the one date box carries a mark; the marker lists show nothing.
+* Correcting it by editing is close to impossible: when a chain loses its anchor, the dates left behind
+  keep the old value as if typed and fill each other in again (the open 22.5). The only sure way was to
+  remove the eight facts.
+
+**Proposed** (each its own item; he still enters and corrects every date himself):
+
+- [ ] **24.1 One sentence that names both sides.** Each entry is headed by the marker and fact, then says
+      what clashes with both dates: "The Journey arrives before it sets out. From: 9 Feb 1921 BC. Until:
+      between 10 Feb 2226 BC and 10 Feb 2026 BC." / "Abram · Lived Haran begins before Abram is born.
+      Lived Haran, from: 10 Feb 2126 BC. Abram · Born: not before 10 Feb 2056 BC."
+- [ ] **24.2 Where each date comes from.** Under each of the two dates, the steps back to what he
+      entered, one line a step, with the tie's words and verse: "From ← equals Terah · Lived at Ur (until)
+      ← typed there, anchored". Every line has an Open button that opens that marker with that fact open
+      and the date box marked.
+- [ ] **24.3 One cause, said once.** Entries whose steps end in the same entered date or pass through the
+      same tie are grouped: "3 conflicts, 1 cause", the shared entry first, marked "start here".
+- [ ] **24.4 A "What to do" line** for each kind, naming the marker to open (the cause, not the place the
+      clash shows) and the two or three ways out (correct the date, edit or overrule the tie, untick the
+      rule for that fact type).
+- [ ] **24.5 Marks outside the panel.** A warning mark on the marker's name in Library → Markers and in
+      the map's left list; on the fact line; and under the date box the same sentence as the panel, with
+      "Show" opening the panel at that entry. A date that only carries someone else's clash says "wrong
+      because of Terah · Lived at Haran" instead of looking like the cause.
+- [ ] **24.6 A chain that loses its anchor goes blank** (the old 22.5). Without it the corrections above
+      cannot be made by editing. Recommended with this section.
+- [ ] **24.7 The second pass in his words.** "The most likely dates are out of order" becomes "Out of
+      order going by the dates in the date boxes (the ranges still overlap)", and the entry shows the
+      ranges as well as those dates.
+
+Code: `showConflicts()`, `shutEntries()`, `autoText()`, `governText()`, `slotState()` in `js/relations.js`
+(the steps of 24.2 are already there: follow `eBy` / `lBy` from date to date until an end that is the
+date's own, then `Store.derivedInfo` for a reckoned date); the captions in `dateField` in `js/editor.js`;
+`badgesHTML`.
+
+**Found on the way: his corrections of 25 Nov came back.** His export of 25 Nov 17:05 had none of the
+eight "Lived at" facts or their time gaps. The export of 27 Nov has all eight, with the same ids, and
+Lot's Born typed and anchored again; the two ties he deleted at 17:16 and 17:17 stayed deleted. Removing a
+fact drops its time gaps with no deletion record (`cleanReferences` in `js/store.js` filters them), and a
+marker syncs whole, newest copy winning, while the solver stamps a marker as changed whenever it rewrites
+a reckoned date. So another device's older copy can win. This is a reading of the code, not a proven
+cause. Told to him 27 Nov; to be looked into on its own.
+
+**The way out told to him:** on the PC remove the eight facts, empty the Journey's From and Until, then
+empty Lot's Born (typed 2108 BC, 52 years before his father can be born; the other three hide it today).
+On a copy inside the script: 3 conflicts, then 1, then 0. Not tried in the app.
