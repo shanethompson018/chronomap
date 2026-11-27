@@ -122,20 +122,31 @@ window.Editor = (() => {
     if (!draft || !isDirty()) return true;
     return confirm(`"${draft.name || 'The marker being edited'}" has unsaved changes. Discard them?`);
   }
-  function open(markerId) {
+  // slot: a date to go to (from the conflicts panel): its fact is opened and its date box marked
+  function open(markerId, slot) {
     const m = Store.marker(markerId); if (!m) return;
-    if (draft && !isNew && id === markerId) { unpark(); return; } // already being edited: just show it
+    if (draft && !isNew && id === markerId) { unpark(); showSlot(slot); return; } // already being edited: just show it
     if (!mayReplace()) { unpark(); return; }
     clearTimeout(unparkTimer); parked = false;
     discardNew();
     id = markerId; isNew = false;
     draft = tidy(JSON.parse(JSON.stringify(m)));
-    openFacts = new Set();
+    openFacts = new Set(); flagSlot = null;
     savedSnapshot = snapshot();
     safeRender();
     drawer.classList.remove('hidden');
     syncView();
-    if (!touch()) drawer.querySelector('[data-bind="name"]')?.focus(); // on a tablet this would pop the keyboard up at once
+    if (slot) showSlot(slot);
+    else if (!touch()) drawer.querySelector('[data-bind="name"]')?.focus(); // on a tablet this would pop the keyboard up at once
+  }
+  let flagSlot = null; // the date box the conflicts panel pointed at: marked until another marker is opened
+  function showSlot(slot) {
+    if (!slot || !draft) return;
+    const fid = String(slot).replace(/^fact:/, '').replace(/:end$/, '');
+    const f = (draft.facts || []).find(x => x.id === fid || (x.stops || []).some(s => s.id === fid)); // a stop's date is inside its journey fact
+    if (!f) return;
+    flagSlot = slot; openFacts.add(f.id); safeRender();
+    const el = drawer.querySelector('.field.flagged'); if (el) el.scrollIntoView({ block: 'center' });
   }
   // A new marker lives only in the draft until it is saved (so cancelling leaves nothing behind).
   function openNew(data = {}) {
@@ -307,7 +318,7 @@ window.Editor = (() => {
     if (st && st.conflict && st.conflict.window) caption = h('div', { class: 'rel-caption conflict' }, st.conflict.soft ? '⚠ The most likely dates around this one are out of order. ' : '⚠ The limits on this date leave it no room. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
     else if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
     if (undet) caption = h('div', { class: 'rel-caption' }, 'Marked undeterminable: not placed on the timeline.');
-    return h('label', { class: 'field' }, label,
+    return h('label', { class: 'field' + (slot === flagSlot ? ' flagged' : '') }, label,
       h('div', { class: 'row date-main', style: { gap: '4px' } }, input, approxTick ? h('div', { class: 'narrow approx-tick', title: approxTick.title }, approxTick, h('span', { onclick: e => { e.preventDefault(); if (!approxTick.disabled) approxTick.click(); } }, 'range')) : null, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),
       approxRow, winCaption, caption);
   }

@@ -123,6 +123,7 @@ window.Relations = (() => {
       const win = solveWindows();
       Store.applyWindows(win.out);
       conflicts = newConflicts.concat(win.conflicts);
+      linkCauses();
       document.dispatchEvent(new CustomEvent('chrono-conflicts', { detail: { count: conflicts.length } }));
     } finally { solving = false; }
   }
@@ -301,7 +302,7 @@ window.Relations = (() => {
     }
     return { W, looping, auto };
   }
-  let winInfo = new Map();
+  let winInfo = new Map(), softInfo = new Map(); // the windows of the first pass, and of the second (the dates in the date boxes alone)
   const closed = n => !!(n.E && n.L && D(n.E) > D(n.L, 1) && !Dates.sameDate(n.E, n.L));
   function solveWindows() {
     const rels = limitRels();
@@ -321,6 +322,7 @@ window.Relations = (() => {
     // wide (a child typed 50 years before its father, each give or take 100) are reported too, as a softer entry.
     if (!looping) {
       const N = windows(rels, true);
+      softInfo = N.W;
       if (!N.looping) list.push(...shutEntries([...N.W].filter(([k, n]) => closed(n) && !(W.get(k) && W.get(k).conflict)), true));
     }
     return { out, conflicts: list };
@@ -611,52 +613,168 @@ window.Relations = (() => {
   // Turn a tie on a date into a limit on an end (for a gap of nothing that was meant as "some time after").
   function convert(relId, part) { Store.updateRelation(relId, { part, min: null, max: null }); }
 
+  // ---------- explaining a conflict (24): which two things clash, and where each date comes from ----------
+  const mref = (id, slot) => ({ kind: 'marker', id, slot });
+  // The two dates a limit joins, [from, to]: "to is not before / not after from, plus its length".
+  function relEnds(rid) {
+    const p = String(rid).split('|');
+    if (p[0] === 'own') return [mref(p[1], p[2]), mref(p[1], p[2] + ':end')];
+    if (p[0] === 'seq') return [mref(p[1], p[2]), mref(p[1], p[3])];
+    if (p[0] === 'part') return [mref(p[2], p[3]), mref(p[4], p[5])];
+    if (p[0] === 'life' || p[0] === 'kin') return [mref(p[1], p[2]), mref(p[3], p[4])];
+    const r = Store.relation(rid);
+    return r ? [r.from, r.to] : null;
+  }
+  const infoOf = c => (c.soft ? softInfo : winInfo);
+  // One end of a date's window followed back, limit by limit, to the date it starts from:
+  // [{ ref, value, by }]; the last entry has no `by` (that end is the date's own).
+  function traceEnd(W, ref, side) {
+    const out = []; let k = key(ref);
+    for (let i = 0; i < 12; i++) {
+      const n = W.get(k); if (!n) break;
+      const by = side === 'E' ? n.eBy : n.lBy;
+      out.push({ ref: Store.parseRefKey(k), value: side === 'E' ? n.E : n.L, by });
+      const ends = by && relEnds(by.rel); if (!ends) break;
+      k = key(by.back ? ends[1] : ends[0]);
+    }
+    return out;
+  }
+  // A reckoned date followed back through its time gaps towards its anchor: the dates on the way (at most `max`).
+  function reckonedFrom(ref, max = 12) {
+    const out = []; let cur = ref;
+    for (let i = 0; i < max; i++) { const d = Store.derivedInfo(cur); if (!d || Store.isPinned(cur)) break; cur = Store.parseRefKey(d.fromKey); out.push(cur); }
+    return out;
+  }
+  // 24.3: a conflict whose date is reckoned from a date that is itself in conflict follows from that one
+  // (c.cause = { key, ref }), so the panel can say "start with this one".
+  function linkCauses() {
+    const slotsOf = c => (c.window ? c.slots.map(x => key(x.ref)) : [c.key]);
+    const at = new Map(); conflicts.forEach(c => slotsOf(c).forEach(k => { if (!at.has(k)) at.set(k, c); }));
+    for (const c of conflicts) {
+      c.cause = null;
+      const mine = new Set(slotsOf(c)), ends = [];
+      if (!c.window) ends.push(c.ref);
+      else for (const x of c.slots) for (const side of ['E', 'L']) { const t = traceEnd(infoOf(c), x.ref, side); if (t.length) ends.push(t[t.length - 1].ref); }
+      for (const t of ends) { const hit = reckonedFrom(t).find(r => at.has(key(r)) && !mine.has(key(r))); if (hit) { c.cause = { key: at.get(key(hit)).key, ref: hit }; break; } }
+    }
+    const byKey = new Map(conflicts.map(c => [c.key, c]));
+    for (const c of conflicts) { const p = c.cause && byKey.get(c.cause.key); if (p && p.cause && p.cause.key === c.key) c.cause = null; } // two that point at each other: neither is first
+  }
+  // What is in a date's own boxes, in words. On the second pass (soft) the date box is what counts, so it is named.
+  function ownSaid(ref, soft) {
+    const t = Store.slotTyped(ref) || { date: '', min: '', max: '' };
+    if (t.date) return soft && (t.min || t.max) ? `${Dates.formatInput(t.date)} in its date box (its range is ${Dates.formatInput(t.min || t.date)} to ${Dates.formatInput(t.max || t.date)})` : Dates.formatRange(t.date, t.min, t.max);
+    return [t.min ? 'not before ' + Dates.formatInput(t.min) : '', t.max ? 'not after ' + Dates.formatInput(t.max) : ''].filter(Boolean).join(', ');
+  }
+  // 24.1: one sentence that names both sides of a conflict (x: which of its dates, the first when left out).
+  function conflictText(c, x) {
+    if (!c.window) return `${Store.slotLabel(c.ref)}: two chains of time gaps give this date different values.`;
+    if (c.loop) return 'These limits chase each other round and never settle.';
+    x = x || c.slots[0];
+    const name = Store.slotLabel(x.ref), n = infoOf(c).get(key(x.ref)) || {}, E = Dates.formatInput(x.E), L = Dates.formatInput(x.L);
+    const lead = c.soft ? 'Going by the dates in the date boxes: ' : '';
+    const own = [n.eBy, n.lBy].find(b => b && isOwn(b.rel)), pair = own && relEnds(own.rel);
+    if (pair && ownSaid(pair[0], c.soft) && ownSaid(pair[1], c.soft)) return `${lead}${Store.slotLabel(pair[0])} ends before it begins. From: ${ownSaid(pair[0], c.soft)}. Until: ${ownSaid(pair[1], c.soft)}.`;
+    if (x.eOwn && x.lOwn) return `${name}: its earliest box (${E}) is after its latest box (${L}).`;
+    if (x.lOwn) return `${lead}${name} is too early. It is ${ownSaid(x.ref, c.soft)}, and it cannot be before ${E}: ${governText(n.eBy)}.`;
+    if (x.eOwn) return `${lead}${name} is too late. It is ${ownSaid(x.ref, c.soft)}, and it cannot be after ${L}: ${governText(n.lBy)}.`;
+    return `${lead}${name} has no room. It cannot be before ${E} (${governText(n.eBy)}) and it cannot be after ${L} (${governText(n.lBy)}).`;
+  }
+  // The same, for the caption under a date box and the warning mark on a fact line: { key, text } or null.
+  function conflictNote(ref) {
+    const c = conflicts.find(c => (c.window ? c.slots.some(x => Store.sameRef(x.ref, ref)) : Store.sameRef(c.ref, ref)));
+    if (!c) return null;
+    return { key: c.key, text: c.cause ? `This date is reckoned from ${Store.slotLabel(c.cause.ref)}, which is in conflict. Correct that one first.` : conflictText(c, c.window ? c.slots.find(x => Store.sameRef(x.ref, ref)) : null) };
+  }
+  const markerConflicts = id => conflicts.filter(c => (c.window ? c.slots.some(x => x.ref.id === id) : c.ref.id === id)).length;
+  // 24.4: what to do about it
+  function todoText(c) {
+    const tail = ' The lines above end where a date was typed or a tie was made: open the one that is wrong and correct it there. A date that says "reckoned" cannot be corrected in its own box.';
+    if (c.cause) return 'Correct the conflict this one follows from first. This one should then clear by itself.';
+    if (c.soft) return 'The ranges of these dates still overlap, so this is a warning. Usually one date was typed where it should have been worked out, or is left over from an earlier time gap.' + tail;
+    if (!c.rels.length) return 'One of these dates was typed outside its own earliest or latest box. Correct the box in its marker.';
+    if (c.rels.every(isOwn)) return 'Correct the From or the Until.' + tail;
+    if (c.rels.some(isLife) && c.rels.every(r => isAuto(r) || isOwn(r))) return 'Correct the date that is wrong.' + tail + ' If the rule does not fit a kind of fact, tick "may fall outside the lifetime" on its fact type (Library → Fact types); the rules themselves are switched in Library → Time gaps.';
+    if (c.rels.some(isPart)) return 'Correct a date, or clear the "Part of" box on the shorter journey. The app does not choose between them.' + tail;
+    if (c.rels.every(isAuto)) return 'Correct the date that is out of order, or put the places in the order they were reached.' + tail;
+    return 'Either a date is wrong or a tie is. Correct the date, or press Edit tie or Overrule on the tie that does not hold.' + tail;
+  }
+
   // ---------- conflicts panel ----------
   function pathText(c) {
     const steps = c.path.map(id => { const r = Store.relation(id); return r ? describeRelation(r) : '?'; });
     return `from ${Store.slotLabel(Store.parseRefKey(c.pin))}${steps.length ? ': ' + steps.join(' → ') : ''}`;
   }
-  function showConflicts() {
+  // focusKey: the entry to bring into view (the "Show" link under a date box in the editor).
+  function showConflicts(focusKey) {
     const body = h('div');
-    const render = () => {
-      body.innerHTML = '';
-      if (!conflicts.length) { body.append(h('p', { class: 'muted' }, 'No conflicts. Every related date agrees.')); return; }
-      body.append(h('p', { class: 'hint' }, 'Each entry is either one date that two chains of time gaps place differently (their ranges cannot both be true), or a set of limits that leaves a date no room (its earliest is after its latest). Choose the value to keep (the time gap that produced the other value is kept but marked overruled, so the disagreement stays on record), or mark the date undeterminable.'));
-      for (const c of conflicts) {
-        if (c.window) { // limits that cannot all be true: name the dates and the ties, and let a tie be set aside
-          const card = h('div', { class: 'card' }, h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, c.loop ? 'These limits chase each other round and never settle' : c.soft ? 'The most likely dates are out of order' : 'These cannot all be true'));
-          for (const x of c.slots) card.append(h('div', { class: 'rel-cand' },
-            h('div', { class: 'grow' }, h('strong', {}, Store.slotLabel(x.ref)), ' ', h('span', { class: 'muted' }, `${c.soft ? 'going by the most likely dates, ' : ''}would have to be not before ${Dates.formatInput(x.E)}${x.eOwn ? ' (its own date)' : ''} and not after ${Dates.formatInput(x.L)}${x.lOwn ? ' (its own date)' : ''}`)),
-            h('button', { class: 'small', onclick: () => Editor.open(x.ref.id) }, 'Open marker')));
-          for (const rid of c.rels) {
-            if (isOwn(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), 'Its own dates: the Until is not before the From'))); continue; }
-            if (isAuto(rid)) { card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), autoLead(rid) + autoText(rid)))); continue; }
-            const r = Store.relation(rid); if (!r) continue;
-            card.append(h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, h('span', { class: 'rel-badge chain' }, '⛓ '), describeRelation(r), r.sourceId && Store.source(r.sourceId) ? h('span', { class: 'muted' }, ` · ${Store.source(r.sourceId).title}${r.page ? ', ' + r.page : ''}`) : null),
-              h('button', { class: 'small', title: 'Keep the record but leave it out of the reckoning', onclick: () => { Store.updateRelation(rid, { status: 'overruled' }); render(); } }, 'Overrule this tie'))); }
-          card.append(h('p', { class: 'hint' }, c.soft ? 'Each of these dates has a range, and inside the ranges they can still agree. Going by the most likely dates they cannot all be true. Usually one of them was typed where it should have been worked out, or is left over from an earlier time gap. Correct it in its marker.'
-            : !c.rels.length ? 'One of these dates was typed outside its own earliest or latest box.'
-            : c.rels.every(isOwn) ? 'This fact\'s Until is before its From. Correct one of the two in the marker.'
-            : c.rels.some(isLife) && c.rels.every(r => isAuto(r) || isOwn(r)) ? 'These follow from rules the app keeps by itself: a marker\'s facts fall between its Begins and its Ends, whoever takes part in a fact was alive for it, and a child is not born before its parent. Correct the date that is wrong. If the rule does not fit a kind of fact, tick "may fall outside the lifetime" on its fact type (Library → Fact types); the rules themselves are switched in Library → Time gaps.'
-            : c.rels.some(isPart) ? 'One of these journeys is marked "Part of" the other, so these dates are the same moment, or one must fall inside the other. The two do not agree. Correct a date in its marker, or clear the "Part of" box on the shorter journey. The app does not choose between them.'
-            : c.rels.every(isAuto) ? 'A journey\'s dates run in order: From, then each stop\'s Arrived and Left, then Until. One of these dates is out of that order. Correct it in the marker, or put the places in the order they were reached.'
-            : 'Either a date here is wrong, or one of these ties is. Correct the date in its marker, or overrule the tie that does not hold.'));
-          body.append(card);
-          continue;
+    let m = null;
+    const open = ref => { if (m) m.close(); Editor.open(ref.id, ref.slot); };
+    // 24.2: the lines under one end of a date: each limit it passes, then what was entered at the far end
+    const traceLines = (c, ref, side) => {
+      const line = (text, r, extra) => h('div', { class: 'rel-cand' }, h('div', { class: 'grow' }, text), ...(extra || []), h('button', { class: 'small', title: 'Open this marker at this date', onclick: () => open(r) }, 'Open'));
+      const out = [];
+      traceEnd(infoOf(c), ref, side).forEach((s, i) => {
+        const arrow = i ? '← ' : '';
+        if (s.by) {
+          const r = !isAuto(s.by.rel) && !isOwn(s.by.rel) ? Store.relation(s.by.rel) : null;
+          out.push(line(`${arrow}${Store.slotLabel(s.ref)} is not ${side === 'E' ? 'before' : 'after'} ${Dates.formatInput(s.value)}: ${governText(s.by)}${r && r.page ? ` (${r.page})` : ''}`, s.ref,
+            r ? [h('button', { class: 'small', title: 'Change this tie', onclick: () => pick(null, { edit: r.id, onDone: render }) }, 'Edit tie'),
+              h('button', { class: 'small', title: 'Keep the record but leave it out of the reckoning', onclick: () => { Store.updateRelation(r.id, { status: 'overruled' }); render(); } }, 'Overrule')] : null));
+          return;
         }
-        const card = h('div', { class: 'card' }, h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, Store.slotLabel(c.ref), ' ', h('span', { class: 'muted' }, `(currently ${Dates.formatInput(c.chosen)})`)));
-        for (const cand of c.candidates) {
-          card.append(h('div', { class: 'rel-cand' },
-            h('div', { class: 'grow' }, h('strong', {}, Dates.formatRangeFull(cand.value, cand.min, cand.max)), ' ', h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, pathText(cand))),
-            h('button', { class: 'small', onclick: () => { useValue(c, cand); render(); } }, 'Use this')));
-        }
-        card.append(h('div', { style: { marginTop: '6px' } }, h('button', { class: 'small', onclick: () => { Store.setUndetermined(c.ref, true); render(); } }, 'Mark undeterminable'),
-          ' ', h('button', { class: 'small', onclick: () => { Editor.open(c.ref.id); } }, 'Open marker')));
-        body.append(card);
-      }
+        // the far end: a date of its own, typed or reckoned by a time gap
+        const reckoned = r => !!Store.derivedInfo(r) && !Store.isPinned(r);
+        const typed = r => `${Store.slotLabel(r)} is ${ownSaid(r, c.soft) || 'empty'}: typed here${Store.isPinned(r) ? ' and anchored 🔒' : ''}`;
+        if (!reckoned(s.ref)) { out.push(line(arrow + typed(s.ref), s.ref)); return; }
+        out.push(line(`${arrow}${Store.slotLabel(s.ref)} is ${ownSaid(s.ref, c.soft)}: not typed, reckoned from ${describeDerived(s.ref)}`, s.ref));
+        for (const b of reckonedFrom(s.ref, 3)) out.push(line(reckoned(b) ? `← ${Store.slotLabel(b)}: reckoned from ${describeDerived(b)}` : '← ' + typed(b), b));
+      });
+      return out;
     };
+    const winCard = c => {
+      const card = h('div', { class: 'card conflict-card' + (c.cause ? ' follows' : ''), 'data-ckey': c.key });
+      if (c.loop) { card.append(h('div', { class: 'conflict-say' }, '⚠ ' + conflictText(c))); return card; }
+      c.slots.forEach((x, i) => {
+        card.append(h('div', { class: 'conflict-say' }, '⚠ ' + conflictText(c, x)));
+        if (c.cause && !i) card.append(h('div', { class: 'conflict-follows' }, `This follows from the conflict at ${Store.slotLabel(c.cause.ref)}: the date here is reckoned from that one.`));
+        for (const side of ['E', 'L']) {
+          const own = side === 'E' ? x.eOwn : x.lOwn, v = Dates.formatInput(side === 'E' ? x.E : x.L);
+          card.append(h('div', { class: 'conflict-side' }, own ? 'Where its own date comes from' : `Why it cannot be ${side === 'E' ? 'before' : 'after'} ${v}`));
+          traceLines(c, x.ref, side).forEach(l => card.append(l));
+        }
+      });
+      card.append(h('p', { class: 'hint' }, h('strong', {}, 'What to do. '), todoText(c)));
+      return card;
+    };
+    const chainCard = c => {
+      const card = h('div', { class: 'card conflict-card' + (c.cause ? ' follows' : ''), 'data-ckey': c.key }, h('div', { class: 'conflict-say' }, '⚠ ' + conflictText(c), ' ', h('span', { class: 'muted' }, `(currently ${Dates.formatInput(c.chosen)})`)));
+      if (c.cause) card.append(h('div', { class: 'conflict-follows' }, `This follows from the conflict at ${Store.slotLabel(c.cause.ref)}: the date here is reckoned from that one.`));
+      for (const cand of c.candidates) {
+        card.append(h('div', { class: 'rel-cand' },
+          h('div', { class: 'grow' }, h('strong', {}, Dates.formatRangeFull(cand.value, cand.min, cand.max)), ' ', h('span', { class: 'muted', style: { fontSize: 'calc(12px * var(--fs))' } }, pathText(cand))),
+          h('button', { class: 'small', onclick: () => { useValue(c, cand); render(); } }, 'Use this')));
+      }
+      card.append(h('div', { style: { marginTop: '6px' } }, h('button', { class: 'small', onclick: () => { Store.setUndetermined(c.ref, true); render(); } }, 'Mark undeterminable'),
+        ' ', h('button', { class: 'small', onclick: () => open(c.ref) }, 'Open')));
+      card.append(h('p', { class: 'hint' }, h('strong', {}, 'What to do. '), c.cause ? todoText(c) : 'Choose the value to keep with Use this (the time gap that gave the other value is kept but marked overruled), correct a time gap, or mark the date undeterminable.'));
+      return card;
+    };
+    function render() {
+      body.innerHTML = '';
+      if (m) m.box.querySelector('.modal-head h2').textContent = `Date conflicts (${conflicts.length})`;
+      if (!conflicts.length) { body.append(h('p', { class: 'muted' }, 'No conflicts. Every related date agrees.')); return; }
+      const firsts = conflicts.filter(c => !c.cause), rest = conflicts.length - firsts.length;
+      body.append(h('p', { class: 'hint' }, (rest ? `${conflicts.length} conflicts, ${firsts.length} to start with: the other${rest > 1 ? 's follow' : ' follows'} from ${firsts.length > 1 ? 'them' : 'it'} and should clear with ${firsts.length > 1 ? 'them' : 'it'}. ` : '')
+        + 'Each entry says which two things disagree, then where each of them comes from, step by step, back to what was entered. Open takes you to that date in its marker. Nothing is changed for you.'));
+      const done = new Set(), put = c => { if (done.has(c.key)) return; done.add(c.key); body.append(c.window ? winCard(c) : chainCard(c)); conflicts.filter(d => d.cause && d.cause.key === c.key).forEach(put); };
+      firsts.forEach(put); conflicts.forEach(put);
+      const at = focusKey && [...body.querySelectorAll('.conflict-card')].find(el => el.dataset.ckey === focusKey);
+      if (at) { at.classList.add('focus'); at.scrollIntoView({ block: 'start' }); }
+      focusKey = null;
+    }
     document.addEventListener('chrono-conflicts', render);
-    const m = UI.modal({ title: `Date conflicts (${conflicts.length})`, body, width: '760px', onClose: () => document.removeEventListener('chrono-conflicts', render) });
+    m = UI.modal({ title: `Date conflicts (${conflicts.length})`, body, width: '820px', onClose: () => document.removeEventListener('chrono-conflicts', render) });
     render();
   }
   // Keep one candidate: anchor the slot at that value and overrule the last time gap on every other route.
@@ -674,5 +792,5 @@ window.Relations = (() => {
     solve();
   }
 
-  return { init, solve, pick, convert, showConflicts, slotState, windowOf, governText, badgesHTML, describeDerived, describeRelation, agree, conflicts: () => conflicts, undetermined: () => undetermined };
+  return { init, solve, pick, convert, showConflicts, slotState, windowOf, governText, badgesHTML, describeDerived, describeRelation, agree, conflictNote, markerConflicts, conflicts: () => conflicts, undetermined: () => undetermined };
 })();

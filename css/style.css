@@ -655,6 +655,18 @@ body.eink .tl-date:not(.gap)::after { background: #000; border-color: #fff; }
 body.eink .tl-gap { color: #000; }
 body.eink .tl-chip { min-height: 36px; }
 
+/* ---------- conflicts panel (24) ---------- */
+.conflict-say { font-weight: 600; line-height: 1.45; margin-bottom: 4px; }
+.conflict-follows { margin: 4px 0; padding: 4px 8px; border-left: 3px solid var(--accent2); }
+.conflict-side { margin: 10px 0 2px; font-weight: 600; font-size: calc(12px * var(--fs)); color: var(--muted); }
+.conflict-card.follows { margin-left: calc(18px * var(--fs)); }
+.conflict-card.focus { outline: 2px solid var(--accent); }
+.conflict-card .rel-cand { align-items: flex-start; }
+.field.flagged { outline: 3px solid var(--danger); outline-offset: 4px; border-radius: 4px; }
+body.eink .conflict-follows { border-left-color: #000; }
+body.eink .conflict-side { color: #000; font-size: calc(13px * var(--fs)); }
+body.eink .conflict-card.focus, body.eink .field.flagged { outline-color: #000; }
+
 /* ---------- Gantt tab ---------- */
 .gt-area { flex-direction: column; }
 .gt-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
