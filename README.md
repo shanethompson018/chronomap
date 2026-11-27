@@ -34,7 +34,9 @@ open copies of the app show a "Reload" notice.
   web). Your data never leaves your computer. Base maps come from Esri and OpenTopoMap; OpenStreetMap's
   own tile server is not used because it blocks pages opened from a local file.
 * Everything is saved automatically in the browser you use. Use **Data → Export JSON** to keep a backup,
-  move to another computer, or share a dataset. **Import JSON** brings it back.
+  move to another computer, or share a dataset. **Import JSON** brings it back. An import counts as a
+  change made now: with sync on, everything the file holds also replaces the same items on your other
+  devices at the next sync, even where they were changed after the file was made.
 * It opens with a sample dataset (the American founding era). Replace it any time with
   **Data → Clear everything** or **Load sample data**.
 

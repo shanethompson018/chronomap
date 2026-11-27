@@ -40,8 +40,9 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   tombstones each time gap `cleanReferences` dropped. A record `{ coll: 'facts', id, at, back: true }` cancels an
   earlier removal (the fact is there again after an import). `S.deleted` may hold several records for one id;
   the newest counts. Anything that removes a fact outside `updateMarker` must call `recordFacts` itself.
-- `importJSON` keeps the stamps that are in the file, so with sync on a newer copy in Drive wins again at the
-  next sync (agenda 26.5, open).
+- `importJSON` stamps every record the file holds as changed now (26.5), in both modes, so the import wins the
+  next sync; with the file's own stamps the newer copies in Drive came back and the import was undone. Fact types
+  are upserted in merge mode too (they had been left out).
 - Places along a journey: `fact.stops` (absent when empty), each `{ id, kind: 'stop'|'pass', at: { kind:
   'marker', markerId } | { kind: 'point', lat, lng }, label }`; a stop also has the six date boxes of a fact and
   the four `calc…` ends, **under the same names**, so every function that works on a fact's dates works on a
@@ -318,8 +319,11 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   devices signed in to different Google accounts each sync happily to their own Drive.
 - `mergeDocs`: after the newest copy of each marker is chosen, facts and stops with a `facts` tombstone are
   taken out of it (unless the newest record for that id is marked `back`). The copy keeps its stamp.
-- `sharedKey` sorts object keys but not lists: two devices holding the same records in a different order each
-  write the Drive file at every sync. Harmless; an import can cause it.
+- `sharedKey` (is anything different?) sorts object keys, sorts each collection by id and the tombstones by
+  coll, id and time, and leaves out a marker's `mirrors` (derived, and its order follows the order of the
+  markers). So two devices holding the same records in a different order do not rewrite the Drive file. Other
+  derived fields (`start`, `end`, `moves`) are still compared; if one turns out to depend on order, leave it
+  out here too.
 - To test sync without Google: mock `window.fetch` for `googleapis.com` with one file held in a variable, put
   the fake token in place, reload (the token is only read at start; keep `driveSync` off across the reload so
   nothing goes to Google), then call `Sync.run` with `driveSync` on. Two devices are two saved copies of

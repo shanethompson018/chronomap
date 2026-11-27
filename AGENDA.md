@@ -45,9 +45,10 @@ cross items off as they land. We go through it one item at a time.
 - **Section 26:** removed facts came back after a sync. Looked into 27 Nov 2026 and shown on the test
   copy. 26.1 (the solver no longer stamps a marker as changed) and 26.2 (a removed fact, a removed stop
   and their time gaps leave a deletion record) built 27 Nov 2026 ("Yes, build 26"); not checked on the
-  Boox. Both devices must have opened the new version for it to hold. 26.3 (a warning on a device that
-  is behind), 26.4 (the Sync page says what the last sync did) and 26.5 (an imported backup is undone by
-  the next sync: found while testing, his decision) are proposed, not decided.
+  Boox. Both devices must have opened the new version for it to hold. 26.5 (an imported backup now wins
+  the next sync instead of being undone by it) built 27 Nov 2026 ("Yes, build 26.5"); not checked on the
+  Boox. 26.3 (a warning on a device that is behind) and 26.4 (the Sync page says what the last sync did)
+  are proposed, not decided.
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
@@ -1257,7 +1258,7 @@ wants it.
 Tested on the test copy with throwaway markers at the PC size and the tablet size (E-ink on), including
 the largest letter size and dates BC; not checked on the Boox itself, and not seen with his own data.
 
-## 26. Removed facts came back after a sync (found 27 Nov 2026; 26.1 and 26.2 built 27 Nov 2026; 26.3 to 26.5 proposed)
+## 26. Removed facts came back after a sync (found 27 Nov 2026; 26.1, 26.2 and 26.5 built 27 Nov 2026; 26.3 and 26.4 proposed)
 
 On 25 Nov he removed the eight "Lived at" facts on Terah, Abram, Sarai and Lot and emptied Lot's Born. On
 27 Nov they were all back. His two exports were compared by a script that only reads them; neither was
@@ -1358,7 +1359,7 @@ of his devices show a version stamp of 27 Nov 2026 or later from this section.
       synced … Tap Sync first, or a newer change made on your other device may be undone." One tap.
 - [ ] **26.4 The Sync page says what the last sync did**: the names of the markers it took from the
       other device and of those it sent. A return like this one would be seen the same minute.
-- [ ] **26.5 An imported backup should win the next sync** (found while testing 26.2; his decision).
+- [x] **26.5 An imported backup wins the next sync. Built 27 Nov 2026** (found while testing 26.2).
       Today Library → Backup → Import puts the file's records in place on that device, but they keep the
       stamps they have in the file. With sync on, the next sync takes the newer copy from Drive again
       for everything changed since the backup was made, so the import is quietly undone for those
@@ -1384,8 +1385,8 @@ wins. 26.3 warns of it.
   deleted time gap. In a sync, `mergeDocs` takes a recorded fact or place out of whichever copy of the
   marker wins. Records last 180 days like the others.
 * **A fact that is there again on purpose** (an imported backup holds it) gets a later record marked
-  `back`, which cancels the removal, so the next sync does not take it out again. Its time gaps do not
-  come back that way; see 26.5.
+  `back`, which cancels the removal, so the next sync does not take it out again. Its time gaps come
+  back with it since 26.5.
 * **Nothing changes on screen.** No new button, no new wording.
 
 Tested on the test copy with `T-` records, Google Drive faked, two copies of the data as two devices:
@@ -1403,3 +1404,38 @@ Tested on the test copy with `T-` records, Google Drive faked, two copies of the
   stays. Imported and synced with nothing else done: undone by the sync (26.5).
 
 Not checked on the Boox, and not with his real accounts: Google's sign-in cannot be tested from here.
+
+**26.5 as built, 27 Nov 2026** ("Yes, build 26.5"; one commit):
+
+* **Everything the file holds counts as changed now** (`importJSON` in `js/store.js`), in both ways of
+  importing. At the next sync the file's version of each of those items goes to Drive and to the other
+  device, also where the other device changed the item after the file was made. An item that had been
+  deleted since the file was made is back and stays (its old deletion record is older than its new
+  stamp). Items the file does not hold are left alone by "Merge"; "Replace everything" deletes them, as
+  before.
+* **Library → Backup says so** in one sentence under the buttons: "An import counts as a change made
+  now. With sync on, everything the file holds also replaces the same items on your other devices at
+  the next sync, even where they were changed after the file was made."
+* **Fact types now come in with a "Merge" import.** They had been left out of it: a fact whose type only
+  the file had was turned into a Note. Found while building; put right because without it an import
+  could not bring back a fact of a deleted fact type.
+* **Two devices holding the same items in a different order no longer rewrite the Drive file at every
+  sync.** An import that sticks moves items to the end of the list on one device, and both devices then
+  wrote the file each time, for ever (nothing was lost by it). `sharedKey` in `js/sync.js` now compares
+  without regard to the order of the lists, and leaves out a marker's `mirrors`, which `Facts.derive`
+  fills in the order the markers come. Each device keeps its own order on screen, as before.
+
+Tested on the test copy with `T-` records, Google Drive faked, two copies of the data as two devices.
+After the removal of the fact on one device, the backup from before it is imported there:
+
+* "Merge": the fact, its two time gaps, the time gap deleted directly and the typed Born are back on
+  both devices, and a further sync on each writes nothing.
+* The other device had saved the same marker after the backup was made: the file's version wins on both.
+* "Replace everything", with a marker made after the backup: that marker is gone on both devices and the
+  rest is as in the file.
+* A fact type deleted after the backup: it is back on both, and its fact has its type again.
+* The same items in the opposite order on the two devices: a sync on each writes nothing, and each keeps
+  its order.
+* The seven cases of 26.1 and 26.2 run again: unchanged.
+
+Not checked on the Boox, and not with a real backup file of his: only `T-` records were imported.
