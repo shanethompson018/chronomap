@@ -420,7 +420,7 @@ window.Relations = (() => {
     const s = slotState(ref);
     let out = '';
     if (s.undetermined) out += ' <span class="rel-badge undet" title="Marked undeterminable">?</span>';
-    if (s.conflict) out += ' <span class="rel-badge conflict" title="Conflicting dates: see the ⚠ Conflicts panel">⚠</span>';
+    if (s.conflict) out += ` <span class="rel-badge conflict" title="${esc((conflictNote(ref) || {}).text || 'Conflicting dates: see the ⚠ Conflicts panel')}">⚠</span>`;
     if (s.derived && !s.pinned) out += ` <span class="rel-badge chain" title="Reckoned from ${esc(describeDerived(ref))}">⛓</span>`;
     else if (s.pinned && s.related) out += ' <span class="rel-badge pin" title="Anchor: the related dates are reckoned from this one">🔒</span>';
     const w = windowOf(ref);

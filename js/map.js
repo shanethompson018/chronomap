@@ -656,7 +656,7 @@ window.MapView = (() => {
       else status = 'not at this time';
       const row = UI.h('div', { class: 'marker-row' + (on ? '' : ' off'), title: on ? 'Show on map' : 'Jump to when this marker first appears' },
         UI.h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m)),
-        UI.h('span', { class: 'name' }, Store.displayName(m, ignoreTime ? null : t)), UI.h('span', { class: 'status' }, status));
+        UI.h('span', { class: 'name' }, Store.displayName(m, ignoreTime ? null : t), Relations.markerConflicts(m.id) ? UI.h('span', { class: 'rel-badge conflict', title: 'A date of this marker is in conflict: press ⚠ in the top bar' }, ' ⚠') : null), UI.h('span', { class: 'status' }, status));
       row.addEventListener('click', () => locate(m.id));
       host.append(row);
     }

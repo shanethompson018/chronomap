@@ -315,8 +315,9 @@ window.Editor = (() => {
       if (a && b && !win.conflict && b.y - a.y > 0) lines.push(`window ${b.y - a.y} year${b.y - a.y === 1 ? '' : 's'}`);
       winCaption = h('div', { class: 'rel-caption' }, ...lines.map(t => h('div', {}, t)));
     }
-    if (st && st.conflict && st.conflict.window) caption = h('div', { class: 'rel-caption conflict' }, st.conflict.soft ? '⚠ The most likely dates around this one are out of order. ' : '⚠ The limits on this date leave it no room. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
-    else if (st && st.conflict) caption = h('div', { class: 'rel-caption conflict' }, '⚠ Two chains disagree about this date. ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer' }, onclick: () => Relations.showConflicts() }, 'Review'));
+    // a date in conflict says what clashes, in the panel's own words, and "Show" opens the panel at that entry
+    const note = st && st.conflict ? Relations.conflictNote(ref) : null;
+    if (note) caption = h('div', { class: 'rel-caption conflict' }, '⚠ ' + note.text + ' ', h('a', { class: 'mlink', style: { color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }, onclick: e => { e.preventDefault(); Relations.showConflicts(note.key); } }, 'Show'));
     if (undet) caption = h('div', { class: 'rel-caption' }, 'Marked undeterminable: not placed on the timeline.');
     return h('label', { class: 'field' + (slot === flagSlot ? ' flagged' : '') }, label,
       h('div', { class: 'row date-main', style: { gap: '4px' } }, input, approxTick ? h('div', { class: 'narrow approx-tick', title: approxTick.title }, approxTick, h('span', { onclick: e => { e.preventDefault(); if (!approxTick.disabled) approxTick.click(); } }, 'range')) : null, h('div', { class: 'narrow' }, chain), pin ? h('div', { class: 'narrow' }, pin) : null, restore ? h('div', { class: 'narrow' }, restore) : null),

@@ -385,7 +385,7 @@ window.DataTab = (() => {
     for (const m of shown) {
       tb.append(h('tr', {},
         h('td', { class: 'narrow' }, h('span', { class: 'swatch sm', style: { background: Store.displayColor(m) } }, Store.displayIcon(m))),
-        h('td', {}, h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => Editor.open(m.id) }, Store.displayName(m)),
+        h('td', {}, h('a', { class: 'mlink', style: { color: 'var(--accent)', cursor: 'pointer' }, onclick: () => Editor.open(m.id) }, Store.displayName(m)), Relations.markerConflicts(m.id) ? h('span', { class: 'rel-badge conflict', title: 'A date of this marker is in conflict: press ⚠ in the top bar' }, ' ⚠') : null,
           Store.otherNamesShown(m).length ? h('div', { class: 'muted', style: { fontSize: 'calc(11px * var(--fs))' } }, 'also ' + Store.otherNamesShown(m).join(', ')) : null),
         h('td', {}, Store.category(m.categoryId)?.name || h('span', { class: 'muted' }, '—')),
         h('td', {}, { pin: 'Point', area: 'Area', path: 'Route' }[m.kind] || m.kind),
