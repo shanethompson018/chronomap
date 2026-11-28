@@ -270,7 +270,7 @@ window.DataTab = (() => {
     const used = new Map();
     Store.markers().forEach(m => m.facts.forEach(f => used.set(f.typeId, (used.get(f.typeId) || 0) + 1)));
     for (const t of Store.factTypes().slice().sort((a, b) => a.name.localeCompare(b.name))) {
-      const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}` + (r.mirror === false ? ' (not shown on theirs)' : ` (theirs: ${r.mirrorWord || Facts.defaultMirrorWord(t, r)})`) + (r.goes ? ' (they go there too)' : ''); }).join(', ');
+      const roles = t.roles.map(r => { const lt = Store.linkType(r.tieTypeId); return `${r.name} → ${lt ? lt.name : '(no tie)'}` + (r.mirror === false ? ' (not shown on theirs)' : ` (theirs: ${r.mirrorWord || Facts.defaultMirrorWord(t, r)})`) + (r.goes ? ' (they go there too)' : '') + (r.rules && r.rules.length ? ` (${r.rules.length} date rule${r.rules.length > 1 ? 's' : ''})` : ''); }).join(', ');
       const implies = [t.begins ? 'begins' : null, t.ends ? 'ends' : null, t.journey ? 'a journey' : null, t.placeFrom ? 'place from ' + ((t.roles.find(r => r.id === t.placeFrom) || {}).name || '?') : null].filter(Boolean).join(', ');
       tb.append(h('tr', {},
         h('td', {}, t.name),
@@ -323,11 +323,42 @@ window.DataTab = (() => {
         show.addEventListener('change', () => { r.mirror = show.checked; });
         const goes = h('input', { type: 'checkbox', checked: !!r.goes });
         goes.addEventListener('change', () => { r.goes = goes.checked; });
+        // 27.1: date rules of the user's own making, kept by the app for every fact of this type (Relations.roleRels)
+        const rulesBox = h('div', { class: 'role-rules' });
+        const drawRules = () => {
+          rulesBox.innerHTML = '';
+          const two = hasEnd.checked;
+          rulesBox.append(h('div', { class: 'role-rules-head', title: 'A date rule is kept by the app for every fact of this type, with no tie to enter: whenever a marker is put in this role, the rule holds between this fact\'s date and that marker\'s Begins or Ends. Change or remove a rule here and every fact follows at once. One fact can be let off in its marker.' }, 'Date rules for this role'));
+          (r.rules || []).forEach((u, k) => {
+            const len = [Math.abs(u.years || 0), Math.abs(u.months || 0), Math.abs(u.days || 0)];
+            const says = h('div', { class: 'hint role-rule-says' });
+            const say = () => { says.textContent = 'Reads as: ' + Relations.ruleText(u, hasEnd.checked) + '.' + (u.at === 'until' && !hasEnd.checked ? ' Not used: this fact type has no until date.' : ''); };
+            const at = UI.select(two ? [['from', 'From'], ['until', 'Until']] : u.at === 'until' ? [['from', 'Its date'], ['until', 'Until (none on this fact type)']] : [['from', 'Its date']], u.at, { 'aria-label': 'Which date of this fact' });
+            at.addEventListener('change', () => { u.at = at.value; say(); });
+            const part = UI.select([['min', 'is not before'], ['max', 'is not after']], u.part, { 'aria-label': 'Not before or not after' });
+            part.addEventListener('change', () => { u.part = part.value; say(); });
+            const dirSel = UI.select([['after', 'after'], ['before', 'before']], (u.years || u.months || u.days) < 0 ? 'before' : 'after', { 'aria-label': 'After or before', title: 'Used only when a length is given' });
+            const put = () => { const s = dirSel.value === 'before' ? -1 : 1; u.years = s * len[0] || 0; u.months = s * len[1] || 0; u.days = s * len[2] || 0; say(); };
+            dirSel.addEventListener('change', put);
+            const num = (j, label) => { const el = h('input', { type: 'number', min: 0, inputmode: 'numeric', class: 'tie-num', value: len[j] || '', 'aria-label': label, title: label + ' (leave all three empty for no length)' }); el.addEventListener('input', () => { len[j] = Math.max(0, Math.trunc(+el.value) || 0); put(); }); return el; };
+            const of = UI.select([['begins', 'the Begins'], ['ends', 'the Ends']], u.of, { 'aria-label': 'Begins or Ends', title: 'The Begins of a marker is its fact of a type ticked "begins the marker" (Born, Founded); its Ends is its fact of a type ticked "ends the marker" (Died, Destroyed).' });
+            of.addEventListener('change', () => { u.of = of.value; say(); });
+            say();
+            rulesBox.append(h('div', { class: 'role-rule' }, at, part,
+              h('span', { class: 'tie-len' }, num(0, 'years'), h('span', { class: 'muted' }, 'y'), num(1, 'months'), h('span', { class: 'muted' }, 'm'), num(2, 'days'), h('span', { class: 'muted' }, 'd')),
+              dirSel, of, h('span', { class: 'role-rule-who' }, 'of whoever is in this role'),
+              h('button', { class: 'small narrow', title: 'Remove this date rule', onclick: () => { r.rules.splice(k, 1); drawRules(); } }, '✕')), says);
+          });
+          rulesBox.append(h('button', { class: 'small', title: 'For example: "Its date is not after 1 year after the Ends of whoever is in this role" on Born → Father closes every birth at the father\'s death.', onclick: () => { (r.rules = r.rules || []).push({ id: Store.uid(), at: 'from', part: 'max', years: 0, months: 0, days: 0, of: 'ends' }); drawRules(); } }, '+ Add date rule'));
+          if ((r.rules || []).length) rulesBox.append(h('div', { class: 'hint' }, 'The app keeps these for every fact of this type; you enter no tie. A marker with no Begins or Ends fact (no Died, say) makes the rule wait. To let one fact off, tick "does not follow its type\'s date rules" on that fact in its marker.'));
+        };
+        drawRules();
         rolesHost.append(h('div', { class: 'card' },
           h('div', { class: 'ed-row' }, nm, tie, h('button', { class: 'small narrow', title: 'Remove role', onclick: () => { t.roles.splice(i, 1); renderRoles(); renderPlaceFrom(); } }, '✕')),
           h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'Tie direction', dir)),
           h('div', { class: 'ed-row' }, h('label', { class: 'field' }, 'On their marker as', word), h('label', { style: { alignSelf: 'end', whiteSpace: 'nowrap' } }, show, ' show on their marker')),
-          h('label', { title: 'For a fact that has a place: everyone named in this role is put at that place too, over the fact\'s dates. One fact then moves the whole party, with one date and one source. Example: a "Moved to" fact on Terah with the role "Took with him" naming Abram, Sarai and Lot.' }, goes, ' they go there too (the fact\'s place and dates apply to them as well)')));
+          h('label', { title: 'For a fact that has a place: everyone named in this role is put at that place too, over the fact\'s dates. One fact then moves the whole party, with one date and one source. Example: a "Moved to" fact on Terah with the role "Took with him" naming Abram, Sarai and Lot.' }, goes, ' they go there too (the fact\'s place and dates apply to them as well)'),
+          rulesBox));
       });
       rolesHost.append(h('button', { class: 'small', onclick: () => { t.roles.push({ id: Store.uid(), name: '', tieTypeId: null, direction: 'this-to-other' }); renderRoles(); renderPlaceFrom(); } }, '+ Add role'));
     }
@@ -337,6 +368,7 @@ window.DataTab = (() => {
       t.roles.forEach(r => placeFrom.append(h('option', { value: r.id, selected: r.id === t.placeFrom }, `the ${r.name || 'role'}'s location`)));
     }
     renderRoles(); renderPlaceFrom();
+    hasEnd.addEventListener('change', renderRoles); // a date rule offers From / Until only on a from / until fact type
     const save = () => {
       if (!name.value.trim()) { UI.toast('Give the fact type a name', 'error'); return; }
       const data = { name: name.value.trim(), hasDate: hasDate.checked, hasEnd: hasEnd.checked, place: place.value, begins: begins.checked, ends: ends.checked,

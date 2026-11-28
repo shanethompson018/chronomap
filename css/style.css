@@ -413,6 +413,19 @@ button.icon { padding: 4px 7px; }
 .tie-row-top .tie-slot { flex: 1 1 calc(170px * var(--fs)); min-width: 0; }
 .tie-row-top .tie-verse { flex: 0 1 calc(140px * var(--fs)); width: auto; }
 .tie-len { display: inline-flex; align-items: center; gap: 3px; flex: none; }
+/* 27.1: date rules on a fact type's role (Library, Fact types), and their line on a fact in the marker editor */
+.role-rules { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+.role-rules-head { font-size: calc(12px * var(--fs)); color: var(--muted); margin-bottom: 4px; }
+.role-rule { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 2px; }
+.role-rule select { width: auto; flex: 0 0 auto; }
+.role-rule-who { font-size: calc(13px * var(--fs)); }
+.role-rule-says { margin: 0 0 6px; }
+.fact-rules { margin: 4px 0 6px; font-size: calc(12px * var(--fs)); }
+.fact-rules-list { color: var(--muted); margin-bottom: 2px; }
+.fact-rules.off .fact-rules-list { text-decoration: line-through; }
+.fact-rules label { font-size: calc(13px * var(--fs)); }
+body.eink .role-rules { border-top-color: #000; }
+body.eink .role-rules-head, body.eink .fact-rules-list { color: #000; }
 input.tie-num { width: calc(58px * var(--fs)); padding-left: 6px; padding-right: 2px; }
 .tie-give { display: inline-flex; align-items: center; gap: 4px; font-size: calc(12px * var(--fs)); white-space: nowrap; }
 .tie-give-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: calc(12px * var(--fs)); }
@@ -723,7 +736,7 @@ body.eink .conflict-card.focus, body.eink .field.flagged { outline-color: #000; 
 .gt-axis { cursor: ew-resize; }
 body.eink .gt-wheel { display: none; } /* the tablet has no wheel */
 .gt-lag.stub { color: var(--muted); }
-.gt-lag.stub.left { transform: translate(calc(-100% - 4px), -50%); }
+.gt-lag.left, .gt-lag.stub.left { transform: translate(calc(-100% - 4px), -50%); }
 body.eink .gt-lag.stub { color: #000; }
 #gt-info:not(.open) { display: none; }
 #gt-info.open + .info-close { display: block; position: absolute; top: 8px; right: 8px; z-index: 21; }

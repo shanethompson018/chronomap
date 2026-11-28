@@ -67,7 +67,20 @@ window.Store = (() => {
   }
   function normCategory(c) { const o = Object.assign({ id: uid(), name: 'Category', color: '#4f8cff', icon: '📍', fields: [], defaultKind: 'pin', sourceId: null, factTypeIds: [] }, c || {}); o.fields = o.fields || []; o.factTypeIds = o.factTypeIds || []; return o; }
   function normLinkType(t) { return Object.assign({ id: uid(), name: 'Link', color: '#999999', directed: false, fromLabel: '', toLabel: '', topSide: 'from' }, t || {}); }
-  function normRole(r) { return Object.assign({ id: uid(), name: 'Other', tieTypeId: null, direction: 'this-to-other' }, r || {}); }
+  // A date rule on a role (27.1): "this fact's From / Until is not before / not after [a length after or before]
+  // the Begins / Ends of whoever is in this role". The length is signed like a time gap's (negative = before).
+  // Kept on the fact type only; Relations.roleRels turns the rules into limits on every run.
+  function normRule(u) {
+    if (!u) return null;
+    const n = v => Math.trunc(+v) || 0;
+    return { id: u.id || uid(), at: u.at === 'until' ? 'until' : 'from', part: u.part === 'max' ? 'max' : 'min', years: n(u.years), months: n(u.months), days: n(u.days), of: u.of === 'ends' ? 'ends' : 'begins' };
+  }
+  function normRole(r) {
+    const o = Object.assign({ id: uid(), name: 'Other', tieTypeId: null, direction: 'this-to-other' }, r || {});
+    if (Array.isArray(o.rules)) o.rules = o.rules.map(normRule).filter(Boolean);
+    if (!o.rules || !o.rules.length) delete o.rules; // absent when the role has no date rules
+    return o;
+  }
   function normFactType(t) {
     const o = Object.assign({ id: uid(), name: 'Fact', hasDate: true, hasEnd: false, place: 'any', roles: [], begins: false, ends: false, details: [], placeFrom: null }, t || {});
     o.roles = (o.roles || []).map(normRole); o.details = o.details || [];
@@ -105,6 +118,7 @@ window.Store = (() => {
     if (!o.stops || !o.stops.length) delete o.stops;
     // a short journey that is part of a longer one names the longer journey's fact; absent when not set
     if (o.partOf && o.partOf.markerId && o.partOf.factId) o.partOf = { markerId: o.partOf.markerId, factId: o.partOf.factId }; else delete o.partOf;
+    if (o.noRules) o.noRules = true; else delete o.noRules; // this fact is let off its type's date rules (27.1); absent when not
     return o;
   }
   // A place along a journey (fact.stops, in the order travelled). `at` is a marker or a point picked on the map.

@@ -268,14 +268,14 @@ window.Gantt = (() => {
     const reg = (k, i, p) => { if (k && p) { if (!at.has(k)) at.set(k, []); at.get(k).push({ i, E: p.E, L: p.L }); } };
     rows.forEach((r, i) => { reg(r.slotS, i, r.s); reg(r.slotE, i, r.e); });
     const mid = el => el.offsetTop + el.offsetHeight / 2, stubs = new Map();
-    for (const r of Store.relations()) {
+    for (const r of Store.relations().concat(Relations.roleLimits())) { // stored time gaps and limits, then the limits a role's date rule makes (27.1)
       if (r.status !== 'active' || !r.from || !r.to) continue;
       const A = at.get(Store.refKey(r.from)), B = at.get(Store.refKey(r.to)), side = r.part === 'max' ? 'L' : 'E';
       if (!A && !B) continue;
       const limit = r.part === 'min' || r.part === 'max', cls = limit ? ' lim' : ' gap';
       if (!A || !B) { // the other date is not on the chart
         if (!Store.refExists(A ? r.to : r.from)) continue;
-        const how = limit ? (r.part === 'min' ? 'not before' : 'not after') + (lenText(r) ? ' ' + lenText(r) : '') : (lenText(r) || 'the same day');
+        const how = (limit ? (r.part === 'min' ? 'not before' : 'not after') + (lenText(r) ? ' ' + lenText(r) : '') : (lenText(r) || 'the same day')) + (r.rule ? ', rule' : '');
         const text = A ? `${how}: ${Store.slotLabel(r.to)}` : limit ? `${Store.slotLabel(r.from)} (${how})` : `${Store.slotLabel(r.from)} ${how}`;
         for (const p of (A || B)) {
           if (!isFinite(p[side])) continue;
@@ -292,8 +292,8 @@ window.Gantt = (() => {
       over.append(h('div', { class: 'gt-ln v' + cls, style: { left: xa + '%', top: Math.min(ya, yb) + 'px', height: Math.abs(yb - ya) + 'px' } }));
       if (xa !== xb) over.append(h('div', { class: 'gt-ln hz' + cls, style: { left: Math.min(xa, xb) + '%', width: Math.abs(xb - xa) + '%', top: yb + 'px' } }));
       over.append(h('div', { class: 'gt-head ' + (xb > xa ? 'r' : xb < xa ? 'l' : yb > ya ? 'd' : 'u'), style: { left: xb + '%', top: yb + 'px' } }));
-      const text = limit ? (r.part === 'min' ? 'not before' : 'not after') + (lenText(r) ? ' ' + lenText(r) : '') : (lenText(r) || '=');
-      over.append(h('div', { class: 'gt-lag', style: { left: xa + '%', top: (ya + yb) / 2 + 'px' } }, text));
+      const text = (limit ? (r.part === 'min' ? 'not before' : 'not after') + (lenText(r) ? ' ' + lenText(r) : '') : (lenText(r) || '=')) + (r.rule ? ' (rule)' : '');
+      over.append(h('div', { class: 'gt-lag' + (xa > 70 ? ' left' : ''), style: { left: xa + '%', top: (ya + yb) / 2 + 'px' } }, text)); // near the right edge the words go to the left of the line, or they are cut off
     }
     for (const s of stubs.values()) { // an arrow into the date (the other date sets it) or out of it (it sets the other)
       const x = pct(s.p[s.side]), el = els[s.p.i], y = mid(el);
@@ -320,7 +320,8 @@ window.Gantt = (() => {
     el.append(h('div', {}, h('strong', {}, r.kind === 'm' ? r.label : `${Store.displayName(r.m)} · ${r.label}`), h('span', { html: sub ? ' · ' + sub : (r.kind === 'm' ? '' : ' · no date') }),
       ' ', h('button', { class: 'small', onclick: () => select(r.m.id) }, 'Information'), ' ', h('button', { class: 'small', onclick: () => Editor.open(r.m.id) }, 'Edit marker')));
     const rels = [r.slotS, r.slotE].filter(Boolean).flatMap(k => Store.relationsOfRef(Store.parseRefKey(k))).filter((x, i, all) => x.status === 'active' && all.indexOf(x) === i && Store.refExists(x.from) && Store.refExists(x.to));
-    if (rels.length) el.append(h('ul', {}, ...rels.map(x => h('li', {}, '⛓ ' + Relations.describeRelation(x) + (x.page ? ` (${x.page})` : '')))));
+    const keys = [r.slotS, r.slotE].filter(Boolean), rules = Relations.roleLimits().filter(x => keys.includes(Store.refKey(x.from)) || keys.includes(Store.refKey(x.to))); // 27.1
+    if (rels.length || rules.length) el.append(h('ul', {}, ...rels.map(x => h('li', {}, '⛓ ' + Relations.describeRelation(x) + (x.page ? ` (${x.page})` : ''))), ...rules.map(x => h('li', {}, '⛓ ' + Relations.roleText(x.id)))));
   }
 
   function drawInfo() {

@@ -521,6 +521,14 @@ window.Editor = (() => {
     if (t.journey) card.append(renderJourney(i));
     // roles
     for (const role of t.roles) card.append(renderRole(i, role));
+    // 27.1: the fact type's date rules, in words, and the tick that lets this one fact off them
+    const ruled = t.hasDate !== false ? t.roles.filter(r => r.rules && r.rules.length) : [];
+    if (ruled.length) {
+      const off = h('input', { type: 'checkbox', checked: !!f.noRules, onchange: e => { if (e.target.checked) draft.facts[i].noRules = true; else delete draft.facts[i].noRules; render(); } });
+      card.append(h('div', { class: 'fact-rules' + (f.noRules ? ' off' : '') },
+        h('div', { class: 'fact-rules-list' }, `Date rules of the ${t.name} fact type (Library → Fact types): ` + ruled.flatMap(r => r.rules.filter(u => u.at !== 'until' || t.hasEnd).map(u => Relations.ruleText(u, t.hasEnd, 'the ' + r.name))).join('; ') + '.'),
+        h('label', { title: 'Tick this when the rules do not fit this one fact. The rules stay on the fact type and go on holding for every other fact of this type.' }, off, ' does not follow its type\'s date rules')));
+    }
     // details
     const detailKeys = [...new Set([...(t.details || []), ...Object.keys(f.details || {})])];
     if (detailKeys.length || true) {

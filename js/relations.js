@@ -177,17 +177,11 @@ window.Relations = (() => {
   //    began (not asked of a birth: a father may die before his child is born).
   //  * A child's Begins is not before its parent's Begins (every "Parent of" tie).
   // Ids: 'life|<m1>|<slot1>|<m2>|<slot2>' and 'kin|…': slot2 is not before slot1. Switches: settings autoLife, autoKin.
-  function lifeRels(given) {
-    const out = [], seen = new Set(), set = Store.settings();
-    if (set.autoLife === false && set.autoKin === false) return out;
-    const ref = (id, slot) => ({ kind: 'marker', id, slot });
-    const add = (kind, m1, s1, m2, s2) => {
-      if (m1 === m2 && s1 === s2) return;
-      const id = [kind, m1, s1, m2, s2].join('|'); if (seen.has(id)) return;
-      seen.add(id); out.push({ id, from: ref(m1, s1), to: ref(m2, s2), part: 'min', years: 0, months: 0, days: 0 });
-    };
-    const touched = new Set(given.flatMap(r => [key(r.from), key(r.to)]));
-    const span = new Map(); // marker id -> { b, e }: its Begins and Ends, each { f, d, slot }
+  // Every marker's Begins and Ends: marker id -> { b, e }, each { f, d, slot } or null. The Begins is its earliest
+  // dated fact of a type that begins the marker, the Ends its latest dated fact of a type that ends it (one with
+  // no date yet still counts when there is no other).
+  function spans() {
+    const span = new Map();
     for (const m of Store.markers()) {
       let b = null, e = null;
       for (const f of m.facts || []) {
@@ -198,6 +192,19 @@ window.Relations = (() => {
       }
       span.set(m.id, { b, e });
     }
+    return span;
+  }
+  function lifeRels(given) {
+    const out = [], seen = new Set(), set = Store.settings();
+    if (set.autoLife === false && set.autoKin === false) return out;
+    const ref = (id, slot) => ({ kind: 'marker', id, slot });
+    const add = (kind, m1, s1, m2, s2) => {
+      if (m1 === m2 && s1 === s2) return;
+      const id = [kind, m1, s1, m2, s2].join('|'); if (seen.has(id)) return;
+      seen.add(id); out.push({ id, from: ref(m1, s1), to: ref(m2, s2), part: 'min', years: 0, months: 0, days: 0 });
+    };
+    const touched = new Set(given.flatMap(r => [key(r.from), key(r.to)]));
+    const span = spans();
     if (set.autoLife !== false) for (const m of Store.markers()) {
       const own = span.get(m.id);
       if (own.b && own.e && own.b.f !== own.e.f) add('life', m.id, own.b.slot, m.id, own.e.slot); // it does not end before it begins
@@ -262,15 +269,67 @@ window.Relations = (() => {
     }
     return out;
   }
-  const isAuto = id => /^(seq|part|life|kin)\|/.test(String(id)); // a limit the app keeps by itself (not a tie the user made, so it cannot be overruled)
+  // Date rules on a fact type's roles (27.1). A role can carry rules of the user's own making: "this fact's From
+  // (or Until) is not before / not after [a length after or before] the Begins / Ends of whoever is in this role".
+  // Nothing is stored on the facts: on every run, each fact of such a type gives one limit for each rule and each
+  // marker in that role, between the fact's date and that marker's Begins or Ends (spans() above). A fact ticked
+  // "does not follow its type's date rules" (fact.noRules) gives none; a marker with no Begins / Ends fact makes
+  // the rule wait. Ids: 'role|<factTypeId>|<roleId>|<ruleId>|<m1>|<slot1>|<m2>|<slot2>', where 1 is the Begins or
+  // Ends of the marker in the role and 2 the fact's date: "2 is not before / not after 1 plus the length", exactly
+  // like a stored limit from 1 to 2 (so a "not after" rule and a length before need no swapping of ends).
+  // Unlike the lifetime limits these count as ties (they are in `auto`, so in `tied`): a date no other tie touches
+  // still gets its window from a rule.
+  function roleRels() {
+    const out = [], seen = new Set();
+    const types = new Map(Store.factTypes().filter(t => t.hasDate !== false && t.roles.some(r => r.rules && r.rules.length)).map(t => [t.id, t]));
+    if (!types.size) return out;
+    const ref = (id, slot) => ({ kind: 'marker', id, slot });
+    let span = null;
+    for (const m of Store.markers()) for (const f of m.facts || []) {
+      const t = types.get(f.typeId); if (!t || f.noRules) continue;
+      for (const p of f.participants || []) {
+        const role = t.roles.find(r => r.id === p.roleId); if (!role || !role.rules) continue;
+        span = span || spans();
+        const o = span.get(p.markerId); if (!o) continue;
+        for (const u of role.rules) {
+          if (u.at === 'until' && !t.hasEnd) continue;
+          const far = u.of === 'ends' ? o.e : o.b; if (!far) continue; // that marker has no Begins / Ends fact: the rule waits
+          const slot = 'fact:' + f.id + (u.at === 'until' ? ':end' : '');
+          if (p.markerId === m.id && far.slot === slot) continue;
+          const id = ['role', t.id, role.id, u.id, p.markerId, far.slot, m.id, slot].join('|'); if (seen.has(id)) continue;
+          seen.add(id); out.push({ id, status: 'active', rule: true, from: ref(p.markerId, far.slot), to: ref(m.id, slot), part: u.part, years: u.years, months: u.months, days: u.days });
+        }
+      }
+    }
+    return out;
+  }
+  const isRole = id => /^role\|/.test(String(id));
+  // The rule behind one of those limits: { t, role, u, from, to }, or null when the rule is no longer there.
+  function roleRule(id) {
+    const p = String(id).split('|'), t = Store.factType(p[1]), role = t && t.roles.find(r => r.id === p[2]), u = role && (role.rules || []).find(x => x.id === p[3]);
+    return u ? { t, role, u, from: { kind: 'marker', id: p[4], slot: p[5] }, to: { kind: 'marker', id: p[6], slot: p[7] } } : null;
+  }
+  const roleTag = x => `rule of the ${x.t.name} fact type, role ${x.role.name}`;
+  // A rule in words: "From is not after 1 year after the Ends of whoever is in this role". A fact type with one
+  // date says "Its date"; `who` names the role where that reads better ("the Father").
+  function ruleText(u, hasEnd, who) {
+    return `${hasEnd ? (u.at === 'until' ? 'Until' : 'From') : 'Its date'} is ${limitText(u.part, offOf(u), `the ${u.of === 'ends' ? 'Ends' : 'Begins'} of ${who || 'whoever is in this role'}`)}`;
+  }
+  // One of those limits in full: "Nahor · Born: not after 1 year after Terah · Died (rule of the Born fact type, role Father)"
+  function roleText(id) {
+    const x = roleRule(id);
+    return x ? `${Store.slotLabel(x.to)}: ${limitText(x.u.part, offOf(x.u), Store.slotLabel(x.from))} (${roleTag(x)})` : '';
+  }
+  const isAuto = id => /^(seq|part|life|kin|role)\|/.test(String(id)); // a limit the app keeps by itself (not a tie the user made, so it cannot be overruled)
   const isLife = id => /^(life|kin)\|/.test(String(id));
   const isOwn = id => /^own\|/.test(String(id));
   // the words in front of one of the app's own limits in the conflicts panel
-  const autoLead = id => (isPart(id) ? 'Part of a longer journey: ' : /^kin\|/.test(String(id)) ? 'Parent and child: ' : isLife(id) ? 'Within a lifetime: ' : 'The order of the journey: ');
+  const autoLead = id => (isRole(id) ? 'A date rule of a fact type: ' : isPart(id) ? 'Part of a longer journey: ' : /^kin\|/.test(String(id)) ? 'Parent and child: ' : isLife(id) ? 'Within a lifetime: ' : 'The order of the journey: ');
   const isPart = id => /^part\|/.test(String(id));
   // "arriving at Haran is not before the journey's From"; for a part of a longer journey the two dates are named in full
   function autoText(id) {
     const p = String(id).split('|');
+    if (p[0] === 'role') return roleText(id);
     if (p[0] === 'life' || p[0] === 'kin') return `${Store.slotLabel({ kind: 'marker', id: p[3], slot: p[4] })} is not before ${Store.slotLabel({ kind: 'marker', id: p[1], slot: p[2] })}`;
     if (p[0] === 'part') {
       const A = Store.slotLabel({ kind: 'marker', id: p[2], slot: p[3] }), B = Store.slotLabel({ kind: 'marker', id: p[4], slot: p[5] });
@@ -280,8 +339,9 @@ window.Relations = (() => {
     return `${Store.slotShort({ kind: 'marker', id: mid, slot: b })} is not before ${Store.slotShort({ kind: 'marker', id: mid, slot: a })}`;
   }
   function windows(given, likely) {
-    const auto = seqRels().concat(partRels());
-    const rels = given.concat(ownRels(given), auto, lifeRels(given));
+    const role = roleRels(), ties = given.concat(role); // a role's date rule counts as a tie on both its dates (27.1)
+    const auto = seqRels().concat(partRels(), role);
+    const rels = given.concat(ownRels(ties), auto, lifeRels(ties));
     const W = new Map();
     const node = k => { if (!W.has(k)) { const b = baseOf(k, likely); W.set(k, { E: b.min || '', L: b.max || '', eBy: null, lBy: null }); } return W.get(k); };
     const raise = (n, cand, by) => { if (cand && (!n.E || D(cand) > D(n.E))) { n.E = cand; n.eBy = by; return true; } return false; };
@@ -311,7 +371,7 @@ window.Relations = (() => {
     const rels = limitRels();
     const { W, looping, auto } = windows(rels);
     winInfo = W;
-    const tied = new Set(rels.concat(auto).flatMap(r => [key(r.from), key(r.to)])); // dates that a tie really touches, and the dates of a journey with stops
+    const tied = new Set(rels.concat(auto).flatMap(r => [key(r.from), key(r.to)])); // dates that a tie really touches, the dates of a journey with stops, and both dates of a role's date rule
     tiedKeys = tied;
     const out = new Map(), shut = [];
     for (const [k, n] of W) {
@@ -355,7 +415,7 @@ window.Relations = (() => {
     const n = n0 ? { E: quiet(n0.eBy) ? '' : n0.E, L: quiet(n0.lBy) ? '' : n0.L, eBy: quiet(n0.eBy) ? null : n0.eBy, lBy: quiet(n0.lBy) ? null : n0.lBy, conflict: n0.conflict } : null;
     const ties = Store.relationsOfRef(ref).filter(r => r.status === 'active' && isLimit(r));
     return { E: n ? n.E : '', L: n ? n.L : '', eBy: n ? n.eBy : null, lBy: n ? n.lBy : null, conflict: !!(n && n.conflict),
-      auto: !!(n && ((n.eBy && isAuto(n.eBy.rel)) || (n.lBy && isAuto(n.lBy.rel)))), // an end is set by the order of a journey's stops
+      auto: !!(n && ((n.eBy && isAuto(n.eBy.rel)) || (n.lBy && isAuto(n.lBy.rel)))), // an end is set by the order of a journey's stops, or by a role's date rule
       minTies: ties.filter(r => (r.part === 'min') === Store.sameRef(r.to, ref)), maxTies: ties.filter(r => (r.part === 'max') === Store.sameRef(r.to, ref)) };
   }
   const lenWords = o => [[o.years, 'year'], [o.months, 'month'], [o.days, 'day']].filter(([n]) => n).map(([n, w]) => `${Math.abs(n)} ${w}${Math.abs(n) === 1 ? '' : 's'}`).join(' ');
@@ -371,6 +431,11 @@ window.Relations = (() => {
     if (by && isLife(by.rel)) { // the lifetime rule, or parent and child
       const p = String(by.rel).split('|');
       return `not ${by.back ? 'after' : 'before'} ${Store.slotLabel({ kind: 'marker', id: by.back ? p[3] : p[1], slot: by.back ? p[4] : p[2] })} (${p[0] === 'kin' ? 'a child is not born before its parent' : 'the lifetime rule'})`;
+    }
+    if (by && isRole(by.rel)) { // a date rule on a fact type's role (27.1); worked backwards it is said from the other date's side
+      const x = roleRule(by.rel); if (!x) return '';
+      const o = offOf(x.u);
+      return `${by.back ? limitText(x.u.part === 'min' ? 'max' : 'min', neg(o), Store.slotLabel(x.to)) : limitText(x.u.part, o, Store.slotLabel(x.from))} (${roleTag(x)})`;
     }
     if (by && isPart(by.rel)) { // a date shared with the journey this one is part of (or with a part of this one)
       const p = String(by.rel).split('|');
@@ -625,6 +690,7 @@ window.Relations = (() => {
     if (p[0] === 'seq') return [mref(p[1], p[2]), mref(p[1], p[3])];
     if (p[0] === 'part') return [mref(p[2], p[3]), mref(p[4], p[5])];
     if (p[0] === 'life' || p[0] === 'kin') return [mref(p[1], p[2]), mref(p[3], p[4])];
+    if (p[0] === 'role') return [mref(p[4], p[5]), mref(p[6], p[7])];
     const r = Store.relation(rid);
     return r ? [r.from, r.to] : null;
   }
@@ -694,7 +760,10 @@ window.Relations = (() => {
   function todoText(c) {
     const tail = ' The lines above end where a date was typed or a tie was made: open the one that is wrong and correct it there. A date that says "reckoned" cannot be corrected in its own box.';
     if (c.cause) return 'Correct the conflict this one follows from first. This one should then clear by itself.';
-    if (c.soft) return 'The ranges of these dates still overlap, so this is a warning. Usually one date was typed where it should have been worked out, or is left over from an earlier time gap.' + tail;
+    // 27.1: a date rule of a fact type is in it. The rule is the user's own, so say where it is changed.
+    const rule = c.rels.some(isRole) ? ' A date rule of a fact type is part of this. The rule is yours: change or remove it in Library → Fact types → the pencil on the fact type → the role\'s date rules (the Fact type button above opens it), and every fact of that type follows at once. To let one fact off, open it in its marker and tick "does not follow its type\'s date rules".' : '';
+    if (c.soft) return 'The ranges of these dates still overlap, so this is a warning. Usually one date was typed where it should have been worked out, or is left over from an earlier time gap.' + tail + rule;
+    if (rule) return (c.rels.every(r => isAuto(r) || isOwn(r)) ? 'Either a date is wrong or the rule does not fit here. Correct the date that is wrong.' : 'Either a date is wrong, a tie is, or the rule does not fit here. Correct the date, or press Edit tie or Overrule on a tie that does not hold.') + tail + rule;
     if (!c.rels.length) return 'One of these dates was typed outside its own earliest or latest box. Correct the box in its marker.';
     if (c.rels.every(isOwn)) return 'Correct the From or the Until.' + tail;
     if (c.rels.some(isLife) && c.rels.every(r => isAuto(r) || isOwn(r))) return 'Correct the date that is wrong.' + tail + ' If the rule does not fit a kind of fact, tick "may fall outside the lifetime" on its fact type (Library → Fact types); the rules themselves are switched in Library → Time gaps.';
@@ -721,7 +790,9 @@ window.Relations = (() => {
         const arrow = i ? '← ' : '';
         if (s.by) {
           const r = !isAuto(s.by.rel) && !isOwn(s.by.rel) ? Store.relation(s.by.rel) : null;
+          const rule = isRole(s.by.rel) ? roleRule(s.by.rel) : null; // a role's date rule: no Overrule, but its fact type opens from here
           out.push(line(`${arrow}${Store.slotLabel(s.ref)} is not ${side === 'E' ? 'before' : 'after'} ${Dates.formatInput(s.value)}: ${governText(s.by)}${r && r.page ? ` (${r.page})` : ''}`, s.ref,
+            rule ? [h('button', { class: 'small', title: `Open the ${rule.t.name} fact type, where this rule is written (Library → Fact types)`, onclick: () => DataTab.editFactType(rule.t.id) }, 'Fact type')] :
             r ? [h('button', { class: 'small', title: 'Change this tie', onclick: () => pick(null, { edit: r.id, onDone: render }) }, 'Edit tie'),
               h('button', { class: 'small', title: 'Keep the record but leave it out of the reckoning', onclick: () => { Store.updateRelation(r.id, { status: 'overruled' }); render(); } }, 'Overrule')] : null));
           return;
@@ -795,5 +866,5 @@ window.Relations = (() => {
     solve();
   }
 
-  return { init, solve, pick, convert, showConflicts, slotState, windowOf, governText, badgesHTML, describeDerived, describeRelation, agree, conflictNote, markerConflicts, conflicts: () => conflicts, undetermined: () => undetermined };
+  return { init, solve, pick, convert, showConflicts, slotState, windowOf, governText, roleLimits: roleRels, roleText, ruleText, badgesHTML, describeDerived, describeRelation, agree, conflictNote, markerConflicts, conflicts: () => conflicts, undetermined: () => undetermined };
 })();
