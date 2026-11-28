@@ -49,6 +49,8 @@ cross items off as they land. We go through it one item at a time.
   the next sync instead of being undone by it) built 27 Nov 2026 ("Yes, build 26.5"); not checked on the
   Boox. 26.3 (a warning on a device that is behind) and 26.4 (the Sync page says what the last sync did)
   are proposed, not decided.
+- **Section 27:** date rules on a fact type's roles ("Born, Father: not after 1 year after his Died").
+  Proposed 27 Nov 2026 from his question; one choice is his (27.0); not built.
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
@@ -1439,3 +1441,61 @@ After the removal of the fact on one device, the backup from before it is import
 * The seven cases of 26.1 and 26.2 run again: unchanged.
 
 Not checked on the Boox, and not with a real backup file of his: only `T-` records were imported.
+
+## 27. Date rules on a fact type's roles (asked 27 Nov 2026, proposed, not built)
+
+It began with the Gantt chart: "Why is Nahor being born continuing forever? Abram, and Haran born stops at
+Terah's death. I believe I put them in the same way." He had: all three births carry the same tie
+("not before 70 years after Terah · Born"), which gives an earliest date only. Abram's latest comes from
+being a traveller on the Journey (tied to "not after Terah · Died"), Haran's from "Haran · Died: not after
+Terah · Died". Nahor has nothing that gives a latest, so his birth reads "after 10 Feb 2156 BC". The app
+does not assume a child is born before its father dies (22.2 lets a birth off on purpose). A fixed rule
+was offered (a child is born no later than a year after its father dies).
+
+**His answer, a better idea:** "What about allowing facts to have automatic ties to roles? I can edit, or
+create facts that automatically put time gaps on ties created from roles added?"
+
+**Read as:** a role on a fact type (Library → Fact types → the pencil on a fact type → its roles) can
+carry date rules of his own making. Whenever a marker is put in that role on a fact, the rule applies
+between that fact's date and that marker's dates, with no tie to enter by hand. A role already carries
+its tie type, how it reads on the other marker, and "they go there too"; this is one more thing it
+carries. He writes the rules; the app enters no data.
+
+**What a rule says** (one line in the role's box, any number of lines):
+
+    [this fact's From | Until]  is  [not before | not after | exactly]  [a length, or none]  [after | before]
+    [the Begins | the Ends]  of whoever is in this role
+
+Examples he could make:
+
+* Born, Father: "From is not after 1 year after the Ends of the Father" (closes Nahor's bar at Terah's
+  death, and every other child's).
+* Born, Mother: "From is not after the Ends of the Mother".
+* Born, Father: "From is not before the Begins of the Father". Today this is the fixed family rule (22.3);
+  it would become a rule he can see and change, already filled in.
+* Had child, Child: "From is exactly the Begins of the Child".
+* Married, Spouse: "From is not before 13 years after the Begins of the Spouse", if he reads it so.
+
+- [ ] **27.0 His to choose: how a rule is kept.**
+      (A) **Kept by the app** (recommended). The rule lives on the fact type and is worked out on every
+      change, like the lifetime rule. Changing or removing the rule changes every fact of that type at
+      once; nothing is stored on the facts, so nothing can be left behind or come back through a sync. A
+      fact can be let off with a tick ("this fact does not follow its type's date rules").
+      (B) **Real time gaps made at the moment a role is filled.** Each can then be edited or deleted like
+      any time gap, but they do not follow a later change to the rule, and removing the rule leaves them
+      behind to be deleted one by one.
+- [ ] **27.1 Limits on a role** ("not before", "not after", with or without a length). The working out is
+      there already: these are limits like the lifetime rule's (`lifeRels` in `js/relations.js`), made
+      from each fact's `participants` and the role's rules. In the conflicts panel and under a date box
+      they read "… (rule of the Born fact type, role Father)", with no Overrule button but with a link to
+      the fact type. On the Gantt chart they are drawn like any limit.
+- [ ] **27.2 "Exactly" on a role** (a time gap that sets the date). More work than 27.1: the date
+      reckoning (stage 1 of `solve()`) only knows stored time gaps, and "reckoned from …" looks the tie up
+      by its id. To be designed after 27.1.
+- [ ] **27.3 The family rule becomes an ordinary role rule**, shown and editable on Born → Father and
+      Mother, with the tick in Library → Time gaps kept as the switch for all of them.
+
+Not decided: whether a rule may point at a named fact of the other marker ("the Married of the Spouse")
+and not only at its Begins and Ends. Begins and Ends cover every example so far.
+
+Design-heavy (dating logic): a fresh session with the top model.
