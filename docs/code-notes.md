@@ -82,7 +82,11 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   Arrivals are judged against a snapshot of the moves taken before any start or end is added; starts are judged
   after the arrivals are in, so a second journey does not add a start where the first one's arrival already
   places the traveller. A traveller's own dated move after From and up to the arrival = left the party: no
-  arrival, and their copy of the route move gets that date as its `dateEnd`. Move ids must not contain `|`
+  arrival, and their copy of the route move gets that date as its `dateEnd`. Starts are not judged by dates
+  alone (28.1): `brings(k, j, T)` = journey k ends where j sets out and is not certainly later, so j gives T no
+  start; `comesAfter(j, T)` = the journeys that follow j by place, whose moves do not count as "placed before
+  From". The dates compared elsewhere here are still the middles of windows (`when`), which can stand in the
+  wrong order: agenda 28.2. Move ids must not contain `|`
   (map layers are keyed `markerId|moveId` and split on it).
 - Stops (19.1): when a journey has stops with an arrival to go by (`j.stops`; `when(stop)` gives the date or the
   middle of its window), each traveller's copy of the route move (id = the fact id) is **removed** and replaced

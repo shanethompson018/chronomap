@@ -49,6 +49,11 @@ cross items off as they land. We go through it one item at a time.
   the next sync instead of being undone by it) built 27 Nov 2026 ("Yes, build 26.5"); not checked on the
   Boox. 26.3 (a warning on a device that is behind) and 26.4 (the Sync page says what the last sync did)
   are proposed, not decided.
+- **Section 28:** "Where and when" with two journeys whose dates are only windows. 28.1 (the start of a
+  journey is judged by the places, not by made-up middle dates) built 28 Nov 2026; not checked on the
+  Boox, not seen with his own data (his export is asked for). 28.2 (the order of the rows when dates are
+  only windows) is proposed, design-heavy, not decided. Also in the section: his question on changing a
+  border; the button "Change border here" already does it; 28.3 (the same from the marker editor) offered.
 - **Section 27:** date rules on a fact type's roles ("Born, Father: not after 1 year after his Died").
   Proposed 27 Nov 2026 from his question. He chose "kept by the app" (27.0). 27.1 ("not before" and
   "not after" rules) built 27 Nov 2026; not checked on the Boox, not tried on his own data. 27.2
@@ -1544,3 +1549,57 @@ himself: Library → Fact types → the pencil on Born → the Father role → +
 not after · 1 y · after · the Ends".
 
 27.2 and 27.3 are design-heavy (dating logic): a fresh session with the top model.
+
+## 28. "Where and when" with two journeys; changing a border (asked 28 Nov 2026; 28.1 built 28 Nov 2026; 28.2 and 28.3 proposed)
+
+The user's words: "The where and when for Abram, Lot, & Sarai show at Haran(City) from beginning until
+Journey from Ur to Haran. Terah shows it correctly at Ur from beginning until Journey from Ur to Haran.
+Why are the other 3 incorrect? What needs to get fixed? Go ahead and fix it."
+
+**Why.** His current data was not seen (his newest export is of 27 Nov, from before this). The three are
+the ones who travel on from Haran (Genesis 12), so a second journey that sets out from Haran is taken to
+be there. Shown on the test copy with `T-` records: two journeys, Ur to Haran and Haran to Canaan, one
+traveller on both, the dates of both known only as windows. The app places a date it does not know at
+the middle of its window, to have an order. The middle of the second journey's window fell before the
+middle of the first's, so the app took the second journey for the earlier one: it gave the traveller a
+start "at Haran from the beginning", and that start in turn kept the first journey from giving its own
+start at Ur. With typed dates in the right order it was always right, whatever the order of the markers.
+
+- [x] **28.1 The start of a journey is judged by the places. Built 28 Nov 2026.** A journey that ends
+      where another one sets out is the one that brought the traveller there, unless it certainly
+      arrives after the other has left (a way back). So the later journey gives no start "from the
+      beginning", and nothing of the later journey can keep the first one from giving its start.
+      `deriveJourneys` in `js/facts.js`, the starts: `brings(k, j, T)` and `comesAfter(j, T)`. A
+      traveller who joins at a stop is judged as before.
+- [ ] **28.2 The order of the rows when dates are only windows** (design-heavy; his decision). After
+      28.1 the rows can still stand in the wrong order (Canaan before Haran), because the order still
+      comes from the middles. Seen on the test copy: with a limit he enters himself ("the second
+      journey's From is not before the first journey's Until") and both windows closed at both ends, the
+      order comes out right; with a window open at one end ("after 1790") it does not, because such a
+      date is placed at its one known end. Proposed, in P6 terms a finish-to-start relationship the app
+      keeps by itself: for one traveller, the next journey does not set out before the one that brought
+      them there arrives, as a limit like the order of a journey's stops (shown in Conflicts as a rule
+      of the app, with a switch). With it: a fact's From is narrowed by its own Until (today J1 read
+      "between 1790 and 1830 – between 1790 and 1811"), and a date with one known end is placed with
+      regard to its neighbours. These touch the solver in `js/relations.js` and `when` in `js/facts.js`.
+
+Tested on the test copy (`T-` records, all removed): dates only windows, in both orders of the markers:
+Ur from the beginning is back and "Haran from the beginning" is gone; the same with his own limit added,
+where the three rows then stand in the right order; a second journey with no dates at all. Unchanged:
+typed dates in order (both orders of the markers), there and back, one journey alone, a place of the
+traveller's own before the first journey. Not checked on the Boox.
+
+**Meanwhile, told to him:** tie the two journeys himself: on the second journey's From, a limit "not
+before" the first journey's Until. And send an export, so the rows can be checked against his real
+entries.
+
+**His question on borders:** "When I make a border change I should be able to edit the existing border
+instead of starting a brand new border. How will the app allow to use the existing border?" It already
+does, from the map: Map tab, untick "Show all times", move the slider to the date of the change, tap the
+area, and in its information press "✥ Change border here". The border in force at that date is copied
+into a new dated border and opened with its corners to drag, add or delete; Done, then Save. The earlier
+border stays as it was (`changeBorderHere` in `js/editor.js`; not tried again today, read in the code).
+
+- [ ] **28.3 The same from the marker editor** (offered, not decided): on a new "Border changed" fact
+      that has no outline yet, a button "Start from the border before this date" beside "Draw", for
+      when he adds the fact in the editor instead of from the map.
