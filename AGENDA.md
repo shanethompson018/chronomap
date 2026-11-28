@@ -50,7 +50,8 @@ cross items off as they land. We go through it one item at a time.
   Boox. 26.3 (a warning on a device that is behind) and 26.4 (the Sync page says what the last sync did)
   are proposed, not decided.
 - **Section 27:** date rules on a fact type's roles ("Born, Father: not after 1 year after his Died").
-  Proposed 27 Nov 2026 from his question; one choice is his (27.0); not built.
+  Proposed 27 Nov 2026 from his question. He chose "kept by the app" (27.0). Not built; he has not yet
+  said to build.
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
@@ -1442,7 +1443,7 @@ After the removal of the fact on one device, the backup from before it is import
 
 Not checked on the Boox, and not with a real backup file of his: only `T-` records were imported.
 
-## 27. Date rules on a fact type's roles (asked 27 Nov 2026, proposed, not built)
+## 27. Date rules on a fact type's roles (asked 27 Nov 2026; kept by the app, decided 27 Nov 2026; not built)
 
 It began with the Gantt chart: "Why is Nahor being born continuing forever? Abram, and Haran born stops at
 Terah's death. I believe I put them in the same way." He had: all three births carry the same tie
@@ -1476,7 +1477,7 @@ Examples he could make:
 * Had child, Child: "From is exactly the Begins of the Child".
 * Married, Spouse: "From is not before 13 years after the Begins of the Spouse", if he reads it so.
 
-- [ ] **27.0 His to choose: how a rule is kept.**
+- [x] **27.0 How a rule is kept: decided 27 Nov 2026, "Kept by the app" (A).**
       (A) **Kept by the app** (recommended). The rule lives on the fact type and is worked out on every
       change, like the lifetime rule. Changing or removing the rule changes every fact of that type at
       once; nothing is stored on the facts, so nothing can be left behind or come back through a sync. A
