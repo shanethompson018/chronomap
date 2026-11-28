@@ -428,6 +428,19 @@ window.Facts = (() => {
     }
     // starts: only for a traveller whom nothing else (an own place, another journey's arrival) places before From
     // Someone who joins at a stop starts from that stop instead, judged against the day the party arrives there.
+    // Which of a traveller's journeys comes first is not read off the dates where a place says it (28.1): a journey
+    // that ends where another sets out is the one that brought them there, unless it certainly arrives after the
+    // other has left (a way back). A date known only as a window is placed at its middle, and two middles can
+    // stand in the wrong order: judged by them alone, the later journey gave its start "from the beginning" and
+    // the first journey's own start was dropped.
+    const firstDay = a => { const s = a.min || a.date; return s ? dayOf(s) : null; }, lastDay = a => { const s = a.max || a.date; return s ? dayOf(s) : null; };
+    const brings = (k, j, T) => k !== j && k.travellers.includes(T) && k.span(T).lp === Infinity && !!k.f.endAt
+      && !(firstDay(k.arr) != null && lastDay(j.w) != null && firstDay(k.arr) > lastDay(j.w));
+    const comesAfter = (j, T) => { // the journeys this traveller makes after j, going by the places: their fact ids
+      const seen = new Set(), todo = [j];
+      while (todo.length) { const a = todo.pop(); for (const k of journeys) if (k !== j && !seen.has(k.f.id) && k.f.startAt === a.f.endAt && k.travellers.includes(T) && brings(a, k, T)) { seen.add(k.f.id); todo.push(k); } }
+      return seen;
+    };
     for (const j of journeys) {
       const { f, owner } = j, start = f.startAt && byId.get(f.startAt);
       for (const T of j.travellers) {
@@ -436,7 +449,9 @@ window.Facts = (() => {
         let at = start, pt = null, day = j.from;
         if (jp >= 0) { const st = j.stops.find(x => x.pos === jp); if (!st) continue; at = st.o; pt = st.o ? null : st.s; day = dayOf(st.sw.date); }
         if ((!at && !pt) || day == null || (at && T.id === at.id)) continue;
-        const placed = T.moves.some(mv => { if (mv.id === f.id || mv.journeyOf === f.id) return false; const x = dayOfMove(mv); return !mv.date || (x != null && x <= day); });
+        if (jp < 0 && at && journeys.some(k => k.f.endAt === at.id && brings(k, j, T))) continue; // another journey brought them to this start
+        const later = comesAfter(j, T);
+        const placed = T.moves.some(mv => { if (mv.id === f.id || mv.journeyOf === f.id || later.has(mv.id) || later.has(mv.journeyOf)) return false; const x = dayOfMove(mv); return !mv.date || (x != null && x <= day); });
         if (placed) continue;
         give(T, owner, Object.assign({}, j.base, { id: f.id + '~start', date: '', dateMin: '', dateMax: '', dateEnd: '', dateEndMin: '', dateEndMax: '', journeyStart: true },
           at ? { atMarkerId: at.id, label: at.name } : { lat: pt.at.lat, lng: pt.at.lng, label: pt.label || '' }));
