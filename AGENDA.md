@@ -50,8 +50,9 @@ cross items off as they land. We go through it one item at a time.
   Boox. 26.3 (a warning on a device that is behind) and 26.4 (the Sync page says what the last sync did)
   are proposed, not decided.
 - **Section 27:** date rules on a fact type's roles ("Born, Father: not after 1 year after his Died").
-  Proposed 27 Nov 2026 from his question. He chose "kept by the app" (27.0). Not built; he has not yet
-  said to build.
+  Proposed 27 Nov 2026 from his question. He chose "kept by the app" (27.0). 27.1 ("not before" and
+  "not after" rules) built 27 Nov 2026; not checked on the Boox, not tried on his own data. 27.2
+  ("exactly") and 27.3 (the family rule as a role rule) are not built.
 - **Section 3, areas:** labels inside areas, areas following a person, importing real border data.
 - Offered and not taken up: an emoji chooser for category icons; general clustering of nearby map pins.
 - Declined 23 Nov 2026, do not offer again: a "+ Role" button on a fact in the marker editor. Roles are
@@ -1443,7 +1444,7 @@ After the removal of the fact on one device, the backup from before it is import
 
 Not checked on the Boox, and not with a real backup file of his: only `T-` records were imported.
 
-## 27. Date rules on a fact type's roles (asked 27 Nov 2026; kept by the app, decided 27 Nov 2026; not built)
+## 27. Date rules on a fact type's roles (asked 27 Nov 2026; kept by the app, decided 27 Nov 2026; 27.1 built 27 Nov 2026)
 
 It began with the Gantt chart: "Why is Nahor being born continuing forever? Abram, and Haran born stops at
 Terah's death. I believe I put them in the same way." He had: all three births carry the same tie
@@ -1485,11 +1486,50 @@ Examples he could make:
       (B) **Real time gaps made at the moment a role is filled.** Each can then be edited or deleted like
       any time gap, but they do not follow a later change to the rule, and removing the rule leaves them
       behind to be deleted one by one.
-- [ ] **27.1 Limits on a role** ("not before", "not after", with or without a length). The working out is
-      there already: these are limits like the lifetime rule's (`lifeRels` in `js/relations.js`), made
-      from each fact's `participants` and the role's rules. In the conflicts panel and under a date box
-      they read "… (rule of the Born fact type, role Father)", with no Overrule button but with a link to
-      the fact type. On the Gantt chart they are drawn like any limit.
+- [x] **27.1 Limits on a role** ("not before", "not after", with or without a length). **Built
+      27 Nov 2026.** The working out was there already: these are limits like the lifetime rule's
+      (`lifeRels` in `js/relations.js`), made from each fact's `participants` and the role's rules. In
+      the conflicts panel and under a date box they read "… (rule of the Born fact type, role Father)",
+      with no Overrule button but with a button to the fact type. On the Gantt chart they are drawn like
+      any limit. As built:
+      * **Where a rule is written.** Library → Fact types → the pencil on a fact type → in each role's
+        box, "Date rules for this role" and the button "+ Add date rule". One line per rule: From / Until
+        (a fact type with one date says "Its date") · is not before / is not after · years, months, days
+        (all empty for no length) · after / before · the Begins / the Ends "of whoever is in this role".
+        Under each line the app writes it back: "Reads as: Its date is not after 1 year after the Ends
+        of whoever is in this role." The Fact types list shows "(1 date rule)" beside the role.
+      * **Kept by the app.** The rules are part of the fact type and sync with it. On every change the
+        app makes one limit for each rule, each fact of that type and each marker in that role, between
+        the fact's date and that marker's Begins or Ends. Nothing is stored on the facts. A rule changed
+        or removed changes every fact at once.
+      * **Begins and Ends** are the marker's fact of a type ticked "begins the marker" (Born, Founded)
+        and "ends the marker" (Died, Destroyed), the same ones the lifetime rule uses. A marker in the
+        role that has no such fact makes the rule wait; one that has the fact with no date yet is still
+        tied to it, and its date is narrowed from the other side ("Terah · Died is not before 1 year
+        before Nahor · Born").
+      * **A date no tie touches still gets its window from a rule.** This is the one difference from
+        the lifetime rule (22.2), which gives no window to an untied date, and it is what closes the bar
+        of a birth at the father's death. It follows that a date a rule touches counts as tied: the
+        lifetime rule then narrows it too and says so, and a from / until fact a rule touches keeps its
+        Until not before its From.
+      * **Explained like the app's other limits.** Under ⚠ Conflicts and under the date box: "Nahor ·
+        Born is too late. It is …, and it cannot be after …: not after 1 year after Terah · Died (rule
+        of the Born fact type, role Father)." The line has a **Fact type** button that opens the fact
+        type, and no Overrule. "What to do" says the rule is his and where it is changed. The second
+        pass over the most likely dates (22) covers these limits as well.
+      * **One fact let off.** In the marker editor a fact of such a type lists its type's rules in words
+        and has the tick "does not follow its type's date rules". The tick is kept on the fact and
+        syncs with its marker.
+      * **Gantt tab.** Drawn as a dashed limit line marked "(rule)" when both dates are on the chart, and
+        as the short arrow with the other date's name when one is not. Tapping a row lists its rules
+        with its time gaps. With it, a line's words are written to the left of the line when the line
+        is near the right edge of the chart (they were cut off there).
+      * Tested on the test copy with `T-` records at the PC size and the tablet size (E-ink on): a
+        birth with a father whose death is known; a broken rule; a rule edited (1 year, 10 years,
+        6 months, a length before) and removed; "not before" and "not after"; a from / until fact type
+        with an Until rule; the father's death with no date (worked backwards) and with no Died fact
+        (the rule waits); a rule against one of his own limits; the tick; the Gantt lines and short
+        arrows. Not checked on the Boox itself. Not tried on his own data.
 - [ ] **27.2 "Exactly" on a role** (a time gap that sets the date). More work than 27.1: the date
       reckoning (stage 1 of `solve()`) only knows stored time gaps, and "reckoned from …" looks the tie up
       by its id. To be designed after 27.1.
@@ -1499,4 +1539,8 @@ Examples he could make:
 Not decided: whether a rule may point at a named fact of the other marker ("the Married of the Spouse")
 and not only at its Begins and Ends. Begins and Ends cover every example so far.
 
-Design-heavy (dating logic): a fresh session with the top model.
+Left for him: no rule has been written for him. To close a birth at the father's death he adds the rule
+himself: Library → Fact types → the pencil on Born → the Father role → + Add date rule → "Its date · is
+not after · 1 y · after · the Ends".
+
+27.2 and 27.3 are design-heavy (dating logic): a fresh session with the top model.

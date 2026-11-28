@@ -176,7 +176,8 @@ the earliest it can end). A single date that is certain is a diamond; one with a
 A fact that ends before it begins is a red dashed bar. **Time gaps and limits** are lines with an
 arrowhead from the date they start from to the date they set: solid for a time gap, with its length;
 dashed for a limit ("not before", "not after"). When the other date is not on the chart, a short arrow
-stands at the date that is, with the other date's name beside it.
+stands at the date that is, with the other date's name beside it. A limit that comes from a date rule
+on a fact type's role is drawn the same way and marked "rule".
 
 The tick **Where and when and facts in one list** puts places and facts under one heading in date order;
 without it each has its own heading.
@@ -499,6 +500,26 @@ A date that already has a tie is narrowed by these and says so ("not after … D
 Where dates carry wide ranges, the limits are also checked against the most likely dates alone, and what
 fails only there is listed as **The most likely dates are out of order**. The two rules are switched in
 Library → Time gaps (a setting of each device).
+
+**Date rules of your own, on a role.** A role of a fact type can carry date rules that you write once
+and the app then keeps for every fact of that type, with no tie to enter. In Library → Fact types, press
+the pencil on a fact type; in a role's box press **+ Add date rule** and choose the line: From or Until
+(a fact type with one date says "Its date"), **is not before** or **is not after**, a length in years,
+months and days (leave it empty for none), after or before, and **the Begins** or **the Ends** of whoever
+is in this role. The app writes the rule back in words, for example "Its date is not after 1 year after
+the Ends of whoever is in this role": on Born → Father that closes every birth at the father's death.
+
+* The Begins and the Ends are the same as for the lifetime rule: the marker's fact of a type ticked
+  "begins the marker" (Born, Founded) or "ends the marker" (Died, Destroyed). If the marker in the role
+  has no such fact, the rule waits.
+* Nothing is written on the facts. Change or remove a rule and every fact of that type follows at once.
+* Unlike the lifetime rule, a rule gives a window even to a date that has no tie: a birth with no date
+  reads "before …" or "between … and …" as soon as the other date is known.
+* A date that breaks a rule is listed under ⚠ Conflicts and under its date box, with the fact type and
+  the role named. There is no Overrule: the **Fact type** button on that line opens the rule.
+* To let one fact off, open it in its marker and tick **does not follow its type's date rules**. The
+  rules of its type are written beside the tick.
+* The rules sync with the fact type, and the tick with its marker.
 
 **Where and when.** A point marker's information, and a section of the same name in the marker editor
 (so it can be read on any tab), lists every place it is, in order: the place, from,

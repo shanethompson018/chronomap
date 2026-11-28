@@ -15,6 +15,9 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   **before** calling `close()` (the picture chooser once returned nothing because of this).
 - Never give a modal the class `side` (the sidebar's rule swallows it). The side panel class is `side-modal`.
 - Library tables turn into cards under `body.compact` through `td[data-label]`.
+- The fact type dialog (`editFactType` in `js/data.js`) edits a copy `t`; each role card draws its date rules
+  with `drawRules` (27.1), which writes into `r.rules` as the boxes change. `renderRoles` runs again when
+  "has an end date" is ticked, because a rule offers From / Until only then.
 
 ## js/store.js
 
@@ -52,6 +55,10 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   slots (`factIds` includes stop ids) and drops a row whose marker is gone; `applyWindows` writes the `calc…`
   ends of stops too. `slotLabel` says "… · stop at Haran (arrived)"; `slotShort` says "arriving at Haran",
   "the journey's From". `stopsOf(f)` = the rows with dates; `stopName(s)`.
+- Date rules on a role (27.1): `factType.roles[].rules` (absent when empty), each `{ id, at: 'from'|'until',
+  part: 'min'|'max', years, months, days, of: 'begins'|'ends' }` (`normRule`; the length is signed like a time
+  gap's, negative = before). They are part of the fact type record, so they sync and export with it and an older
+  version keeps them untouched. `fact.noRules` (true, or absent) lets one fact off; `normFact` keeps it.
 - Grading: `source.reliability` (high | reliable | questionable | unreliable); `confidence` + `reason` on facts,
   field grades and relations (high | reasonable | low | none). `UI.gradeBadgeHTML` draws the badge.
 
@@ -144,6 +151,24 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   `windowOf` blanks an end governed by one unless the slot is in `tiedKeys` (`quiet`). Settings `autoLife`,
   `autoKin` (`!== false` = on), ticked in Library → Time gaps, which then calls `Relations.solve()` and
   `Store.notify`.
+- Date rules on a role (27.1). `roleRels()` builds, on every run, one limit for each rule of a role, each fact
+  of that type (not `noRules`) and each participant in that role: `from` = the participant's Begins or Ends
+  (`spans()`, shared with `lifeRels`), `to` = the fact's From or Until, `part` and the signed length straight
+  from the rule, so it works like a stored limit and needs no swapping of ends. Ids
+  `role|<factTypeId>|<roleId>|<ruleId>|<m1>|<slot1>|<m2>|<slot2>` (1 = Begins / Ends, 2 = the fact's date);
+  `roleRule(id)` reads the rule back from the id (null when it is gone), `relEnds` knows the layout. A marker
+  with no Begins / Ends fact gives no limit; an `until` rule on a type without `hasEnd` is skipped.
+  **Unlike the lifetime limits they are in `auto`, so in `tied`**: windows are written for a date no other tie
+  touches (that is the point: an untied birth closes at the father's death), and such a date is no longer
+  `quiet`, so lifetime limits on it show too. They are also given to `ownRels` and `lifeRels` as ties (From ≤
+  Until of a from / until fact they touch; its Until counts as touched). `isRole(id)`; `isAuto` includes them
+  (no Overrule; the editor's `hasWin` opens the earliest / latest boxes). Wording: `governText` (forward:
+  `limitText` + "(rule of the X fact type, role Y)"; worked backwards the part is flipped and the length
+  negated, said from the other date), `roleText(id)` (one limit in full, used by the Gantt detail),
+  `ruleText(u, hasEnd, who)` (the rule itself, used by the fact type dialog and the editor), `todoText`
+  (a `rule` sentence added whenever a role rule is among `c.rels`). In the panel the line gets a "Fact type"
+  button (`DataTab.editFactType`). Exported: `Relations.roleLimits()` (each has `status: 'active'`,
+  `rule: true`), `roleText`, `ruleText`. `autoLead` / `autoText` are not called from anywhere.
 - Second pass: `windows(rels, true)` makes `baseOf` take a known date at its most likely value. Nodes closed
   there and not in the first pass become `{ window: true, soft: true }` entries (`shutEntries(shut, soft)`);
   the panel heads them "The most likely dates are out of order".
@@ -170,6 +195,8 @@ the code disagree, the code is right, and the note should be corrected. Read onl
 
 - Sections fold (`chronomap.editorSections`); facts show as summary lines until opened. Save keeps the editor
   open (a snapshot decides "unsaved"); the `calc…` fields are left out of that snapshot and kept on save.
+- A fact of a type whose roles carry date rules (27.1) gets `.fact-rules` after its roles in `renderFact`: the
+  rules in words (`Relations.ruleText` with the role named) and the tick that sets `draft.facts[i].noRules`.
 - `dateField`: Earliest / the date / Latest, a ⛓ button beside each, "(tied)" placeholders, lines naming the
   governing tie and the window's width. Layout (23.1): the main row is `.row.date-main`, the two ends are
   `.approx-rows` > `.row.approx-row` (label `.approx-label`, box, ⛓); `.row > *` is `flex: 1`, so every button
@@ -293,7 +320,11 @@ the code disagree, the code is right, and the note should be corrected. Read onl
   which take their dates from the holding marker's fact through `Facts.when`) register `slotS` / `slotE`
   (`Store.refKey`s); a date can be on several rows, and the two nearest are joined. Both dates on the
   chart: the elbow line. One only: a stub (16px line, arrowhead, `.gt-lag.stub` label), grouped by row,
-  side and direction. `part: 'max'` uses the two `L`s, everything else the two `E`s.
+  side and direction. `part: 'max'` uses the two `L`s, everything else the two `E`s. The limits of a role's
+  date rules (27.1, `Relations.roleLimits()`, `r.rule`) are drawn after the stored ones and marked "(rule)";
+  the lifetime, journey-order and part-of limits are not drawn. A label on a line past 70% across gets
+  `.left` (written to the left of the line) or it is cut off at the chart's edge. `drawDetail` lists a row's
+  role limits with `Relations.roleText`.
 - `onWheel` (on `#gt-body`, not passive): Ctrl = scale about the pointer, Shift / sideways / over
   `.gt-axis` = shift; anything else is left to scroll the rows. It sets `view` and `pref.t0` / `t1` at
   once, draws after 16 ms (a timer, since `requestAnimationFrame` does not run in a hidden pane) and
